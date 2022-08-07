@@ -1,27 +1,28 @@
+use crate::model_structs::{DanbooruPost, DanbooruPostCount, SAFItemMetadata, SAFMetadata};
+use crate::requests::{download_all, fetch_items};
 use anyhow::Error;
 use reqwest::Client;
 use tempdir::TempDir;
-use crate::model_structs::{DanbooruPost, DanbooruPostCount, SAFItemMetadata, SAFMetadata};
-use crate::requests::{download_all, fetch_items};
 
 extern crate tokio;
 
 mod model_structs;
+mod progress_bar;
 mod requests;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::builder().format_timestamp(None).init();
-    let tag = "kroos_(arknights)";
-    let client = Client::builder().user_agent("LibSFA 0.1 - testing").build()?;
+    let tag = "texas_(arknights)";
+    let client = Client::builder()
+        .user_agent("LibSFA 0.1 - testing")
+        .build()?;
 
     let good_results = fetch_items(&client, tag.to_string()).await?;
 
     let temp = TempDir::new_in("/mnt/ram", "kk")?.into_path();
 
     download_all(&client, &good_results, &temp).await?;
-
-
 
     let mut saf_items: Vec<SAFItemMetadata> = Vec::new();
 
