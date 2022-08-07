@@ -1,57 +1,54 @@
+use anyhow::Error;
+use reqwest::Client;
+use tempdir::TempDir;
 use crate::model_structs::{DanbooruPost, DanbooruPostCount, SAFItemMetadata, SAFMetadata};
+use crate::requests::{download_all, fetch_items};
+
+extern crate tokio;
 
 mod model_structs;
+mod requests;
 
-const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
-
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    env_logger::builder().format_timestamp(None).init();
     let tag = "kroos_(arknights)";
+    let client = Client::builder().user_agent("LibSFA 0.1 - testing").build()?;
 
-    let count = reqwest::blocking::get(format!("{}{}", DANBOORU_COUNT, tag))
-        .unwrap()
-        .json::<DanbooruPostCount>()
-        .unwrap();
+    let good_results = fetch_items(&client, tag.to_string()).await?;
 
-    let total = (count.counts.posts / 200.0).ceil() as u64;
+    let temp = TempDir::new_in("/mnt/ram", "kk")?.into_path();
 
-    println!("{} Posts\n{} Pages", count.counts.posts, total);
+    download_all(&client, &good_results, &temp).await?;
 
-    let mut good_results: Vec<DanbooruPost> = Vec::new();
 
-    for i in 1..=total {
-        let jj = reqwest::blocking::get(
-            format!("https://danbooru.donmai.us/posts.json?tags={}&page={}&limit=200","kroos_(arknights)", i),
-        )
-        .unwrap()
-        .json::<Vec<Option<DanbooruPost>>>()
-        .unwrap();
-        for i in jj.into_iter().flatten() {
-            match i.file_url {
-                None => {},
-                Some(_) => good_results.push(i),
-            }
-        }
-    }
 
     let mut saf_items: Vec<SAFItemMetadata> = Vec::new();
 
     for i in good_results {
         let item = SAFItemMetadata {
             file: i.file_url.unwrap(),
-            file_size: i.file_size.unwrap(),
-            md5: i.md5.unwrap(),
-            sha256: "EEE".to_string()
+            file_size: i.file_size,
+            md5: "FFF".to_string(),
+            sha256: "EEE".to_string(),
         };
         saf_items.push(item)
     }
 
-    let saf_hdr = SAFMetadata { item_count: saf_items.len(), item_list: saf_items };
+    let saf_hdr = SAFMetadata {
+        item_count: saf_items.len(),
+        item_list: saf_items,
+    };
 
     let encoded = bincode::serialize(&saf_hdr).unwrap();
     let compressed = zstd::encode_all(encoded.as_slice(), 7).unwrap();
 
-    println!("{} collected posts", saf_hdr.item_count);
-    println!("{}\n{}", encoded.len(), compressed.len())
+    println!(
+        "SAF Header raw size: {} B\nSAF Header compressed size: {} B",
+        encoded.len(),
+        compressed.len()
+    );
+    Ok(())
 
     //
 

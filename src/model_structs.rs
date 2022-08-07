@@ -2,9 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DanbooruPost {
-    pub id: Option<u64>,
-    pub md5: Option<String>,
-    pub file_size: Option<u64>,
+    pub file_size: u64,
+    pub file_ext: Option<String>,
     pub file_url: Option<String>,
 }
 
@@ -23,11 +22,11 @@ pub struct SAFItemMetadata {
     pub file: String,
     pub file_size: u64,
     pub md5: String,
-    pub sha256: String
+    pub sha256: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SAFMetadata {
     pub item_count: usize,
-    pub item_list: Vec<SAFItemMetadata>
+    pub item_list: Vec<SAFItemMetadata>,
 }
