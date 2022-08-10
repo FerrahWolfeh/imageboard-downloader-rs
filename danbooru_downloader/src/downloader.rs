@@ -4,11 +4,13 @@ use anyhow::{bail, Error};
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
+use md5::compute;
 use reqwest::Client;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::fs::{create_dir_all, OpenOptions};
+use tokio::fs;
+use tokio::fs::{create_dir_all, read, File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
@@ -21,6 +23,7 @@ pub struct DanbooruDownloader {
     tag_string: String,
     client: Client,
     out_dir: PathBuf,
+    downloaded_files: u64,
 }
 
 impl DanbooruDownloader {
@@ -57,6 +60,8 @@ impl DanbooruDownloader {
             .json::<DanbooruPostCount>()
             .await?;
 
+        debug!("{} Posts for tag list '{:?}'", count.counts.posts, tags);
+
         if count.counts.posts == 0.0 {
             bail!("")
         }
@@ -70,6 +75,7 @@ impl DanbooruDownloader {
             tag_string: tag_url,
             client,
             out_dir: out,
+            downloaded_files: 0,
         })
     }
 
@@ -99,7 +105,7 @@ impl DanbooruDownloader {
 
             // Download everything got in the above function
             futures::stream::iter(jj)
-                .map(|d| Self::fetch(self, d, multi.clone(), main.clone()))
+                .map(|d| Self::check_file_exists(self, d, multi.clone(), main.clone()))
                 .buffer_unordered(self.concurrent_downloads)
                 .collect::<Vec<_>>()
                 .await;
@@ -108,11 +114,11 @@ impl DanbooruDownloader {
         Ok(())
     }
 
-    async fn fetch(
+    async fn check_file_exists(
         &self,
         item: DanbooruItem,
-        multi: Arc<MultiProgress>,
-        main: Arc<ProgressBar>,
+        multi_progress: Arc<MultiProgress>,
+        main_bar: Arc<ProgressBar>,
     ) -> Result<(), Error> {
         if item.file_url.is_some() {
             let output = &self.out_dir.join(format!(
@@ -120,53 +126,97 @@ impl DanbooruDownloader {
                 item.md5.clone().unwrap(),
                 item.file_ext.clone().unwrap()
             ));
-            if !output.exists() {
-                debug!("Fetching {}", &item.file_url.clone().unwrap());
-                let res = self
-                    .client
-                    .get(item.file_url.clone().unwrap())
-                    .send()
-                    .await?;
-
-                let size = res.content_length().unwrap_or_default();
-                let bar = ProgressBar::new(size).with_style(download_progress_style());
-                bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-
-                let pb = multi.add(bar);
-
-                debug!("Creating destination file {:?}", &output);
-                let mut file = OpenOptions::new()
-                    .append(true)
-                    .create(true)
-                    .open(output)
-                    .await?;
-
-                // Download the file chunk by chunk.
-                debug!("Retrieving chunks...");
-                let mut stream = res.bytes_stream();
-                while let Some(item) = stream.next().await {
-                    // Retrieve chunk.
-                    let mut chunk = match item {
-                        Ok(chunk) => chunk,
-                        Err(e) => {
-                            bail!(e)
-                        }
-                    };
-                    pb.inc(chunk.len() as u64);
-
-                    // Write to file.
-                    match file.write_all_buf(&mut chunk).await {
-                        Ok(_res) => (),
-                        Err(e) => {
-                            bail!(e);
-                        }
-                    };
+            if output.exists() {
+                let file_digest = compute(read(output).await?);
+                let hash = format!("{:x}", file_digest);
+                if hash != item.md5.clone().unwrap() {
+                    fs::remove_file(output).await?;
+                    multi_progress.println(format!(
+                        "File {}.{} is corrupted. Re-downloading...",
+                        item.md5.clone().unwrap(),
+                        item.file_ext.clone().unwrap()
+                    ))?;
+                    Self::fetch(
+                        self,
+                        &item,
+                        multi_progress,
+                        main_bar,
+                        output,
+                    )
+                    .await?
+                } else {
+                    multi_progress.println(format!(
+                        "File {}.{} already exists. Skipping.",
+                        item.md5.unwrap(),
+                        item.file_ext.unwrap()
+                    ))?;
                 }
-                pb.finish_and_clear();
-
-                main.inc(1);
+                return Ok(());
+            } else {
+                Self::fetch(
+                    self,
+                    &item,
+                    multi_progress,
+                    main_bar,
+                    output,
+                )
+                .await?
             }
         }
+        Ok(())
+    }
+
+    async fn fetch(
+        &self,
+        item: &DanbooruItem,
+        multi: Arc<MultiProgress>,
+        main: Arc<ProgressBar>,
+        output: &Path,
+    ) -> Result<(), Error> {
+        debug!("Fetching {}", &item.file_url.clone().unwrap());
+        let res = self
+            .client
+            .get(item.file_url.clone().unwrap())
+            .send()
+            .await?;
+
+        let size = res.content_length().unwrap_or_default();
+        let bar = ProgressBar::new(size).with_style(download_progress_style());
+        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+
+        let pb = multi.add(bar);
+
+        debug!("Creating destination file {:?}", &output);
+        let mut file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(output)
+            .await?;
+
+        // Download the file chunk by chunk.
+        debug!("Retrieving chunks...");
+        let mut stream = res.bytes_stream();
+        while let Some(item) = stream.next().await {
+            // Retrieve chunk.
+            let mut chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => {
+                    bail!(e)
+                }
+            };
+            pb.inc(chunk.len() as u64);
+
+            // Write to file.
+            match file.write_all_buf(&mut chunk).await {
+                Ok(_res) => (),
+                Err(e) => {
+                    bail!(e);
+                }
+            };
+        }
+        pb.finish_and_clear();
+
+        main.inc(1);
         Ok(())
     }
 }
