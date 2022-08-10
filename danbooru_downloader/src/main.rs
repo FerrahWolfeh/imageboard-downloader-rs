@@ -1,10 +1,10 @@
-use crate::danbooru::downloader::DanbooruDownloader;
+use crate::imageboards::danbooru::DanbooruDownloader;
 use anyhow::Error;
 
 extern crate tokio;
 
-mod danbooru;
 mod progress_bars;
+mod imageboards;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

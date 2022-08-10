@@ -11,7 +11,10 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
+use crate::imageboards::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
+
+mod model_structs;
+
 
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
 
@@ -143,7 +146,7 @@ impl DanbooruDownloader {
                         main_bar,
                         output,
                     )
-                    .await?
+                        .await?
                 } else {
                     multi_progress.println(format!(
                         "File {}.{} already exists. Skipping.",
@@ -161,7 +164,7 @@ impl DanbooruDownloader {
                     main_bar,
                     output,
                 )
-                .await?
+                    .await?
             }
         }
         Ok(())
