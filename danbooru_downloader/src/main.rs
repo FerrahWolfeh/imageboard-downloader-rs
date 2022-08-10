@@ -1,7 +1,6 @@
-use crate::downloader::Downloader;
+use crate::downloader::DanbooruDownloader;
 use crate::model_structs::{DanbooruItem, DanbooruPostCount};
 use anyhow::Error;
-
 
 extern crate tokio;
 
@@ -12,12 +11,14 @@ mod progress_bar;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::builder().format_timestamp(None).init();
-    let tag = vec!["kroos_(arknights)".to_string()];
+    let tag = vec!["pozyomka_(arknights)".to_string()];
 
-    let mut dl = Downloader::new(&tag, None, 3).await?;
-    dl.download().await?;
-
-    println!("{:?}", dl);
+    if let Ok(mut dl) = DanbooruDownloader::new(&tag, None, 3).await {
+        dl.download().await?;
+        println!("{:?}", dl);
+    } else {
+        println!("No posts found for tag selection!")
+    }
 
     // let client = Client::builder()
     //     .user_agent("LibSFA 0.1 - testing")
