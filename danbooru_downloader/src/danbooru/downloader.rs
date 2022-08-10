@@ -1,5 +1,4 @@
 use crate::progress_bars::{download_progress_style, master_progress_style};
-use crate::{DanbooruItem, DanbooruPostCount};
 use anyhow::{bail, Error};
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -151,6 +150,7 @@ impl DanbooruDownloader {
                         item.md5.unwrap(),
                         item.file_ext.unwrap()
                     ))?;
+                    main_bar.set_length(main_bar.length().unwrap() - 1)
                 }
                 return Ok(());
             } else {
