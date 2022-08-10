@@ -1,12 +1,10 @@
-use crate::downloader::DanbooruDownloader;
-use crate::model_structs::{DanbooruItem, DanbooruPostCount};
+use crate::danbooru::downloader::DanbooruDownloader;
 use anyhow::Error;
 
 extern crate tokio;
 
-mod downloader;
-mod model_structs;
-mod progress_bar;
+mod danbooru;
+mod progress_bars;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

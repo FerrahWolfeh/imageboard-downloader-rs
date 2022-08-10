@@ -1,4 +1,4 @@
-use crate::progress_bar::{download_progress_style, master_progress_style};
+use crate::progress_bars::{download_progress_style, master_progress_style};
 use crate::{DanbooruItem, DanbooruPostCount};
 use anyhow::{bail, Error};
 use futures::StreamExt;
@@ -10,8 +10,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
-use tokio::fs::{create_dir_all, read, File, OpenOptions};
+use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
+use crate::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
 
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
 
