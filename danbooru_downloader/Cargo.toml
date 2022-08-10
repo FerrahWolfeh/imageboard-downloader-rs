@@ -13,29 +13,20 @@ env_logger = "0.9.0"
 anyhow = "1.0.60"
 futures = "0.3.21"
 tempdir = "0.3.7"
-trauma = "2"
 
 
 [dependencies.tokio]
-version = "1.20.1"
+version = "1"
 features = ["full"]
-
-[dependencies.zip]
-version = "0.6.2"
-default-features = false
-
-[dependencies.downloader]
-version = "0.2.6"
-features = ["tui"]
 
 [dependencies.reqwest]
 version = "0.11.11"
-features = ["blocking", "json"]
+features = ["json", "stream"]
 
 [dependencies.clap]
 version = "3.2.16"
 features = ["derive", "cargo"]
 
 [dependencies.serde]
-version = "1.0.142"
+version = "1.0.143"
 features = ["derive"]

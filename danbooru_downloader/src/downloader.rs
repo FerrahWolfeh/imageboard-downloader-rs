@@ -17,7 +17,6 @@ const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=
 
 #[derive(Debug)]
 pub struct Downloader {
-    item_list: Vec<DanbooruItem>,
     item_count: u64,
     page_count: u64,
     concurrent_downloads: usize,
@@ -63,7 +62,6 @@ impl Downloader {
         let total = (count.counts.posts / 200.0).ceil() as u64;
 
         Ok(Self {
-            item_list: vec![],
             item_count: count.counts.posts as u64,
             page_count: total,
             concurrent_downloads: concurrent_downs,
@@ -98,15 +96,12 @@ impl Downloader {
                 .await?;
 
             // Download everything got in the above function
-            let downs = futures::stream::iter(jj)
+            futures::stream::iter(jj)
                 .map(|d| Self::fetch(self, d, multi.clone(), main.clone()))
                 .buffer_unordered(self.concurrent_downloads)
                 .collect::<Vec<_>>()
                 .await;
 
-            for i in downs {
-                self.item_list.extend(i?);
-            }
         }
         main.finish_and_clear();
         Ok(())
@@ -117,9 +112,7 @@ impl Downloader {
         item: DanbooruItem,
         multi: Arc<MultiProgress>,
         main: Arc<ProgressBar>,
-    ) -> Result<Vec<DanbooruItem>, Error> {
-        let mut storage = Vec::new();
-
+    ) -> Result<(), Error> {
         if item.file_url.is_some() {
             debug!("Fetching {}", &item.file_url.clone().unwrap());
             let res = self
@@ -172,10 +165,8 @@ impl Downloader {
             pb.finish_and_clear();
 
             main.inc(1);
-
-            storage.push(item);
         } else {
         }
-        Ok(storage)
+        Ok(())
     }
 }
