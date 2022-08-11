@@ -1,19 +1,43 @@
+use std::path::PathBuf;
 use crate::imageboards::danbooru::DanbooruDownloader;
+use crate::imageboards::ImageBoards;
 use anyhow::Error;
+use clap::Parser;
 
 extern crate tokio;
 
-mod progress_bars;
 mod imageboards;
+mod progress_bars;
+
+#[derive(Parser, Debug)]
+#[clap(name = "Booru Downloader", author, version, about, long_about = None)]
+struct Cli {
+    /// Specify imageboard to download from
+    //#[clap(default_value_t = ImageBoards::Danbooru, ignore_case = true, possible_values = &["danbooru", "e621", "rule34", "realbooru"])]
+    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
+    imageboard: ImageBoards,
+
+    /// Output dir
+    #[clap(short, parse(from_os_str))]
+    output: Option<PathBuf>,
+
+    /// Tags to search
+    #[clap(value_parser, required = true)]
+    tags: Vec<String>,
+
+    /// Number of simultaneous downloads
+    #[clap(short, value_parser, default_value_t = 3)]
+    simultaneous_downloads: usize
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let args = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
-    let tag = vec!["pozyomka_(arknights)".to_string()];
 
-    if let Ok(mut dl) = DanbooruDownloader::new(&tag, None, 3).await {
+
+    if let Ok(mut dl) = DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await {
         dl.download().await?;
-        println!("{:?}", dl);
     } else {
         println!("No posts found for tag selection!")
     }

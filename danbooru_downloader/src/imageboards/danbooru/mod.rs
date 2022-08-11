@@ -1,3 +1,4 @@
+use crate::imageboards::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
 use crate::progress_bars::{download_progress_style, master_progress_style};
 use anyhow::{bail, Error};
 use futures::StreamExt;
@@ -11,14 +12,12 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::imageboards::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
+use crate::imageboards::USER_AGENT;
 
 mod model_structs;
 
-
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
 
-#[derive(Debug)]
 pub struct DanbooruDownloader {
     item_count: u64,
     page_count: u64,
@@ -26,24 +25,24 @@ pub struct DanbooruDownloader {
     tag_string: String,
     client: Client,
     out_dir: PathBuf,
-    downloaded_files: u64,
+    _downloaded_files: u64,
 }
 
 impl DanbooruDownloader {
     pub async fn new(
         tags: &[String],
-        out_dir: Option<String>,
+        out_dir: Option<PathBuf>,
         concurrent_downs: usize,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent (mostly because of e621)
         let client = Client::builder()
-            .user_agent("LibSFA 0.5 - testing")
+            .user_agent(USER_AGENT)
             .build()?;
 
         // Place downloaded items in current dir or in /tmp
         let place = match out_dir {
             None => std::env::current_dir()?,
-            Some(dir) => PathBuf::from(dir),
+            Some(dir) => dir,
         };
 
         // Join tags to a url format in case there's more than one
@@ -51,7 +50,7 @@ impl DanbooruDownloader {
         debug!("Tag List: {}", tag_url);
 
         // Create output dir
-        let out = place.join(PathBuf::from(&tag_url));
+        let out = place.join(PathBuf::from(format!("danbooru/{}", &tag_url)));
         create_dir_all(&out).await?;
         debug!("Target dir: {}", out.display());
 
@@ -78,7 +77,7 @@ impl DanbooruDownloader {
             tag_string: tag_url,
             client,
             out_dir: out,
-            downloaded_files: 0,
+            _downloaded_files: 0,
         })
     }
 
@@ -139,14 +138,7 @@ impl DanbooruDownloader {
                         item.md5.clone().unwrap(),
                         item.file_ext.clone().unwrap()
                     ))?;
-                    Self::fetch(
-                        self,
-                        &item,
-                        multi_progress,
-                        main_bar,
-                        output,
-                    )
-                        .await?
+                    Self::fetch(self, &item, multi_progress, main_bar, output).await?
                 } else {
                     multi_progress.println(format!(
                         "File {}.{} already exists. Skipping.",
@@ -157,14 +149,7 @@ impl DanbooruDownloader {
                 }
                 return Ok(());
             } else {
-                Self::fetch(
-                    self,
-                    &item,
-                    multi_progress,
-                    main_bar,
-                    output,
-                )
-                    .await?
+                Self::fetch(self, &item, multi_progress, main_bar, output).await?
             }
         }
         Ok(())
