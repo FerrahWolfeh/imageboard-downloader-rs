@@ -1,4 +1,5 @@
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
+use crate::imageboards::DANBOORU_UA;
 use crate::progress_bars::{download_progress_style, master_progress_style};
 use anyhow::{bail, Error};
 use futures::StreamExt;
@@ -12,7 +13,6 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::imageboards::DANBOORU_UA;
 
 mod models;
 
@@ -38,9 +38,7 @@ impl DanbooruDownloader {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
         };
         // Use common client for all connections with a set User-Agent (mostly because of e621)
-        let client = Client::builder()
-            .user_agent(DANBOORU_UA)
-            .build()?;
+        let client = Client::builder().user_agent(DANBOORU_UA).build()?;
 
         // Place downloaded items in current dir or in /tmp
         let place = match out_dir {
