@@ -10,7 +10,7 @@ mod imageboards;
 mod progress_bars;
 
 #[derive(Parser, Debug)]
-#[clap(name = "Booru Downloader", author, version, about, long_about = None)]
+#[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
 struct Cli {
     /// Specify imageboard to download from
     //#[clap(default_value_t = ImageBoards::Danbooru, ignore_case = true, possible_values = &["danbooru", "e621", "rule34", "realbooru"])]
@@ -36,11 +36,20 @@ async fn main() -> Result<(), Error> {
     env_logger::builder().format_timestamp(None).init();
 
 
-    if let Ok(mut dl) = DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await {
-        dl.download().await?;
-    } else {
-        println!("No posts found for tag selection!")
-    }
+    match args.imageboard {
+        ImageBoards::Danbooru => {
+            if let Ok(mut dl) = DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await {
+                dl.download().await?;
+            } else {
+                println!("No posts found for tag selection!")
+            }
+        },
+        ImageBoards::E621 => todo!(),
+        ImageBoards::Rule34 => todo!(),
+        ImageBoards::Realbooru => todo!()
+    };
+
+
 
     // let client = Client::builder()
     //     .user_agent("LibSFA 0.1 - testing")
