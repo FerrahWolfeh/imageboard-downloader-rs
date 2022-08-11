@@ -12,6 +12,10 @@ mod progress_bars;
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
 struct Cli {
+    /// Tags to search
+    #[clap(value_parser, required = true)]
+    tags: Vec<String>,
+
     /// Specify imageboard to download from
     #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
     imageboard: ImageBoards,
@@ -20,16 +24,13 @@ struct Cli {
     #[clap(short, parse(from_os_str))]
     output: Option<PathBuf>,
 
-    /// Tags to search
-    #[clap(value_parser, required = true)]
-    tags: Vec<String>,
-
     /// Number of simultaneous downloads
     #[clap(short, value_parser, default_value_t = 3)]
     simultaneous_downloads: usize,
 
-    /// Download images from safe version of imageboard
-    #[clap(long, action, default_value_t = false)]
+    /// Download images from safebooru.donmai.us instead of regular danbooru
+    /// Useful if you only want to download posts with "safe" rating.
+    #[clap(long, action, default_value_t = false, help_heading = "Danbooru")]
     safe_mode: bool,
 }
 
