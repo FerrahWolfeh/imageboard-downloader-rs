@@ -12,7 +12,7 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::imageboards::USER_AGENT;
+use crate::imageboards::DANBOORU_UA;
 
 mod models;
 
@@ -36,7 +36,7 @@ impl DanbooruDownloader {
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent (mostly because of e621)
         let client = Client::builder()
-            .user_agent(USER_AGENT)
+            .user_agent(DANBOORU_UA)
             .build()?;
 
         // Place downloaded items in current dir or in /tmp

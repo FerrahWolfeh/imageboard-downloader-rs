@@ -5,7 +5,9 @@ pub mod e621;
 pub mod realbooru;
 pub mod rule34;
 
-pub const USER_AGENT: &str = "Imageboard Downloader 0.5.0 - by FerrahWolfeh";
+pub const DANBOORU_UA: &str = "Rust Imageboard Downloader/0.5.0 (by danbooru user FerrahWolfeh)";
+pub const E621_UA: &str = "Rust Imageboard Downloader/0.5.0 (by e621 user FerrahWolfeh)";
+pub const GENERIC_UA: &str = "Rust Imageboard Downloader/0.5.0";
 
 #[repr(usize)]
 #[derive(Debug, Copy, Clone, ValueEnum)]
