@@ -5,7 +5,7 @@ pub mod e621;
 pub mod realbooru;
 pub mod rule34;
 
-pub const USER_AGENT: &str = "Booru Downloader 0.5.0 - by FerrahWolfeh";
+pub const USER_AGENT: &str = "Imageboard Downloader 0.5.0 - by FerrahWolfeh";
 
 #[repr(usize)]
 #[derive(Debug, Copy, Clone, ValueEnum)]
