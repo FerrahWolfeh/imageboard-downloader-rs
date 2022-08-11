@@ -34,6 +34,9 @@ impl DanbooruDownloader {
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
     ) -> Result<Self, Error> {
+        if tags.len() > 2 {
+            bail!("Danbooru downloader currently doesn't support more than 2 tags")
+        };
         // Use common client for all connections with a set User-Agent (mostly because of e621)
         let client = Client::builder()
             .user_agent(DANBOORU_UA)
