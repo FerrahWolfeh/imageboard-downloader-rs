@@ -16,7 +16,8 @@ use tokio::io::AsyncWriteExt;
 
 mod models;
 
-const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
+const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json";
+const DANBOORU_POSTS: &str = "https://danbooru.donmai.us/posts.json";
 
 pub struct DanbooruDownloader {
     item_count: u64,
@@ -57,7 +58,8 @@ impl DanbooruDownloader {
 
         // Get an estimate of total posts and pages to search
         let count = client
-            .get(format!("{}{}", DANBOORU_COUNT, tag_url))
+            .get(DANBOORU_COUNT)
+            .query(&[("tags", &tag_url)])
             .send()
             .await?
             .json::<DanbooruPostCount>()
@@ -97,10 +99,12 @@ impl DanbooruDownloader {
             // Fetch item list from page
             let jj = self
                 .client
-                .get(format!(
-                    "https://danbooru.donmai.us/posts.json?tags={}&page={}&limit=200",
-                    self.tag_string, i
-                ))
+                .get(DANBOORU_POSTS)
+                .query(&[
+                    ("tags", &self.tag_string),
+                    ("page", &i.to_string()),
+                    ("limit", &200.to_string()),
+                ])
                 .send()
                 .await?
                 .json::<Vec<DanbooruItem>>()
