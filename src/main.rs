@@ -1,8 +1,8 @@
-use std::path::PathBuf;
 use crate::imageboards::danbooru::DanbooruDownloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
+use std::path::PathBuf;
 
 extern crate tokio;
 
@@ -27,7 +27,7 @@ struct Cli {
 
     /// Number of simultaneous downloads
     #[clap(short, value_parser, default_value_t = 3)]
-    simultaneous_downloads: usize
+    simultaneous_downloads: usize,
 }
 
 #[tokio::main]
@@ -35,54 +35,20 @@ async fn main() -> Result<(), Error> {
     let args = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-
     match args.imageboard {
         ImageBoards::Danbooru => {
-            if let Ok(mut dl) = DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await {
+            if let Ok(mut dl) =
+                DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await
+            {
                 dl.download().await?;
             } else {
                 println!("No posts found for tag selection!")
             }
-        },
+        }
         ImageBoards::E621 => todo!(),
         ImageBoards::Rule34 => todo!(),
-        ImageBoards::Realbooru => todo!()
+        ImageBoards::Realbooru => todo!(),
     };
 
-
-
-    // let client = Client::builder()
-    //     .user_agent("LibSFA 0.1 - testing")
-    //     .build()?;
-
-    // let good_results = fetch_items(&client, tag.to_string()).await?;
-    //
-    // download_all(&client, &good_results, &temp).await?;
-    //
-    // let mut saf_items: Vec<SAFItemMetadata> = Vec::new();
-    //
-    // for i in good_results {
-    //     let item = SAFItemMetadata {
-    //         file: i.file_url.unwrap(),
-    //         file_size: i.file_size,
-    //         md5: "FFF".to_string(),
-    //         sha256: "EEE".to_string(),
-    //     };
-    //     saf_items.push(item)
-    // }
-    //
-    // let saf_hdr = SAFMetadata {
-    //     item_count: saf_items.len(),
-    //     item_list: saf_items,
-    // };
-    //
-    // let encoded = bincode::serialize(&saf_hdr).unwrap();
-    // let compressed = zstd::encode_all(encoded.as_slice(), 7).unwrap();
-    //
-    // println!(
-    //     "SAF Header raw size: {} B\nSAF Header compressed size: {} B",
-    //     encoded.len(),
-    //     compressed.len()
-    // );
     Ok(())
 }
