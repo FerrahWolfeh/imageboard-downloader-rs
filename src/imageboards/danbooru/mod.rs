@@ -26,6 +26,7 @@ pub struct DanbooruDownloader {
     tag_string: String,
     client: Client,
     out_dir: PathBuf,
+    safe_mode: bool,
     _downloaded_files: u64,
 }
 
@@ -34,6 +35,7 @@ impl DanbooruDownloader {
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        safe_mode: bool,
     ) -> Result<Self, Error> {
         if tags.len() > 2 {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
@@ -80,9 +82,12 @@ impl DanbooruDownloader {
             tag_string: tag_url,
             client,
             out_dir: out,
+            safe_mode,
             _downloaded_files: 0,
         })
     }
+
+    async fn get_post_count() {} // TODO create functions for downloading from safebooru
 
     pub async fn download(&mut self) -> Result<(), Error> {
         // Setup global progress bar

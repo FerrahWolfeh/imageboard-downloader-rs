@@ -13,7 +13,6 @@ mod progress_bars;
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
 struct Cli {
     /// Specify imageboard to download from
-    //#[clap(default_value_t = ImageBoards::Danbooru, ignore_case = true, possible_values = &["danbooru", "e621", "rule34", "realbooru"])]
     #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
     imageboard: ImageBoards,
 
@@ -28,6 +27,10 @@ struct Cli {
     /// Number of simultaneous downloads
     #[clap(short, value_parser, default_value_t = 3)]
     simultaneous_downloads: usize,
+
+    /// Download images from safe version of imageboard
+    #[clap(long, action, default_value_t = false)]
+    safe_mode: bool,
 }
 
 #[tokio::main]
@@ -37,8 +40,13 @@ async fn main() -> Result<(), Error> {
 
     match args.imageboard {
         ImageBoards::Danbooru => {
-            if let Ok(mut dl) =
-                DanbooruDownloader::new(&args.tags, args.output, args.simultaneous_downloads).await
+            if let Ok(mut dl) = DanbooruDownloader::new(
+                &args.tags,
+                args.output,
+                args.simultaneous_downloads,
+                args.safe_mode,
+            )
+            .await
             {
                 dl.download().await?;
             } else {
