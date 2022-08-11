@@ -16,3 +16,9 @@ pub struct Count {
 pub struct DanbooruPostCount {
     pub counts: Count,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Auth {
+    pub login: String,
+    pub api_key: String
+}

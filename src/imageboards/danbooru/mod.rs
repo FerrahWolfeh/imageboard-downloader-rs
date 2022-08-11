@@ -1,4 +1,4 @@
-use crate::imageboards::danbooru::model_structs::{DanbooruItem, DanbooruPostCount};
+use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::progress_bars::{download_progress_style, master_progress_style};
 use anyhow::{bail, Error};
 use futures::StreamExt;
@@ -14,7 +14,7 @@ use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use crate::imageboards::USER_AGENT;
 
-mod model_structs;
+mod models;
 
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json?tags=";
 
