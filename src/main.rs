@@ -16,21 +16,24 @@ struct Cli {
     #[clap(value_parser, required = true)]
     tags: Vec<String>,
 
-    /// Specify imageboard to download from
+    /// Specify website to download from
     #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
     imageboard: ImageBoards,
 
-    /// Output dir
-    #[clap(short, parse(from_os_str))]
+    /// Where to save downloaded files
+    #[clap(short, long, parse(from_os_str), value_name = "PATH")]
     output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
-    #[clap(short, value_parser, default_value_t = 3)]
+    #[clap(short = 'd', value_name = "NUMBER", value_parser, default_value_t = 3)]
     simultaneous_downloads: usize,
 
-    /// Download images from safebooru.donmai.us instead of regular danbooru
+    /// Download images from the safe version of the selected Imageboard.
+    ///
+    /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
+    ///
     /// Useful if you only want to download posts with "safe" rating.
-    #[clap(long, action, default_value_t = false, help_heading = "Danbooru")]
+    #[clap(long, action, default_value_t = false, help_heading = "COMMON")]
     safe_mode: bool,
 }
 
@@ -41,22 +44,20 @@ async fn main() -> Result<(), Error> {
 
     match args.imageboard {
         ImageBoards::Danbooru => {
-            if let Ok(mut dl) = DanbooruDownloader::new(
+            let mut dl = DanbooruDownloader::new(
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
             )
-            .await
-            {
-                dl.download().await?;
-            } else {
-                println!("No posts found for tag selection!")
-            }
+            .await?;
+
+            dl.download().await?;
         }
         ImageBoards::E621 => todo!(),
         ImageBoards::Rule34 => todo!(),
         ImageBoards::Realbooru => todo!(),
+        ImageBoards::Konachan => todo!(),
     };
 
     Ok(())

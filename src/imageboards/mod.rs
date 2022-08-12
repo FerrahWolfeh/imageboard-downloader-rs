@@ -4,6 +4,7 @@ pub mod danbooru;
 pub mod e621;
 pub mod realbooru;
 pub mod rule34;
+pub mod konachan;
 
 pub const DANBOORU_UA: &str = "Rust Imageboard Downloader/0.5.0 (by danbooru user FerrahWolfeh)";
 pub const E621_UA: &str = "Rust Imageboard Downloader/0.5.0 (by e621 user FerrahWolfeh)";
@@ -16,6 +17,7 @@ pub enum ImageBoards {
     E621,
     Rule34,
     Realbooru,
+    Konachan,
 }
 
 // impl fmt::Display for ImageBoards {

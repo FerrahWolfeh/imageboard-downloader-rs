@@ -16,6 +16,8 @@ use tokio::io::AsyncWriteExt;
 
 mod models;
 
+const SAFEBOORU_COUNT: &str = "https://safebooru.donmai.us/counts/posts.json";
+const SAFEBOORU_POSTS: &str = "https://safebooru.donmai.us/posts.json";
 const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json";
 const DANBOORU_POSTS: &str = "https://danbooru.donmai.us/posts.json";
 
@@ -23,6 +25,7 @@ pub struct DanbooruDownloader {
     item_count: u64,
     page_count: u64,
     concurrent_downloads: usize,
+    tag_list: Vec<String>,
     tag_string: String,
     client: Client,
     out_dir: PathBuf,
@@ -43,43 +46,26 @@ impl DanbooruDownloader {
         // Use common client for all connections with a set User-Agent (mostly because of e621)
         let client = Client::builder().user_agent(DANBOORU_UA).build()?;
 
+        // Join tags to a url format in case there's more than one
+        let tag_string = tags.join("+");
+        debug!("Tag List: {}", tag_string);
+
         // Place downloaded items in current dir or in /tmp
         let place = match out_dir {
             None => std::env::current_dir()?,
             Some(dir) => dir,
         };
 
-        // Join tags to a url format in case there's more than one
-        let tag_url = tags.join("+");
-        debug!("Tag List: {}", tag_url);
-
         // Create output dir
-        let out = place.join(PathBuf::from(format!("danbooru/{}", &tag_url)));
-        create_dir_all(&out).await?;
+        let out = place.join(PathBuf::from(format!("danbooru/{}", &tag_string)));
         debug!("Target dir: {}", out.display());
 
-        // Get an estimate of total posts and pages to search
-        let count = client
-            .get(DANBOORU_COUNT)
-            .query(&[("tags", &tag_url)])
-            .send()
-            .await?
-            .json::<DanbooruPostCount>()
-            .await?;
-
-        debug!("{} Posts for tag list '{:?}'", count.counts.posts, tags);
-
-        if count.counts.posts == 0.0 {
-            bail!("")
-        }
-
-        let total = (count.counts.posts / 200.0).ceil() as u64;
-
         Ok(Self {
-            item_count: count.counts.posts as u64,
-            page_count: total,
+            item_count: 0,
+            page_count: 0,
             concurrent_downloads: concurrent_downs,
-            tag_string: tag_url,
+            tag_list: Vec::from(tags),
+            tag_string,
             client,
             out_dir: out,
             safe_mode,
@@ -87,9 +73,46 @@ impl DanbooruDownloader {
         })
     }
 
-    async fn get_post_count() {} // TODO create functions for downloading from safebooru
+    async fn get_post_count(&mut self) -> Result<(), Error> {
+        let count_endpoint = if self.safe_mode {
+            SAFEBOORU_COUNT
+        } else {
+            DANBOORU_COUNT
+        };
+
+        // Get an estimate of total posts and pages to search
+        let count = &self
+            .client
+            .get(count_endpoint)
+            .query(&[("tags", &self.tag_string)])
+            .send()
+            .await?
+            .json::<DanbooruPostCount>()
+            .await?;
+
+        // Bail out if no posts are found
+        if count.counts.posts == 0.0 {
+            bail!("No posts found for tag selection!")
+        }
+
+        self.item_count = count.counts.posts as u64;
+        self.page_count = (count.counts.posts / 200.0).ceil() as u64;
+
+        debug!(
+            "{} Posts for tag list '{:?}'",
+            &self.item_count, &self.tag_list
+        );
+
+        Ok(())
+    }
 
     pub async fn download(&mut self) -> Result<(), Error> {
+        // Generate post count data
+        Self::get_post_count(self).await?;
+
+        // Create output dir
+        create_dir_all(&self.out_dir).await?;
+
         // Setup global progress bar
         let bar = ProgressBar::new(self.item_count).with_style(master_progress_style());
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
@@ -101,10 +124,17 @@ impl DanbooruDownloader {
 
         // Begin downloading all posts per page
         for i in 1..=self.page_count {
+            // Check safe mode
+            let url_mode = if self.safe_mode {
+                SAFEBOORU_POSTS
+            } else {
+                DANBOORU_POSTS
+            };
+
             // Fetch item list from page
             let jj = self
                 .client
-                .get(DANBOORU_POSTS)
+                .get(url_mode)
                 .query(&[
                     ("tags", &self.tag_string),
                     ("page", &i.to_string()),
