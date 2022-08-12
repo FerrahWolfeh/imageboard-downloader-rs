@@ -5,6 +5,7 @@ pub mod e621;
 pub mod realbooru;
 pub mod rule34;
 pub mod konachan;
+mod macros;
 
 pub const DANBOORU_UA: &str = "Rust Imageboard Downloader/0.5.0 (by danbooru user FerrahWolfeh)";
 pub const E621_UA: &str = "Rust Imageboard Downloader/0.5.0 (by e621 user FerrahWolfeh)";

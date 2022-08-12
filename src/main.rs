@@ -49,8 +49,7 @@ async fn main() -> Result<(), Error> {
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
-            )
-            .await?;
+            )?;
 
             dl.download().await?;
         }

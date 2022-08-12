@@ -13,6 +13,7 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
+use crate::client;
 
 mod models;
 
@@ -34,7 +35,7 @@ pub struct DanbooruDownloader {
 }
 
 impl DanbooruDownloader {
-    pub async fn new(
+    pub fn new(
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
@@ -44,7 +45,7 @@ impl DanbooruDownloader {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
         };
         // Use common client for all connections with a set User-Agent (mostly because of e621)
-        let client = Client::builder().user_agent(DANBOORU_UA).build()?;
+        let client = client!(DANBOORU_UA);
 
         // Join tags to a url format in case there's more than one
         let tag_string = tags.join("+");
