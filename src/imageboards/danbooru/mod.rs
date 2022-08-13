@@ -1,6 +1,5 @@
-use crate::imageboards::common::generate_out_dir;
+use crate::imageboards::common::{generate_out_dir, set_user_agent};
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
-use crate::imageboards::DANBOORU_UA;
 use crate::progress_bars::{download_progress_style, master_progress_style};
 use crate::{client, join_tags, ImageBoards};
 use anyhow::{bail, Error};
@@ -46,7 +45,7 @@ impl DanbooruDownloader {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
         };
         // Use common client for all connections with a set User-Agent
-        let client = client!(DANBOORU_UA);
+        let client = client!(ImageBoards::Danbooru);
 
         // Join tags to a url format in case there's more than one
         let tag_string = join_tags!(tags);

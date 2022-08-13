@@ -22,3 +22,16 @@ pub fn generate_out_dir(
     debug!("Target dir: {}", out.display());
     Ok(out)
 }
+
+pub fn set_user_agent(imageboard: ImageBoards) -> String {
+    let app_name: &str = "Rust Imageboard Downloader";
+    let variant = match imageboard {
+        ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
+        ImageBoards::E621 => " (by e621 user FerrahWolfeh)",
+        _ => ""
+    };
+    let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
+    debug!("Connecting with user-agent: {}", ua);
+    ua
+
+}
