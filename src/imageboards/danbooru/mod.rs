@@ -17,11 +17,6 @@ use tokio::io::AsyncWriteExt;
 
 mod models;
 
-const SAFEBOORU_COUNT: &str = "https://safebooru.donmai.us/counts/posts.json";
-const SAFEBOORU_POSTS: &str = "https://safebooru.donmai.us/posts.json";
-const DANBOORU_COUNT: &str = "https://danbooru.donmai.us/counts/posts.json";
-const DANBOORU_POSTS: &str = "https://danbooru.donmai.us/posts.json";
-
 pub struct DanbooruDownloader {
     item_count: u64,
     page_count: u64,
@@ -67,11 +62,7 @@ impl DanbooruDownloader {
     }
 
     async fn get_post_count(&mut self) -> Result<(), Error> {
-        let count_endpoint = if self.safe_mode {
-            format!("{}?tags={}", SAFEBOORU_COUNT, &self.tag_string)
-        } else {
-            format!("{}?tags={}", DANBOORU_COUNT, &self.tag_string)
-        };
+        let count_endpoint = format!("{}?tags={}", ImageBoards::Danbooru.post_count_url(self.safe_mode).unwrap(), &self.tag_string);
 
         // Get an estimate of total posts and pages to search
         let count = &self
@@ -117,11 +108,7 @@ impl DanbooruDownloader {
         // Begin downloading all posts per page
         for i in 1..=self.page_count {
             // Check safe mode
-            let url_mode = if self.safe_mode {
-                format!("{}?tags={}", SAFEBOORU_POSTS, &self.tag_string)
-            } else {
-                format!("{}?tags={}", DANBOORU_POSTS, &self.tag_string)
-            };
+            let url_mode = format!("{}?tags={}", ImageBoards::Danbooru.post_url(self.safe_mode).unwrap(), &self.tag_string);
 
             // Fetch item list from page
             let jj = self

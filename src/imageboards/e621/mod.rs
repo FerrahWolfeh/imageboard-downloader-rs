@@ -17,8 +17,6 @@ use tokio::io::AsyncWriteExt;
 
 mod models;
 
-const E621_POST_LIST: &str = "https://e621.net/posts.json";
-const E926_POST_LIST: &str = "https://e926.net/posts.json";
 const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
 pub struct E621Downloader {
@@ -27,7 +25,7 @@ pub struct E621Downloader {
     tag_string: String,
     tag_list: Vec<String>,
     concurrent_downloads: usize,
-    count_endpoint: String,
+    posts_endpoint: String,
     out_dir: PathBuf,
     safe_mode: bool,
 }
@@ -54,18 +52,14 @@ impl E621Downloader {
             tag_string,
             tag_list: Vec::from(tags),
             concurrent_downloads: concurrent_downs,
-            count_endpoint: "".to_string(),
+            posts_endpoint: "".to_string(),
             out_dir: out,
             safe_mode,
         })
     }
 
     async fn check_tag_list(&mut self) -> Result<(), Error> {
-        let count_endpoint = if self.safe_mode {
-            format!("{}?tags={}", E926_POST_LIST, &self.tag_string)
-        } else {
-            format!("{}?tags={}", E621_POST_LIST, &self.tag_string)
-        };
+        let count_endpoint = format!("{}?tags={}", ImageBoards::E621.post_url(self.safe_mode).unwrap(), &self.tag_string);
 
         // Get an estimate of total posts and pages to search
         let count = &self
@@ -85,7 +79,7 @@ impl E621Downloader {
             // Fill memory with standard post count just to initialize the progress bar
             self.item_count = count.posts.len() as u64;
 
-            self.count_endpoint = count_endpoint;
+            self.posts_endpoint = count_endpoint;
 
             Ok(())
         }
@@ -157,7 +151,7 @@ impl E621Downloader {
 
             let items = &self
                 .client
-                .get(&self.count_endpoint)
+                .get(&self.posts_endpoint)
                 .query(&[("page", page), ("limit", 320)])
                 .send()
                 .await?

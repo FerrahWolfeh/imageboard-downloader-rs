@@ -11,12 +11,13 @@ pub mod rule34;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum ImageBoards {
-    /// Used to download images from ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
+    /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
     Danbooru,
-    /// Used to download images from ```https://e621.net```.
+    /// Represents the website ```https://e621.net``` or it's safe variant ```https://e926.net```.
     E621,
     Rule34,
     Realbooru,
+    /// Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```.
     Konachan,
 }
 
@@ -46,6 +47,49 @@ impl ImageBoards {
         let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
         debug!("Using user-agent: {}", ua);
         ua
+    }
+
+    /// Exclusive to ```ImageBoards::Danbooru```.
+    ///
+    /// Will return ```Some``` with the endpoint for the total post count with given tags. In case it's used with another variant, it returns ```None```.
+    ///
+    /// The ```safe``` bool will determine if the endpoint directs to ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
+    pub fn post_count_url(&self, safe: bool) -> Option<&str> {
+        match self {
+            ImageBoards::Danbooru => {
+                if safe {
+                    Some("https://safebooru.donmai.us/counts/posts.json")
+                } else {
+                    Some("https://danbooru.donmai.us/counts/posts.json")
+                }
+            },
+            _ => None
+        }
+    }
+
+    /// Returns ```Some``` with the endpoint for the post list with their respective tags.
+    ///
+    /// Will return ```None``` for still unimplemented imageboards.
+    ///
+    /// ```safe``` works only with ```Imageboards::Danbooru```, ```Imageboards::E621``` and ```Imageboards::Konachan``` since they are the only ones that have a safe variant for now.
+    pub fn post_url(&self, safe: bool) -> Option<&str> {
+        match self {
+            ImageBoards::Danbooru => {
+                if safe {
+                    Some("https://safebooru.donmai.us/posts.json")
+                } else {
+                    Some("https://danbooru.donmai.us/posts.json")
+                }
+            },
+            ImageBoards::E621 => {
+                if safe {
+                    Some("https://e926.net/posts.json")
+                } else {
+                    Some("https://e621.net/posts.json")
+                }
+            },
+            _ => None
+        }
     }
 }
 
