@@ -11,7 +11,9 @@ pub mod rule34;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum ImageBoards {
+    /// Used to download images from ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
     Danbooru,
+    /// Used to download images from ```https://e621.net```.
     E621,
     Rule34,
     Realbooru,
@@ -31,6 +33,9 @@ impl ToString for ImageBoards {
 }
 
 impl ImageBoards {
+    /// Each variant can generate a specific user-agent to connect to the imageboard site.
+    ///
+    /// It will always follow the version declared inside ```Cargo.toml```
     pub fn user_agent(&self) -> String {
         let app_name = "Rust Imageboard Downloader";
         let variant = match self {
@@ -89,3 +94,21 @@ impl ImageBoards {
 // }
 //
 // impl error::Error for ParseError {}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use crate::imageboards::common::generate_out_dir;
+    use crate::{ImageBoards, join_tags};
+    use log::debug;
+
+    #[test]
+    fn test_dir_generation() {
+        let tags = join_tags!(["kroos_(arknights)", "weapon"]);
+        let path = Some(PathBuf::from("./"));
+
+        let out_dir = generate_out_dir(path, &tags, ImageBoards::Danbooru).unwrap();
+
+        assert_eq!(PathBuf::from("./danbooru/kroos_(arknights)+weapon"), out_dir);
+    }
+}
