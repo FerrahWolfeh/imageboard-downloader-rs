@@ -1,4 +1,5 @@
 use clap::ValueEnum;
+use log::debug;
 
 mod common;
 pub mod danbooru;
@@ -26,6 +27,20 @@ impl ToString for ImageBoards {
             ImageBoards::Realbooru => String::from("realbooru"),
             ImageBoards::Konachan => String::from("konachan"),
         }
+    }
+}
+
+impl ImageBoards {
+    pub fn user_agent(&self) -> String {
+        let app_name = "Rust Imageboard Downloader";
+        let variant = match self {
+            ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
+            ImageBoards::E621 => " (by e621 user FerrahWolfeh)",
+            _ => "",
+        };
+        let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
+        debug!("Using user-agent: {}", ua);
+        ua
     }
 }
 

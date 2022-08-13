@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, set_user_agent};
+use crate::imageboards::common::generate_out_dir;
 use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::{download_progress_style, master_progress_style};
 use crate::{client, join_tags, ImageBoards};
@@ -40,7 +40,7 @@ impl E621Downloader {
         safe_mode: bool,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent (e621 requires this)
-        let client = client!(ImageBoards::E621);
+        let client = client!(ImageBoards::E621.user_agent());
 
         // Join tags to a url format in case there's more than one
         let tag_string = join_tags!(tags);
