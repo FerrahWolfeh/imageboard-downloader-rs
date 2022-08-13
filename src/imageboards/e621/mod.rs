@@ -1,20 +1,20 @@
 use crate::imageboards::common::generate_out_dir;
+use crate::imageboards::e621::models::{E621File, E621Post, E621TopLevel};
 use crate::imageboards::E621_UA;
+use crate::progress_bars::{download_progress_style, master_progress_style};
 use crate::{client, join_tags, ImageBoards};
 use anyhow::{bail, Error};
+use futures::StreamExt;
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
+use md5::compute;
 use reqwest::Client;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use futures::StreamExt;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
-use md5::compute;
 use tokio::fs;
-use tokio::fs::{create_dir_all, OpenOptions, read};
+use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::imageboards::e621::models::{E621File, E621Post, E621TopLevel};
-use crate::progress_bars::{download_progress_style, master_progress_style};
 
 mod models;
 
@@ -154,7 +154,6 @@ impl E621Downloader {
         // Begin downloading all posts per page
         // Since e621 doesn't give a precise number of posts, we'll need to go through the pages until there's no more posts left to show
         while self.item_count != 0 {
-
             page += 1;
 
             let items = &self
@@ -234,5 +233,4 @@ impl E621Downloader {
         main.inc(1);
         Ok(())
     }
-
 }

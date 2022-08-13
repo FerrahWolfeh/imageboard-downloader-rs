@@ -26,7 +26,13 @@ struct Cli {
     output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
-    #[clap(short = 'd', value_name = "NUMBER", value_parser, default_value_t = 3, help_heading = "GENERAL")]
+    #[clap(
+        short = 'd',
+        value_name = "NUMBER",
+        value_parser,
+        default_value_t = 3,
+        help_heading = "GENERAL"
+    )]
     simultaneous_downloads: usize,
 
     /// Download images from the safe version of the selected Imageboard.

@@ -128,10 +128,7 @@ impl DanbooruDownloader {
             let jj = self
                 .client
                 .get(url_mode)
-                .query(&[
-                    ("page", &i.to_string()),
-                    ("limit", &200.to_string()),
-                ])
+                .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
                 .send()
                 .await?
                 .json::<Vec<DanbooruItem>>()
