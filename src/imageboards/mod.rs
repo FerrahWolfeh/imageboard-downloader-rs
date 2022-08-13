@@ -1,5 +1,6 @@
 use clap::ValueEnum;
 
+mod common;
 pub mod danbooru;
 pub mod e621;
 pub mod realbooru;
@@ -19,6 +20,18 @@ pub enum ImageBoards {
     Rule34,
     Realbooru,
     Konachan,
+}
+
+impl ToString for ImageBoards {
+    fn to_string(&self) -> String {
+        match self {
+            ImageBoards::Danbooru => String::from("danbooru"),
+            ImageBoards::E621 => String::from("e621"),
+            ImageBoards::Rule34 => String::from("rule34"),
+            ImageBoards::Realbooru => String::from("realbooru"),
+            ImageBoards::Konachan => String::from("konachan"),
+        }
+    }
 }
 
 // impl fmt::Display for ImageBoards {
