@@ -154,27 +154,27 @@ impl DanbooruDownloader {
         if item.file_url.is_some() {
             let output = &self.out_dir.join(format!(
                 "{}.{}",
-                item.md5.clone().unwrap(),
-                item.file_ext.clone().unwrap()
+                item.md5.as_ref().unwrap(),
+                item.file_ext.as_ref().unwrap()
             ));
             if output.exists() {
                 let file_digest = compute(read(output).await?);
                 let hash = format!("{:x}", file_digest);
-                if hash != item.md5.clone().unwrap() {
+                if &hash != item.md5.as_ref().unwrap() {
                     fs::remove_file(output).await?;
                     multi_progress.println(format!(
                         "File {}.{} is corrupted. Re-downloading...",
-                        item.md5.clone().unwrap(),
-                        item.file_ext.clone().unwrap()
+                        item.md5.as_ref().unwrap(),
+                        item.file_ext.as_ref().unwrap()
                     ))?;
                     Self::fetch(self, &item, multi_progress, main_bar, output).await?
                 } else {
                     multi_progress.println(format!(
                         "File {}.{} already exists. Skipping.",
-                        item.md5.unwrap(),
-                        item.file_ext.unwrap()
+                        item.md5.as_ref().unwrap(),
+                        item.file_ext.as_ref().unwrap()
                     ))?;
-                    main_bar.set_length(main_bar.length().unwrap() - 1)
+                    main_bar.inc(1)
                 }
                 return Ok(());
             } else {
