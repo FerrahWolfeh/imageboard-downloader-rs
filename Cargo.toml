@@ -1,7 +1,9 @@
 [package]
 name = "imageboard_downloader"
-version = "0.5.0"
+authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
+version = "0.8.0"
 edition = "2021"
+description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
