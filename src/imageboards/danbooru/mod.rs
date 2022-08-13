@@ -2,6 +2,7 @@ use crate::imageboards::common::generate_out_dir;
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::imageboards::DANBOORU_UA;
 use crate::progress_bars::{download_progress_style, master_progress_style};
+use crate::{client, join_tags, ImageBoards};
 use anyhow::{bail, Error};
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -14,7 +15,6 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::fs::{create_dir_all, read, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use crate::client;
 
 mod models;
 
@@ -45,12 +45,11 @@ impl DanbooruDownloader {
         if tags.len() > 2 {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
         };
-        // Use common client for all connections with a set User-Agent (mostly because of e621)
+        // Use common client for all connections with a set User-Agent
         let client = client!(DANBOORU_UA);
 
         // Join tags to a url format in case there's more than one
-        let tag_string = tags.join("+");
-        debug!("Tag List: {}", tag_string);
+        let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
         let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Danbooru)?;
