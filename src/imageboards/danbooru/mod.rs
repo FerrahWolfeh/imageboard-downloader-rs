@@ -69,16 +69,15 @@ impl DanbooruDownloader {
 
     async fn get_post_count(&mut self) -> Result<(), Error> {
         let count_endpoint = if self.safe_mode {
-            SAFEBOORU_COUNT
+            format!("{}?tags={}", SAFEBOORU_COUNT, &self.tag_string)
         } else {
-            DANBOORU_COUNT
+            format!("{}?tags={}", DANBOORU_COUNT, &self.tag_string)
         };
 
         // Get an estimate of total posts and pages to search
         let count = &self
             .client
             .get(count_endpoint)
-            .query(&[("tags", &self.tag_string)])
             .send()
             .await?
             .json::<DanbooruPostCount>()
@@ -120,9 +119,9 @@ impl DanbooruDownloader {
         for i in 1..=self.page_count {
             // Check safe mode
             let url_mode = if self.safe_mode {
-                SAFEBOORU_POSTS
+                format!("{}?tags={}", SAFEBOORU_POSTS, &self.tag_string)
             } else {
-                DANBOORU_POSTS
+                format!("{}?tags={}", DANBOORU_POSTS, &self.tag_string)
             };
 
             // Fetch item list from page
@@ -130,7 +129,6 @@ impl DanbooruDownloader {
                 .client
                 .get(url_mode)
                 .query(&[
-                    ("tags", &self.tag_string),
                     ("page", &i.to_string()),
                     ("limit", &200.to_string()),
                 ])
