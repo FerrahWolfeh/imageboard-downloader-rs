@@ -1,6 +1,6 @@
+use crate::progress_bars::BarTemplates;
 use clap::ValueEnum;
 use log::debug;
-use crate::progress_bars::BarTemplates;
 
 mod common;
 pub mod danbooru;
@@ -63,8 +63,8 @@ impl ImageBoards {
                 } else {
                     Some("https://danbooru.donmai.us/counts/posts.json")
                 }
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -81,15 +81,15 @@ impl ImageBoards {
                 } else {
                     Some("https://danbooru.donmai.us/posts.json")
                 }
-            },
+            }
             ImageBoards::E621 => {
                 if safe {
                     Some("https://e926.net/posts.json")
                 } else {
                     Some("https://e621.net/posts.json")
                 }
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -156,10 +156,10 @@ impl ImageBoards {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use crate::imageboards::common::generate_out_dir;
-    use crate::{ImageBoards, join_tags};
+    use crate::{join_tags, ImageBoards};
     use log::debug;
+    use std::path::PathBuf;
 
     #[test]
     fn test_dir_generation() {
@@ -168,6 +168,9 @@ mod tests {
 
         let out_dir = generate_out_dir(path, &tags, ImageBoards::Danbooru).unwrap();
 
-        assert_eq!(PathBuf::from("./danbooru/kroos_(arknights)+weapon"), out_dir);
+        assert_eq!(
+            PathBuf::from("./danbooru/kroos_(arknights)+weapon"),
+            out_dir
+        );
     }
 }
