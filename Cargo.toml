@@ -34,3 +34,9 @@ features = ["derive", "cargo"]
 [dependencies.serde]
 version = "1.0.143"
 features = ["derive"]
+
+[profile.release]
+lto = true
+opt-level = 3
+strip = true
+debug = false
