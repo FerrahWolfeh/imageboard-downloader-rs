@@ -83,6 +83,9 @@ impl E621Downloader {
         } else {
             debug!("Tag list: {:?} is valid", &self.tag_list);
 
+            // Fill memory with standard post count just to initialize the progress bar
+            self.item_count = count.posts.len() as u64;
+
             self.count_endpoint = count_endpoint;
 
             Ok(())
@@ -137,7 +140,7 @@ impl E621Downloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(self.item_count).with_style(master_progress_style());
+        let bar = ProgressBar::new(0).with_style(master_progress_style());
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 
