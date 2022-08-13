@@ -78,7 +78,7 @@ impl E621Downloader {
             .await?;
 
         // Bail out if no posts are found
-        if count.posts.len() == 0 {
+        if count.posts.is_empty() {
             bail!("No posts found for tag selection!")
         } else {
             debug!("Tag list: {:?} is valid", &self.tag_list);
@@ -122,7 +122,7 @@ impl E621Downloader {
                         post_file.md5.as_ref().unwrap(),
                         post_file.ext.as_ref().unwrap()
                     ))?;
-                    main_bar.set_length(main_bar.length().unwrap() - 1)
+                    main_bar.inc(1)
                 }
                 return Ok(());
             } else {
@@ -165,7 +165,10 @@ impl E621Downloader {
                 .json::<E621TopLevel>()
                 .await?;
 
-            self.item_count = items.posts.len() as u64;
+            let posts = items.posts.len() as u64;
+
+            self.item_count = posts;
+            main.inc_length(posts);
 
             if self.item_count != 0 {
                 futures::stream::iter(&items.posts)
