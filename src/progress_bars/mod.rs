@@ -3,13 +3,23 @@ use std::fmt::Write;
 
 const PROGRESS_CHARS: &str = "━━";
 
-const MASTER_BAR_TEMPLATE: &str = "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} (est. {eta})";
+pub struct BarTemplates {
+    pub main: &'static str,
+    pub download: &'static str,
+}
 
-const DOWNLOAD_BAR_TEMPLATE: &str = "{spinner:.green.bold} {bar:40.green/white.dim} {bytes:>11.green}/{total_bytes:<11.green} {bytes_per_sec:>13.red} (est. {eta:.blue})";
+impl Default for BarTemplates {
+    fn default() -> Self {
+        Self {
+            main: "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} ({files_sec:.bold} | est. {eta})",
+            download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} {bytes_per_sec:>13.red} (est. {eta:.blue})",
+        }
+    }
+}
 
-pub fn master_progress_style() -> ProgressStyle {
+pub fn master_progress_style(templates: BarTemplates) -> ProgressStyle {
     ProgressStyle::default_bar()
-        .template(MASTER_BAR_TEMPLATE)
+        .template(templates.main)
         .unwrap()
         .with_key("pos", |state: &ProgressState, w: &mut dyn Write| {
             write!(w, "{}/{}", state.pos(), state.len().unwrap()).unwrap()
@@ -17,13 +27,6 @@ pub fn master_progress_style() -> ProgressStyle {
         .with_key("percent", |state: &ProgressState, w: &mut dyn Write| {
             write!(w, "{:>3.0}%", state.fraction() * 100_f32).unwrap()
         })
-        .progress_chars(PROGRESS_CHARS)
-}
-
-pub fn download_progress_style() -> ProgressStyle {
-    ProgressStyle::default_bar()
-        .template(DOWNLOAD_BAR_TEMPLATE)
-        .unwrap()
         .with_key(
             "files_sec",
             |state: &ProgressState, w: &mut dyn Write| match state.per_sec() {
@@ -32,8 +35,15 @@ pub fn download_progress_style() -> ProgressStyle {
                 files_sec => write!(w, "{:.2} files/s", files_sec).unwrap(),
             },
         )
-        .with_key("position", |state: &ProgressState, w: &mut dyn Write| {
-            write!(w, "{}/{}", state.pos(), state.len().unwrap()).unwrap()
+        .progress_chars(PROGRESS_CHARS)
+}
+
+pub fn download_progress_style(templates: BarTemplates) -> ProgressStyle {
+    ProgressStyle::default_bar()
+        .template(templates.download)
+        .unwrap()
+        .with_key("percent", |state: &ProgressState, w: &mut dyn Write| {
+            write!(w, "{:>3.0}%", state.fraction() * 100_f32).unwrap()
         })
         .progress_chars(PROGRESS_CHARS)
 }

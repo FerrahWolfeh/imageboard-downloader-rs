@@ -133,7 +133,7 @@ impl E621Downloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(0).with_style(master_progress_style());
+        let bar = ProgressBar::new(0).with_style(master_progress_style(ImageBoards::E621.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 
@@ -191,7 +191,7 @@ impl E621Downloader {
             .await?;
 
         let size = res.content_length().unwrap_or_default();
-        let bar = ProgressBar::new(size).with_style(download_progress_style());
+        let bar = ProgressBar::new(size).with_style(download_progress_style(ImageBoards::E621.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
         let pb = multi.add(bar);

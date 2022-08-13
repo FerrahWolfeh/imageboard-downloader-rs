@@ -1,5 +1,6 @@
 use clap::ValueEnum;
 use log::debug;
+use crate::progress_bars::BarTemplates;
 
 mod common;
 pub mod danbooru;
@@ -89,6 +90,20 @@ impl ImageBoards {
                 }
             },
             _ => None
+        }
+    }
+
+    /// Returns special-themed progress bars for each variant
+    pub fn progress_template(&self) -> BarTemplates {
+        match self {
+            ImageBoards::Danbooru => BarTemplates::default(),
+            ImageBoards::E621 => BarTemplates {
+                main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} ({files_sec:.bold} | est. {eta})",
+                download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} {bytes_per_sec:>13.yellow} (est. {eta:.blue})",
+            },
+            ImageBoards::Rule34 => BarTemplates::default(),
+            ImageBoards::Realbooru => BarTemplates::default(),
+            ImageBoards::Konachan => BarTemplates::default(),
         }
     }
 }

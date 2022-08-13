@@ -97,7 +97,7 @@ impl DanbooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(self.item_count).with_style(master_progress_style());
+        let bar = ProgressBar::new(self.item_count).with_style(master_progress_style(ImageBoards::Danbooru.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 
@@ -185,7 +185,7 @@ impl DanbooruDownloader {
             .await?;
 
         let size = res.content_length().unwrap_or_default();
-        let bar = ProgressBar::new(size).with_style(download_progress_style());
+        let bar = ProgressBar::new(size).with_style(download_progress_style(ImageBoards::Danbooru.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
         let pb = multi.add(bar);
