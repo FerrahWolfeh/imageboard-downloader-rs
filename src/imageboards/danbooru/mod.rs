@@ -1,3 +1,4 @@
+use crate::imageboards::common::generate_out_dir;
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::imageboards::DANBOORU_UA;
 use crate::progress_bars::{download_progress_style, master_progress_style};
@@ -52,14 +53,7 @@ impl DanbooruDownloader {
         debug!("Tag List: {}", tag_string);
 
         // Place downloaded items in current dir or in /tmp
-        let place = match out_dir {
-            None => std::env::current_dir()?,
-            Some(dir) => dir,
-        };
-
-        // Create output dir
-        let out = place.join(PathBuf::from(format!("danbooru/{}", &tag_string)));
-        debug!("Target dir: {}", out.display());
+        let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Danbooru)?;
 
         Ok(Self {
             item_count: 0,
