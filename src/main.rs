@@ -1,4 +1,5 @@
 use crate::imageboards::danbooru::DanbooruDownloader;
+use crate::imageboards::e621::E621Downloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
@@ -16,7 +17,7 @@ struct Cli {
     #[clap(value_parser, required = true)]
     tags: Vec<String>,
 
-    /// Specify website to download from
+    /// Specify which website to download from
     #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
     imageboard: ImageBoards,
 
@@ -25,7 +26,7 @@ struct Cli {
     output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
-    #[clap(short = 'd', value_name = "NUMBER", value_parser, default_value_t = 3)]
+    #[clap(short = 'd', value_name = "NUMBER", value_parser, default_value_t = 3, help_heading = "GENERAL")]
     simultaneous_downloads: usize,
 
     /// Download images from the safe version of the selected Imageboard.
@@ -33,7 +34,7 @@ struct Cli {
     /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
     ///
     /// Useful if you only want to download posts with "safe" rating.
-    #[clap(long, action, default_value_t = false, help_heading = "COMMON")]
+    #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
     safe_mode: bool,
 }
 
@@ -53,7 +54,16 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::E621 => todo!(),
+        ImageBoards::E621 => {
+            let mut dl = E621Downloader::new(
+                &args.tags,
+                args.output,
+                args.simultaneous_downloads,
+                args.safe_mode,
+            )?;
+
+            dl.download().await?;
+        }
         ImageBoards::Rule34 => todo!(),
         ImageBoards::Realbooru => todo!(),
         ImageBoards::Konachan => todo!(),

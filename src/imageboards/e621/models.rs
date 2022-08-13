@@ -12,7 +12,7 @@ pub struct E621Post {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct E621File {
-    pub ext: String,
-    pub md5: String,
-    pub url: String,
+    pub ext: Option<String>,
+    pub md5: Option<String>,
+    pub url: Option<String>,
 }
