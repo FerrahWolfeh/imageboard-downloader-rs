@@ -83,9 +83,6 @@ impl E621Downloader {
         } else {
             debug!("Tag list: {:?} is valid", &self.tag_list);
 
-            // Fill memory with standard post count just to initialize the progress bar
-            self.item_count = count.posts.len() as u64;
-
             self.count_endpoint = count_endpoint;
 
             Ok(())
