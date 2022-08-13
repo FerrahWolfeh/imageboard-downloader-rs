@@ -19,7 +19,7 @@ mod models;
 
 const E621_POST_LIST: &str = "https://e621.net/posts.json";
 const E926_POST_LIST: &str = "https://e926.net/posts.json";
-const E621_FAVORITES: &str = "https://e621.net/favorites.json";
+const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
 pub struct E621Downloader {
     item_count: u64,
