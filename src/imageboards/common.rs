@@ -47,13 +47,23 @@ pub fn generate_out_dir(
     Ok(out)
 }
 
+/// Most ImageBoard APIs have a common set of info from the files we want to download.
+/// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
 pub struct CommonPostItem {
+    /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
+    /// Instead of calculating the downloaded file's MD5 hash on the fly, it uses the one provided by the API and serves as the name of the downloaded file.
     pub md5: String,
+    /// The original file extension provided by the imageboard.
+    ///
+    /// ```https://konachan.com``` or other imageboards based on MoeBooru doesn`t provide this field. So, additional work is required to get the file extension from the url
     pub ext: String,
 }
 
 impl CommonPostItem {
+    /// Main routine to download posts.
+    ///
+    /// This method should be coupled into a function block to run inside a ```futures::stream``` in order to prevent issues with ```await```
     pub async fn get(
         &self,
         client: &Client,
