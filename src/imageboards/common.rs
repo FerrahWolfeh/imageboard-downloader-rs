@@ -98,6 +98,7 @@ impl CommonPostItem {
                 bail!("")
             }
         } else {
+            main_bar.set_length(main_bar.length().unwrap() - 1);
             Ok(())
         }
     }
