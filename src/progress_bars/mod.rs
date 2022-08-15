@@ -1,4 +1,4 @@
-use indicatif::{ProgressState, ProgressStyle};
+use indicatif::{HumanBytes, ProgressState, ProgressStyle};
 use std::fmt::Write;
 
 const PROGRESS_CHARS: &str = "━━";
@@ -11,8 +11,8 @@ pub struct BarTemplates {
 impl Default for BarTemplates {
     fn default() -> Self {
         Self {
-            main: "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} ({files_sec:.bold} | est. {eta})",
-            download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} {bytes_per_sec:>13.red} (est. {eta:.blue})",
+            main: "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} ({files_sec:.bold} | eta. {eta})",
+            download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} | {byte_progress:.green} @ {bytes_per_sec:>13.red} (eta. {eta:.blue})",
         }
     }
 }
@@ -44,6 +44,9 @@ pub fn download_progress_style(templates: BarTemplates) -> ProgressStyle {
         .unwrap()
         .with_key("percent", |state: &ProgressState, w: &mut dyn Write| {
             write!(w, "{:>3.0}%", state.fraction() * 100_f32).unwrap()
+        })
+        .with_key("byte_progress", |state: &ProgressState, w: &mut dyn Write| {
+            write!(w, "{}/{}", HumanBytes(state.pos()), HumanBytes(state.len().unwrap())).unwrap()
         })
         .progress_chars(PROGRESS_CHARS)
 }

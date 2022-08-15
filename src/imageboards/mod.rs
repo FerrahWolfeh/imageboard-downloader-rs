@@ -98,8 +98,8 @@ impl ImageBoards {
         match self {
             ImageBoards::Danbooru => BarTemplates::default(),
             ImageBoards::E621 => BarTemplates {
-                main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} ({files_sec:.bold} | est. {eta})",
-                download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} {bytes_per_sec:>13.yellow} (est. {eta:.blue})",
+                main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} ({files_sec:.bold} | eta. {eta})",
+                download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:.blue})",
             },
             ImageBoards::Rule34 => BarTemplates::default(),
             ImageBoards::Realbooru => BarTemplates::default(),
