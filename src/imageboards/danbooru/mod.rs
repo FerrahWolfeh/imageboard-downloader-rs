@@ -16,7 +16,7 @@ pub mod models;
 
 pub struct DanbooruDownloader {
     item_count: u64,
-    page_count: u64,
+    page_count: f32,
     concurrent_downloads: usize,
     tag_list: Vec<String>,
     tag_string: String,
@@ -49,7 +49,7 @@ impl DanbooruDownloader {
 
         Ok(Self {
             item_count: 0,
-            page_count: 0,
+            page_count: 0.0,
             concurrent_downloads: concurrent_downs,
             tag_list: Vec::from(tags),
             tag_string,
@@ -96,7 +96,7 @@ impl DanbooruDownloader {
         }
 
         self.item_count = count.counts.posts;
-        self.page_count = self.item_count / 200;
+        self.page_count = (self.item_count as f32 / 200.0).ceil();
 
         debug!(
             "{} Posts for tag list '{:?}'",
@@ -128,7 +128,7 @@ impl DanbooruDownloader {
         let main = Arc::new(multi.add(bar));
 
         // Begin downloading all posts per page
-        for i in 1..=self.page_count {
+        for i in 1..=self.page_count as u64 {
             // Check safe mode
             let url_mode = format!(
                 "{}?tags={}",
