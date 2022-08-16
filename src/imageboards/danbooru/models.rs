@@ -10,7 +10,7 @@ pub struct DanbooruItem {
 
 #[derive(Serialize, Deserialize)]
 pub struct Count {
-    pub posts: f32,
+    pub posts: u64,
 }
 
 #[derive(Serialize, Deserialize)]

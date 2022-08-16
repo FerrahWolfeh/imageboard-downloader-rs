@@ -42,7 +42,7 @@ impl ImageBoards {
     /// Each variant can generate a specific user-agent to connect to the imageboard site.
     ///
     /// It will always follow the version declared inside ```Cargo.toml```
-    pub fn user_agent(&self) -> String {
+    pub fn user_agent(self) -> String {
         let app_name = "Rust Imageboard Downloader";
         let variant = match self {
             ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
@@ -59,7 +59,7 @@ impl ImageBoards {
     /// Will return ```Some``` with the endpoint for the total post count with given tags. In case it's used with another variant, it returns ```None```.
     ///
     /// The ```safe``` bool will determine if the endpoint directs to ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
-    pub fn post_count_url(&self, safe: bool) -> Option<&str> {
+    pub fn post_count_url(self, safe: bool) -> Option<&'static str> {
         match self {
             ImageBoards::Danbooru => {
                 if safe {
@@ -98,7 +98,7 @@ impl ImageBoards {
     }
 
     /// Returns special-themed progress bars for each variant
-    pub fn progress_template(&self) -> BarTemplates {
+    pub fn progress_template(self) -> BarTemplates {
         match self {
             ImageBoards::E621 => BarTemplates {
                 main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} ({files_sec:.bold} | eta. {eta})",
@@ -108,7 +108,7 @@ impl ImageBoards {
         }
     }
 
-    pub fn auth_url(&self) -> &str {
+    pub fn auth_url(self) -> &'static str {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
             ImageBoards::E621
@@ -118,7 +118,7 @@ impl ImageBoards {
         }
     }
 
-    pub fn auth_cache_dir(&self) -> Result<PathBuf, Error> {
+    pub fn auth_cache_dir(self) -> Result<PathBuf, Error> {
         let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader-rs")?;
 
         let dir = xdg_dir.place_config_file(self.to_string())?;

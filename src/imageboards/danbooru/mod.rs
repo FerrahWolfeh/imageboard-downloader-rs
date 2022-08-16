@@ -91,12 +91,12 @@ impl DanbooruDownloader {
         };
 
         // Bail out if no posts are found
-        if count.counts.posts == 0.0 {
+        if count.counts.posts == 0 {
             bail!("No posts found for tag selection!")
         }
 
-        self.item_count = count.counts.posts as u64;
-        self.page_count = (count.counts.posts / 200.0).ceil() as u64;
+        self.item_count = count.counts.posts;
+        self.page_count = (count.counts.posts / 200);
 
         debug!(
             "{} Posts for tag list '{:?}'",

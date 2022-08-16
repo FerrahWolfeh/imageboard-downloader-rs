@@ -47,7 +47,7 @@ pub fn generate_out_dir(
     Ok(out)
 }
 
-/// Most ImageBoard APIs have a common set of info from the files we want to download.
+/// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
 pub struct CommonPostItem {
     pub id: u64,
@@ -85,7 +85,7 @@ impl CommonPostItem {
             .await
             .is_ok()
         {
-            Self::fetch(self, client, multi, main, &output, variant).await?
+            Self::fetch(self, client, multi, main, &output, variant).await?;
         }
         Ok(())
     }
@@ -99,20 +99,20 @@ impl CommonPostItem {
         if output.exists() {
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
-            if hash != self.md5 {
-                fs::remove_file(&output).await?;
-                multi_progress.println(format!(
-                    "File {}.{} is corrupted. Re-downloading...",
-                    &self.md5, &self.ext
-                ))?;
-                Ok(())
-            } else {
+            if hash = self.md5 {
                 multi_progress.println(format!(
                     "File {}.{} already exists. Skipping.",
                     &self.md5, &self.ext
                 ))?;
                 main_bar.inc(1);
                 bail!("")
+            } else {
+                fs::remove_file(&output).await?;
+                multi_progress.println(format!(
+                    "File {}.{} is corrupted. Re-downloading...",
+                    &self.md5, &self.ext
+                ))?;
+                Ok(())
             }
         } else {
             Ok(())
