@@ -99,7 +99,7 @@ impl CommonPostItem {
         if output.exists() {
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
-            if hash = self.md5 {
+            if hash == self.md5 {
                 multi_progress.println(format!(
                     "File {}.{} already exists. Skipping.",
                     &self.md5, &self.ext
