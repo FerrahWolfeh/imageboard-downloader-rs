@@ -74,16 +74,15 @@ impl E621Downloader {
         // Bail out if no posts are found
         if count.posts.is_empty() {
             bail!("No posts found for tag selection!")
-        } else {
-            debug!("Tag list: {:?} is valid", &self.tag_list);
-
-            // Fill memory with standard post count just to initialize the progress bar
-            self.item_count = count.posts.len() as u64;
-
-            self.posts_endpoint = count_endpoint;
-
-            Ok(())
         }
+        debug!("Tag list: {:?} is valid", &self.tag_list);
+
+        // Fill memory with standard post count just to initialize the progress bar
+        self.item_count = count.posts.len() as u64;
+
+        self.posts_endpoint = count_endpoint;
+
+        Ok(())
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
@@ -94,8 +93,9 @@ impl E621Downloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(0)
-            .with_style(master_progress_style(ImageBoards::E621.progress_template()));
+        let bar = ProgressBar::new(0).with_style(master_progress_style(
+            &ImageBoards::E621.progress_template(),
+        ));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 

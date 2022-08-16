@@ -124,8 +124,8 @@ impl CommonPostItem {
         let res = client.get(&self.url).send().await?;
 
         let size = res.content_length().unwrap_or_default();
-        let bar =
-            ProgressBar::new(size).with_style(download_progress_style(variant.progress_template()));
+        let bar = ProgressBar::new(size)
+            .with_style(download_progress_style(&variant.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
         let pb = multi.add(bar);

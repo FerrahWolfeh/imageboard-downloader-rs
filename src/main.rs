@@ -112,9 +112,7 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Rule34 => todo!(),
-        ImageBoards::Realbooru => todo!(),
-        ImageBoards::Konachan => todo!(),
+        ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
     };
 
     Ok(())

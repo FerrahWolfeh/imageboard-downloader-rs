@@ -115,7 +115,7 @@ impl DanbooruDownloader {
 
         // Setup global progress bar
         let bar = ProgressBar::new(self.item_count).with_style(master_progress_style(
-            ImageBoards::Danbooru.progress_template(),
+            &ImageBoards::Danbooru.progress_template(),
         ));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
