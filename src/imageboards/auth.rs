@@ -24,13 +24,13 @@ impl AuthCredentials {
             debug!("Authentication cache found");
 
             return if let Ok(rd) = deserialize::<AuthCredentials>(&config_auth) {
-                debug!("Authentication cache decoded. Using authentication");
+                debug!("Authentication cache decoded.");
                 Ok(Some(Self {
                     username: rd.username,
                     api_key: rd.api_key,
                 }))
             } else {
-                debug!("Authentication cache is empty. Using normal mode");
+                debug!("Authentication cache is invalid or empty. Using normal mode");
                 Ok(None)
             };
         };

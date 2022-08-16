@@ -69,6 +69,7 @@ impl DanbooruDownloader {
 
         // Get an estimate of total posts and pages to search
         let count = if let Some(data) = auth_creds {
+            debug!("[AUTH] Fetching post count");
             self.client
                 .get(count_endpoint)
                 .basic_auth(&data.username, Some(&data.api_key))
@@ -77,6 +78,7 @@ impl DanbooruDownloader {
                 .json::<DanbooruPostCount>()
                 .await?
         } else {
+            debug!("Fetching post count");
             self.client
                 .get(count_endpoint)
                 .send()
@@ -133,6 +135,7 @@ impl DanbooruDownloader {
 
             // Fetch item list from page
             let jj = if let Some(data) = &auth_res {
+                debug!("[AUTH] Fetching posts from page {}", i);
                 self.client
                     .get(url_mode)
                     .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
@@ -142,6 +145,7 @@ impl DanbooruDownloader {
                     .json::<Vec<DanbooruItem>>()
                     .await?
             } else {
+                debug!("Fetching posts from page {}", i);
                 self.client
                     .get(url_mode)
                     .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
