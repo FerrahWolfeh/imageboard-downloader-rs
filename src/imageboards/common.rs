@@ -2,6 +2,7 @@
 use crate::progress_bars::download_progress_style;
 use crate::ImageBoards;
 use anyhow::{bail, Error};
+use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
@@ -57,7 +58,7 @@ pub struct CommonPostItem {
     pub md5: String,
     /// The original file extension provided by the imageboard.
     ///
-    /// ```https://konachan.com``` or other imageboards based on MoeBooru doesn`t provide this field. So, additional work is required to get the file extension from the url
+    /// ```https://konachan.com``` or other imageboards based on MoeBooru doesn't provide this field. So, additional work is required to get the file extension from the url
     pub ext: String,
 }
 
@@ -101,8 +102,10 @@ impl CommonPostItem {
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
                 multi_progress.println(format!(
-                    "File {}.{} already exists. Skipping.",
-                    &self.md5, &self.ext
+                    "{} {} {}",
+                    "File".bold().green(),
+                    format!("{}.{}", &self.md5, &self.ext).bold().green(),
+                    "already exists. Skipping.".bold().green()
                 ))?;
                 main_bar.inc(1);
                 bail!("")
@@ -110,8 +113,10 @@ impl CommonPostItem {
 
             fs::remove_file(&output).await?;
             multi_progress.println(format!(
-                "File {}.{} is corrupted. Re-downloading...",
-                &self.md5, &self.ext
+                "{} {} {}",
+                "File".bold().red(),
+                format!("{}.{}", &self.md5, &self.ext).bold().red(),
+                "is corrupted. Re-downloading...".bold().red()
             ))?;
 
             Ok(())

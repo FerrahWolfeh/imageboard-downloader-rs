@@ -119,7 +119,7 @@ impl ImageBoards {
     }
 
     pub fn auth_cache_dir(self) -> Result<PathBuf, Error> {
-        let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader-rs")?;
+        let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
 
         let dir = xdg_dir.place_config_file(self.to_string())?;
         Ok(dir)

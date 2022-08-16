@@ -27,7 +27,13 @@ struct Cli {
     imageboard: ImageBoards,
 
     /// Where to save downloaded files
-    #[clap(short, long, parse(from_os_str), value_name = "PATH")]
+    #[clap(
+    short,
+    long,
+    parse(from_os_str),
+    value_name = "PATH",
+    help_heading = "DOWNLOAD"
+    )]
     output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
@@ -36,14 +42,14 @@ struct Cli {
         value_name = "NUMBER",
         value_parser,
         default_value_t = 3,
-        help_heading = "GENERAL"
+    help_heading = "DOWNLOAD"
     )]
     simultaneous_downloads: usize,
 
     /// Authenticate to the imageboard website.
     ///
     /// This flag only needs to be set a single time.
-    #[clap(short, long, action)]
+    #[clap(short, long, action, help_heading = "Danbooru Specific Options")]
     auth: bool,
 
     /// Download images from the safe version of the selected Imageboard.
@@ -51,16 +57,16 @@ struct Cli {
     /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
     ///
     /// Useful if you only want to download posts with "safe" rating.
-    #[clap(
-        long,
-        action,
-        default_value_t = false,
-        help_heading = "Danbooru Specific Options"
-    )]
+    #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
     safe_mode: bool,
 
     /// Save files with their ID as filename instead of it's MD5
-    #[clap(long = "id", value_parser, default_value_t = false)]
+    #[clap(
+    long = "id",
+    value_parser,
+    default_value_t = false,
+    help_heading = "DOWNLOAD"
+    )]
     save_file_as_id: bool,
 }
 

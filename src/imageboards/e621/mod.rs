@@ -3,6 +3,7 @@ use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, ImageBoards};
 use anyhow::{bail, Error};
+use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
@@ -137,7 +138,14 @@ impl E621Downloader {
             }
         }
 
+        let total_length = main.length().unwrap();
         main.finish_and_clear();
+        println!(
+            "{} {} {}",
+            total_length.to_string().bold().blue(),
+            "files".bold().blue(),
+            "downloaded".bold()
+        );
         Ok(())
     }
 

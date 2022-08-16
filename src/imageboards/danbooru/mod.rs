@@ -3,6 +3,7 @@ use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, AuthCredentials, ImageBoards};
 use anyhow::{bail, Error};
+use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
@@ -24,7 +25,6 @@ pub struct DanbooruDownloader {
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
-    _downloaded_files: u64,
 }
 
 impl DanbooruDownloader {
@@ -57,7 +57,6 @@ impl DanbooruDownloader {
             out_dir: out,
             safe_mode,
             save_as_id,
-            _downloaded_files: 0,
         })
     }
 
@@ -165,7 +164,15 @@ impl DanbooruDownloader {
                 .collect::<Vec<_>>()
                 .await;
         }
+
+        let total_length = main.length().unwrap();
         main.finish_and_clear();
+        println!(
+            "{} {} {}",
+            total_length.to_string().bold().green(),
+            "files".bold().green(),
+            "downloaded".bold()
+        );
         Ok(())
     }
 
