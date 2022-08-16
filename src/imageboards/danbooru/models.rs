@@ -19,6 +19,8 @@ pub struct DanbooruPostCount {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Auth {
-    pub login: String,
-    pub api_key: String,
+    pub success: Option<bool>,
+    pub message: Option<String>,
+    pub name: Option<String>,
+    pub id: Option<u64>,
 }

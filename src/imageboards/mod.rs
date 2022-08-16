@@ -1,7 +1,11 @@
 use crate::progress_bars::BarTemplates;
+use anyhow::Error;
 use clap::ValueEnum;
 use log::debug;
+use std::path::PathBuf;
+use xdg::BaseDirectories;
 
+pub mod auth;
 mod common;
 pub mod danbooru;
 pub mod e621;
@@ -105,6 +109,23 @@ impl ImageBoards {
             ImageBoards::Realbooru => BarTemplates::default(),
             ImageBoards::Konachan => BarTemplates::default(),
         }
+    }
+
+    pub fn auth_url(&self) -> &str {
+        match self {
+            ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
+            ImageBoards::E621 => todo!(),
+            ImageBoards::Rule34 => todo!(),
+            ImageBoards::Realbooru => todo!(),
+            ImageBoards::Konachan => todo!(),
+        }
+    }
+
+    pub fn auth_cache_dir(&self) -> Result<PathBuf, Error> {
+        let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader-rs")?;
+
+        let dir = xdg_dir.place_config_file(self.to_string())?;
+        Ok(dir)
     }
 }
 

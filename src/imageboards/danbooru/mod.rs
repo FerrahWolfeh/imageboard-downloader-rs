@@ -1,7 +1,7 @@
 use crate::imageboards::common::{generate_out_dir, CommonPostItem};
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, ImageBoards};
+use crate::{client, join_tags, AuthCredentials, ImageBoards};
 use anyhow::{bail, Error};
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 
-mod models;
+pub mod models;
 
 pub struct DanbooruDownloader {
     item_count: u64,
@@ -58,7 +58,7 @@ impl DanbooruDownloader {
         })
     }
 
-    async fn get_post_count(&mut self) -> Result<(), Error> {
+    async fn get_post_count(&mut self, auth_creds: &Option<AuthCredentials>) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::Danbooru
@@ -68,13 +68,22 @@ impl DanbooruDownloader {
         );
 
         // Get an estimate of total posts and pages to search
-        let count = &self
-            .client
-            .get(count_endpoint)
-            .send()
-            .await?
-            .json::<DanbooruPostCount>()
-            .await?;
+        let count = if let Some(data) = auth_creds {
+            self.client
+                .get(count_endpoint)
+                .basic_auth(&data.username, Some(&data.api_key))
+                .send()
+                .await?
+                .json::<DanbooruPostCount>()
+                .await?
+        } else {
+            self.client
+                .get(count_endpoint)
+                .send()
+                .await?
+                .json::<DanbooruPostCount>()
+                .await?
+        };
 
         // Bail out if no posts are found
         if count.counts.posts == 0.0 {
@@ -93,8 +102,11 @@ impl DanbooruDownloader {
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
+        // Get auth data
+        let auth_res = AuthCredentials::read_from_fs(ImageBoards::Danbooru).await?;
+
         // Generate post count data
-        Self::get_post_count(self).await?;
+        Self::get_post_count(self, &auth_res).await?;
 
         // Create output dir
         create_dir_all(&self.out_dir).await?;
@@ -120,14 +132,24 @@ impl DanbooruDownloader {
             );
 
             // Fetch item list from page
-            let jj = self
-                .client
-                .get(url_mode)
-                .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
-                .send()
-                .await?
-                .json::<Vec<DanbooruItem>>()
-                .await?;
+            let jj = if let Some(data) = &auth_res {
+                self.client
+                    .get(url_mode)
+                    .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
+                    .basic_auth(&data.username, Some(&data.api_key))
+                    .send()
+                    .await?
+                    .json::<Vec<DanbooruItem>>()
+                    .await?
+            } else {
+                self.client
+                    .get(url_mode)
+                    .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
+                    .send()
+                    .await?
+                    .json::<Vec<DanbooruItem>>()
+                    .await?
+            };
 
             // Download everything got in the above function
             futures::stream::iter(jj)

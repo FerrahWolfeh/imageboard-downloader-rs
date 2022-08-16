@@ -1,16 +1,19 @@
+use crate::imageboards::auth::AuthCredentials;
 use crate::imageboards::danbooru::DanbooruDownloader;
 use crate::imageboards::e621::E621Downloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
-use std::path::PathBuf;
+use colored::Colorize;
+use log::debug;
 use std::io;
+use std::io::Write;
+use std::path::PathBuf;
 
 extern crate tokio;
 
 mod imageboards;
 mod progress_bars;
-mod auth;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -29,11 +32,11 @@ struct Cli {
 
     /// Number of simultaneous downloads
     #[clap(
-    short = 'd',
-    value_name = "NUMBER",
-    value_parser,
-    default_value_t = 3,
-    help_heading = "GENERAL"
+        short = 'd',
+        value_name = "NUMBER",
+        value_parser,
+        default_value_t = 3,
+        help_heading = "GENERAL"
     )]
     simultaneous_downloads: usize,
 
@@ -52,16 +55,31 @@ struct Cli {
     safe_mode: bool,
 }
 
-async fn do_auth(auth_state: bool, imageboard: ImageBoards) -> Result<(), Error> {
+async fn try_auth(auth_state: bool, imageboard: ImageBoards) -> Result<(), Error> {
     if auth_state {
         let mut username = String::new();
         let mut api_key = String::new();
         let stdin = io::stdin();
-        println!("Enter your username.");
+        println!(
+            "{} {}",
+            "Logging into:".bold(),
+            imageboard.to_string().green().bold()
+        );
+        print!("{}", "Username: ".bold());
+        io::stdout().flush()?;
         stdin.read_line(&mut username)?;
-        println!("Enter the imageboard`s API key");
+        print!("{}", "API Key: ".bold());
+        io::stdout().flush()?;
         stdin.read_line(&mut api_key)?;
-        return Ok(())
+
+        debug!("Username: {:?}", username.trim());
+        debug!("API key: {:?}", api_key.trim());
+
+        let at = AuthCredentials::new(username.trim().to_string(), api_key.trim().to_string());
+
+        at.authenticate(imageboard).await?;
+
+        return Ok(());
     }
     Ok(())
 }
@@ -73,6 +91,7 @@ async fn main() -> Result<(), Error> {
 
     match args.imageboard {
         ImageBoards::Danbooru => {
+            try_auth(args.auth, args.imageboard).await?;
             let mut dl = DanbooruDownloader::new(
                 &args.tags,
                 args.output,
@@ -83,6 +102,7 @@ async fn main() -> Result<(), Error> {
             dl.download().await?;
         }
         ImageBoards::E621 => {
+            try_auth(args.auth, args.imageboard).await?;
             let mut dl = E621Downloader::new(
                 &args.tags,
                 args.output,
