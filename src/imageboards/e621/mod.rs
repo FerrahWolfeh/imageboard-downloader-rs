@@ -25,6 +25,7 @@ pub struct E621Downloader {
     posts_endpoint: String,
     out_dir: PathBuf,
     safe_mode: bool,
+    save_as_id: bool,
 }
 
 impl E621Downloader {
@@ -33,6 +34,7 @@ impl E621Downloader {
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
         safe_mode: bool,
+        save_as_id: bool,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent (e621 requires this)
         let client = client!(ImageBoards::E621.user_agent());
@@ -52,6 +54,7 @@ impl E621Downloader {
             posts_endpoint: "".to_string(),
             out_dir: out,
             safe_mode,
+            save_as_id,
         })
     }
 
@@ -146,6 +149,7 @@ impl E621Downloader {
     ) -> Result<(), Error> {
         if item.file.url.is_some() {
             let entity = CommonPostItem {
+                id: item.file.id.unwrap(),
                 url: item.file.url.clone().unwrap(),
                 md5: item.file.md5.clone().unwrap(),
                 ext: item.file.ext.clone().unwrap(),
@@ -157,6 +161,7 @@ impl E621Downloader {
                     multi_bar,
                     main_bar,
                     ImageBoards::E621,
+                    self.save_as_id,
                 )
                 .await?;
             Ok(())

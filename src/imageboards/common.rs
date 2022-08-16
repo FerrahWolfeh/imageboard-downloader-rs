@@ -50,6 +50,7 @@ pub fn generate_out_dir(
 /// Most ImageBoard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
 pub struct CommonPostItem {
+    pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
     /// Instead of calculating the downloaded file's MD5 hash on the fly, it uses the one provided by the API and serves as the name of the downloaded file.
@@ -71,8 +72,14 @@ impl CommonPostItem {
         multi: Arc<MultiProgress>,
         main: Arc<ProgressBar>,
         variant: ImageBoards,
+        name_id: bool,
     ) -> Result<(), Error> {
-        let output = output.join(format!("{}.{}", &self.md5, &self.ext));
+        let name = if name_id {
+            self.id.to_string()
+        } else {
+            self.md5.clone()
+        };
+        let output = output.join(format!("{}.{}", name, &self.ext));
 
         if Self::check_file_exists(self, &output, multi.clone(), main.clone())
             .await

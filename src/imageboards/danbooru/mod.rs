@@ -23,6 +23,7 @@ pub struct DanbooruDownloader {
     client: Client,
     out_dir: PathBuf,
     safe_mode: bool,
+    save_as_id: bool,
     _downloaded_files: u64,
 }
 
@@ -32,6 +33,7 @@ impl DanbooruDownloader {
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
         safe_mode: bool,
+        save_as_id: bool,
     ) -> Result<Self, Error> {
         if tags.len() > 2 {
             bail!("Danbooru downloader currently doesn't support more than 2 tags")
@@ -54,6 +56,7 @@ impl DanbooruDownloader {
             client,
             out_dir: out,
             safe_mode,
+            save_as_id,
             _downloaded_files: 0,
         })
     }
@@ -174,6 +177,7 @@ impl DanbooruDownloader {
     ) -> Result<(), Error> {
         if item.file_url.is_some() {
             let entity = CommonPostItem {
+                id: item.id.unwrap(),
                 url: item.file_url.unwrap(),
                 md5: item.md5.unwrap(),
                 ext: item.file_ext.unwrap(),
@@ -185,6 +189,7 @@ impl DanbooruDownloader {
                     multi_bar,
                     main_bar,
                     ImageBoards::Danbooru,
+                    self.save_as_id,
                 )
                 .await?;
             Ok(())

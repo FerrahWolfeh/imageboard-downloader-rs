@@ -51,8 +51,17 @@ struct Cli {
     /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
     ///
     /// Useful if you only want to download posts with "safe" rating.
-    #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
+    #[clap(
+        long,
+        action,
+        default_value_t = false,
+        help_heading = "Danbooru Specific Options"
+    )]
     safe_mode: bool,
+
+    /// Save files with their ID as filename instead of it's MD5
+    #[clap(long = "id", value_parser, default_value_t = false)]
+    save_file_as_id: bool,
 }
 
 async fn try_auth(auth_state: bool, imageboard: ImageBoards) -> Result<(), Error> {
@@ -97,6 +106,7 @@ async fn main() -> Result<(), Error> {
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
+                args.save_file_as_id,
             )?;
 
             dl.download().await?;
@@ -108,6 +118,7 @@ async fn main() -> Result<(), Error> {
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
+                args.save_file_as_id,
             )?;
 
             dl.download().await?;
