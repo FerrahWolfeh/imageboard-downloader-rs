@@ -96,7 +96,7 @@ impl DanbooruDownloader {
         }
 
         self.item_count = count.counts.posts;
-        self.page_count = (count.counts.posts / 200);
+        self.page_count = self.item_count / 200;
 
         debug!(
             "{} Posts for tag list '{:?}'",
