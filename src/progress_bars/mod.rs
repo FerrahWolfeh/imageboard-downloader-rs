@@ -45,8 +45,17 @@ pub fn download_progress_style(templates: BarTemplates) -> ProgressStyle {
         .with_key("percent", |state: &ProgressState, w: &mut dyn Write| {
             write!(w, "{:>3.0}%", state.fraction() * 100_f32).unwrap()
         })
-        .with_key("byte_progress", |state: &ProgressState, w: &mut dyn Write| {
-            write!(w, "{}/{}", HumanBytes(state.pos()), HumanBytes(state.len().unwrap())).unwrap()
-        })
+        .with_key(
+            "byte_progress",
+            |state: &ProgressState, w: &mut dyn Write| {
+                write!(
+                    w,
+                    "{}/{}",
+                    HumanBytes(state.pos()),
+                    HumanBytes(state.len().unwrap())
+                )
+                .unwrap()
+            },
+        )
         .progress_chars(PROGRESS_CHARS)
 }
