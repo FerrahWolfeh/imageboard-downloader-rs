@@ -4,11 +4,13 @@ use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
 use std::path::PathBuf;
+use std::io;
 
 extern crate tokio;
 
 mod imageboards;
 mod progress_bars;
+mod auth;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -27,13 +29,19 @@ struct Cli {
 
     /// Number of simultaneous downloads
     #[clap(
-        short = 'd',
-        value_name = "NUMBER",
-        value_parser,
-        default_value_t = 3,
-        help_heading = "GENERAL"
+    short = 'd',
+    value_name = "NUMBER",
+    value_parser,
+    default_value_t = 3,
+    help_heading = "GENERAL"
     )]
     simultaneous_downloads: usize,
+
+    /// Authenticate to the imageboard website.
+    ///
+    /// This flag only needs to be set a single time.
+    #[clap(short, long, action)]
+    auth: bool,
 
     /// Download images from the safe version of the selected Imageboard.
     ///
@@ -42,6 +50,20 @@ struct Cli {
     /// Useful if you only want to download posts with "safe" rating.
     #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
     safe_mode: bool,
+}
+
+async fn do_auth(auth_state: bool, imageboard: ImageBoards) -> Result<(), Error> {
+    if auth_state {
+        let mut username = String::new();
+        let mut api_key = String::new();
+        let stdin = io::stdin();
+        println!("Enter your username.");
+        stdin.read_line(&mut username)?;
+        println!("Enter the imageboard`s API key");
+        stdin.read_line(&mut api_key)?;
+        return Ok(())
+    }
+    Ok(())
 }
 
 #[tokio::main]
