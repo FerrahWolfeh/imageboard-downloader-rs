@@ -106,14 +106,15 @@ impl CommonPostItem {
                 ))?;
                 main_bar.inc(1);
                 bail!("")
-            } else {
-                fs::remove_file(&output).await?;
-                multi_progress.println(format!(
-                    "File {}.{} is corrupted. Re-downloading...",
-                    &self.md5, &self.ext
-                ))?;
-                Ok(())
             }
+
+            fs::remove_file(&output).await?;
+            multi_progress.println(format!(
+                "File {}.{} is corrupted. Re-downloading...",
+                &self.md5, &self.ext
+            ))?;
+
+            Ok(())
         } else {
             Ok(())
         }
