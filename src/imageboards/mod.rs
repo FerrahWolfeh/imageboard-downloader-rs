@@ -93,6 +93,9 @@ impl ImageBoards {
                     Some("https://e621.net/posts.json")
                 }
             }
+            ImageBoards::Rule34 => {
+                Some("https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1")
+            }
             _ => None,
         }
     }

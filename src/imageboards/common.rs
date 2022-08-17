@@ -97,8 +97,8 @@ impl CommonPostItem {
             bars.main.clone(),
             name_id,
         )
-            .await
-            .is_ok()
+        .await
+        .is_ok()
         {
             Self::fetch(self, client, bars, &output, variant).await?;
             let mut down_count = download_count.lock().unwrap();

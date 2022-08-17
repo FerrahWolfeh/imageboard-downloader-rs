@@ -1,6 +1,7 @@
 use crate::imageboards::auth::AuthCredentials;
 use crate::imageboards::danbooru::DanbooruDownloader;
 use crate::imageboards::e621::E621Downloader;
+use crate::imageboards::rule34::R34Downloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
@@ -28,11 +29,11 @@ struct Cli {
 
     /// Where to save downloaded files
     #[clap(
-    short,
-    long,
-    parse(from_os_str),
-    value_name = "PATH",
-    help_heading = "DOWNLOAD"
+        short,
+        long,
+        parse(from_os_str),
+        value_name = "PATH",
+        help_heading = "DOWNLOAD"
     )]
     output: Option<PathBuf>,
 
@@ -42,7 +43,7 @@ struct Cli {
         value_name = "NUMBER",
         value_parser,
         default_value_t = 3,
-    help_heading = "DOWNLOAD"
+        help_heading = "DOWNLOAD"
     )]
     simultaneous_downloads: usize,
 
@@ -62,10 +63,10 @@ struct Cli {
 
     /// Save files with their ID as filename instead of it's MD5
     #[clap(
-    long = "id",
-    value_parser,
-    default_value_t = false,
-    help_heading = "DOWNLOAD"
+        long = "id",
+        value_parser,
+        default_value_t = false,
+        help_heading = "DOWNLOAD"
     )]
     save_file_as_id: bool,
 }
@@ -129,7 +130,18 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
+        ImageBoards::Rule34 => {
+            try_auth(args.auth, args.imageboard).await?;
+            let mut dl = R34Downloader::new(
+                &args.tags,
+                args.output,
+                args.simultaneous_downloads,
+                args.save_file_as_id,
+            )?;
+
+            dl.download().await?;
+        }
+        ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
     };
 
     Ok(())
