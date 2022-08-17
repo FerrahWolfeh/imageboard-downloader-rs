@@ -59,11 +59,14 @@ Download images from danbooru with specified tags:
 ```
 In case you want to authenticate with danbooru, use the `--auth` flag only once. Then all subsequent downloads will use authentication as well.
 
+***
+
 Download only images with "safe" rating from e621 (also works with danbooru/konachan):
 
 ```bash
     imageboard_downloader -i e621 "ash_(pokemon)" "pikachu" --safe-mode
 ```
+***
 
 Download images from rule34 with 100 simultaneous downloads:
 ```bash
@@ -71,8 +74,9 @@ Download images from rule34 with 100 simultaneous downloads:
     imageboard_downloader -i rule34 -d 100 "moe"
 
 ```
+***
 
-| By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1+tag2+.../<file_md5>.png`. In case you want to download files to another place use:
+By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1+tag2+.../<file_md5>.png`. In case you want to download files to another place use:
 ```bash
 
     imageboard_downloader "kroos_(arknights)" -o /any/other/dir
@@ -80,6 +84,8 @@ Download images from rule34 with 100 simultaneous downloads:
 ```
 This will save files in `/any/other/dir/danbooru/kroos_(arknights)/<file_md5>.png`
 If the specified directory does not exist, it will be created.
+
+***
 
 Save downloaded images with their id instead of md5 as filename:
 ```bash
