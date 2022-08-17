@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem};
+use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
 use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, ImageBoards};
@@ -9,7 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 
@@ -27,6 +27,7 @@ pub struct E621Downloader {
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
+    downloaded_files: Arc<Mutex<u64>>,
 }
 
 impl E621Downloader {
@@ -56,6 +57,7 @@ impl E621Downloader {
             out_dir: out,
             safe_mode,
             save_as_id,
+            downloaded_files: Arc::new(Mutex::new(0)),
         })
     }
 
@@ -103,9 +105,11 @@ impl E621Downloader {
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 
-        // Initialize the bar
+        // Initialize the bars
         let multi = Arc::new(MultiProgress::new());
         let main = Arc::new(multi.add(bar));
+
+        let bars = Arc::new(ProgressArcs { main, multi });
 
         // Keep track of pages already downloaded
         let mut page = 0;
@@ -127,34 +131,34 @@ impl E621Downloader {
             let posts = items.posts.len() as u64;
 
             self.item_count = posts;
-            main.inc_length(posts);
+
+            bars.main.inc_length(posts);
 
             if self.item_count != 0 {
                 futures::stream::iter(&items.posts)
-                    .map(|d| Self::download_item(self, d, multi.clone(), main.clone()))
+                    .map(|d| Self::download_item(self, d, bars.clone()))
                     .buffer_unordered(self.concurrent_downloads)
                     .collect::<Vec<_>>()
                     .await;
             }
         }
 
-        let total_length = main.length().unwrap();
-        main.finish_and_clear();
+        bars.main.finish_and_clear();
         println!(
             "{} {} {}",
-            total_length.to_string().bold().blue(),
+            self.downloaded_files
+                .lock()
+                .unwrap()
+                .to_string()
+                .bold()
+                .blue(),
             "files".bold().blue(),
             "downloaded".bold()
         );
         Ok(())
     }
 
-    async fn download_item(
-        &self,
-        item: &E621Post,
-        multi_bar: Arc<MultiProgress>,
-        main_bar: Arc<ProgressBar>,
-    ) -> Result<(), Error> {
+    async fn download_item(&self, item: &E621Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
         if item.file.url.is_some() {
             let entity = CommonPostItem {
                 id: item.id.unwrap(),
@@ -166,15 +170,15 @@ impl E621Downloader {
                 .get(
                     &self.client,
                     &self.out_dir,
-                    multi_bar,
-                    main_bar,
+                    bars,
                     ImageBoards::E621,
+                    self.downloaded_files.clone(),
                     self.save_as_id,
                 )
                 .await?;
             Ok(())
         } else {
-            main_bar.set_length(main_bar.length().unwrap() - 1);
+            bars.main.set_length(bars.main.length().unwrap() - 1);
             Ok(())
         }
     }

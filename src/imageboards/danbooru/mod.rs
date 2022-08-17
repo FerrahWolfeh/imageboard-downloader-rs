@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem};
+use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
 use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, AuthCredentials, ImageBoards};
@@ -9,7 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 
@@ -25,6 +25,7 @@ pub struct DanbooruDownloader {
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
+    downloaded_files: Arc<Mutex<u64>>,
 }
 
 impl DanbooruDownloader {
@@ -57,6 +58,7 @@ impl DanbooruDownloader {
             out_dir: out,
             safe_mode,
             save_as_id,
+            downloaded_files: Arc::new(Mutex::new(0)),
         })
     }
 
@@ -126,6 +128,8 @@ impl DanbooruDownloader {
         let multi = Arc::new(MultiProgress::new());
         let main = Arc::new(multi.add(bar));
 
+        let bars = Arc::new(ProgressArcs { main, multi });
+
         // Begin downloading all posts per page
         for i in 1..=self.page_count as u64 {
             // Check safe mode
@@ -159,17 +163,21 @@ impl DanbooruDownloader {
 
             // Download everything got in the above function
             futures::stream::iter(jj)
-                .map(|d| Self::download_item(self, d, multi.clone(), main.clone()))
+                .map(|d| Self::download_item(self, d, bars.clone()))
                 .buffer_unordered(self.concurrent_downloads)
-                .collect::<Vec<_>>()
+                .collect::<Vec<Result<(), Error>>>()
                 .await;
         }
 
-        let total_length = main.length().unwrap();
-        main.finish_and_clear();
+        bars.main.finish_and_clear();
         println!(
             "{} {} {}",
-            total_length.to_string().bold().green(),
+            self.downloaded_files
+                .lock()
+                .unwrap()
+                .to_string()
+                .bold()
+                .green(),
             "files".bold().green(),
             "downloaded".bold()
         );
@@ -179,8 +187,7 @@ impl DanbooruDownloader {
     async fn download_item(
         &self,
         item: DanbooruItem,
-        multi_bar: Arc<MultiProgress>,
-        main_bar: Arc<ProgressBar>,
+        bars: Arc<ProgressArcs>,
     ) -> Result<(), Error> {
         if item.file_url.is_some() {
             let entity = CommonPostItem {
@@ -193,16 +200,16 @@ impl DanbooruDownloader {
                 .get(
                     &self.client,
                     &self.out_dir,
-                    multi_bar,
-                    main_bar,
+                    bars,
                     ImageBoards::Danbooru,
+                    self.downloaded_files.clone(),
                     self.save_as_id,
                 )
                 .await?;
             Ok(())
         } else {
-            main_bar.set_length(main_bar.length().unwrap() - 1);
-            Ok(())
+            bars.main.set_length(bars.main.length().unwrap() - 1);
+            bail!("")
         }
     }
 }

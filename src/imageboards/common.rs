@@ -9,7 +9,7 @@ use log::debug;
 use md5::compute;
 use reqwest::Client;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::fs;
 use tokio::fs::{read, OpenOptions};
 use tokio::io::AsyncWriteExt;
@@ -48,6 +48,14 @@ pub fn generate_out_dir(
     Ok(out)
 }
 
+/// Struct to condense a commonly used duo of progress bar instances.
+///
+/// The main usage for this is to pass references of the progress bars across multiple threads while downloading.
+pub struct ProgressArcs {
+    pub main: Arc<ProgressBar>,
+    pub multi: Arc<MultiProgress>,
+}
+
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
 pub struct CommonPostItem {
@@ -70,9 +78,9 @@ impl CommonPostItem {
         &self,
         client: &Client,
         output: &Path,
-        multi: Arc<MultiProgress>,
-        main: Arc<ProgressBar>,
+        bars: Arc<ProgressArcs>,
         variant: ImageBoards,
+        download_count: Arc<Mutex<u64>>,
         name_id: bool,
     ) -> Result<(), Error> {
         let name = if name_id {
@@ -82,11 +90,19 @@ impl CommonPostItem {
         };
         let output = output.join(format!("{}.{}", name, &self.ext));
 
-        if Self::check_file_exists(self, &output, multi.clone(), main.clone(), name_id)
+        if Self::check_file_exists(
+            self,
+            &output,
+            bars.multi.clone(),
+            bars.main.clone(),
+            name_id,
+        )
             .await
             .is_ok()
         {
-            Self::fetch(self, client, multi, main, &output, variant).await?;
+            Self::fetch(self, client, bars, &output, variant).await?;
+            let mut down_count = download_count.lock().unwrap();
+            *down_count += 1;
         }
         Ok(())
     }
@@ -134,8 +150,7 @@ impl CommonPostItem {
     async fn fetch(
         &self,
         client: &Client,
-        multi: Arc<MultiProgress>,
-        main: Arc<ProgressBar>,
+        bars: Arc<ProgressArcs>,
         output: &Path,
         variant: ImageBoards,
     ) -> Result<(), Error> {
@@ -147,7 +162,7 @@ impl CommonPostItem {
             .with_style(download_progress_style(&variant.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
-        let pb = multi.add(bar);
+        let pb = bars.multi.add(bar);
 
         debug!("Creating destination file {:?}", &output);
         let mut file = OpenOptions::new()
@@ -179,7 +194,7 @@ impl CommonPostItem {
         }
         pb.finish_and_clear();
 
-        main.inc(1);
+        bars.main.inc(1);
         Ok(())
     }
 }
