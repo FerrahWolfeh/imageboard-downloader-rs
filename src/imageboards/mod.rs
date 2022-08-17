@@ -96,6 +96,13 @@ impl ImageBoards {
             ImageBoards::Rule34 => {
                 Some("https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1")
             }
+            ImageBoards::Konachan => {
+                if safe {
+                    Some("https://konachan.net/post.json")
+                } else {
+                    Some("https://konachan.com/post.json")
+                }
+            }
             _ => None,
         }
     }

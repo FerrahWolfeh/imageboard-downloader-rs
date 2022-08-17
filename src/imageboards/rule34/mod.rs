@@ -3,8 +3,8 @@ mod models;
 use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
 use crate::imageboards::rule34::models::R34Post;
 use crate::progress_bars::master_progress_style;
-use crate::ImageBoards;
 use crate::{client, join_tags};
+use crate::{extract_ext_from_url, ImageBoards};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -155,12 +155,12 @@ impl R34Downloader {
 
     async fn download_item(&self, item: &R34Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
         if item.file_url.is_some() {
-            let extension = item.image.as_ref().unwrap().split('.').next_back().unwrap();
+            let extension = extract_ext_from_url!(item.image.as_ref().unwrap());
             let entity = CommonPostItem {
                 id: item.id.unwrap(),
                 url: item.file_url.clone().unwrap(),
                 md5: item.hash.clone().unwrap(),
-                ext: extension.to_string(),
+                ext: extension,
             };
             entity
                 .get(

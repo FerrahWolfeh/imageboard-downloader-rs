@@ -1,6 +1,7 @@
 use crate::imageboards::auth::AuthCredentials;
 use crate::imageboards::danbooru::DanbooruDownloader;
 use crate::imageboards::e621::E621Downloader;
+use crate::imageboards::konachan::KonachanDownloader;
 use crate::imageboards::rule34::R34Downloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
@@ -141,7 +142,19 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
+        ImageBoards::Konachan => {
+            try_auth(args.auth, args.imageboard).await?;
+            let mut dl = KonachanDownloader::new(
+                &args.tags,
+                args.output,
+                args.simultaneous_downloads,
+                args.safe_mode,
+                args.save_file_as_id,
+            )?;
+
+            dl.download().await?;
+        }
+        ImageBoards::Realbooru => todo!(),
     };
 
     Ok(())
