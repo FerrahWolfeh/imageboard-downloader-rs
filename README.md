@@ -1,7 +1,8 @@
 # Imageboard Downloader
 
-*imageboard-downloader-rs* a command-line multi image gallery downloader made in rust.
-It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as it's main features.
+*imageboard-downloader-rs* a command-line multi image gallery downloader made in **Rust** with a very simple, yet extensible API.
+
+It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
 Dependencies
 ============
