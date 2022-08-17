@@ -82,7 +82,7 @@ impl CommonPostItem {
         };
         let output = output.join(format!("{}.{}", name, &self.ext));
 
-        if Self::check_file_exists(self, &output, multi.clone(), main.clone())
+        if Self::check_file_exists(self, &output, multi.clone(), main.clone(), name_id)
             .await
             .is_ok()
         {
@@ -96,15 +96,21 @@ impl CommonPostItem {
         output: &Path,
         multi_progress: Arc<MultiProgress>,
         main_bar: Arc<ProgressBar>,
+        name_id: bool,
     ) -> Result<(), Error> {
         if output.exists() {
+            let name = if name_id {
+                self.id.to_string()
+            } else {
+                self.md5.clone()
+            };
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
                 multi_progress.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
-                    format!("{}.{}", &self.md5, &self.ext).bold().green(),
+                    format!("{}.{}", &name, &self.ext).bold().green(),
                     "already exists. Skipping.".bold().green()
                 ))?;
                 main_bar.inc(1);
@@ -115,7 +121,7 @@ impl CommonPostItem {
             multi_progress.println(format!(
                 "{} {} {}",
                 "File".bold().red(),
-                format!("{}.{}", &self.md5, &self.ext).bold().red(),
+                format!("{}.{}", &name, &self.ext).bold().red(),
                 "is corrupted. Re-downloading...".bold().red()
             ))?;
 
