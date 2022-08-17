@@ -157,7 +157,7 @@ impl E621Downloader {
     ) -> Result<(), Error> {
         if item.file.url.is_some() {
             let entity = CommonPostItem {
-                id: item.file.id.unwrap(),
+                id: item.id.unwrap(),
                 url: item.file.url.clone().unwrap(),
                 md5: item.file.md5.clone().unwrap(),
                 ext: item.file.ext.clone().unwrap(),
