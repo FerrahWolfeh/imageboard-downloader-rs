@@ -10,6 +10,8 @@ use md5::compute;
 use reqwest::Client;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use bincode::serialize;
+use serde::Serialize;
 use tokio::fs;
 use tokio::fs::{read, OpenOptions};
 use tokio::io::AsyncWriteExt;
@@ -46,6 +48,20 @@ pub fn generate_out_dir(
     )));
     debug!("Target dir: {}", out.display());
     Ok(out)
+}
+
+pub async fn write_cache<T: Serialize>(imageboard: ImageBoards, data: T) -> Result<(), Error> {
+    let config_path = imageboard.auth_cache_dir()?;
+    let mut cfg_cache = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .read(true)
+        .write(true)
+        .open(config_path)
+        .await?;
+    let cfg = serialize(&data)?;
+    cfg_cache.write_all(&cfg).await?;
+    Ok(())
 }
 
 /// Struct to condense a commonly used duo of progress bar instances.

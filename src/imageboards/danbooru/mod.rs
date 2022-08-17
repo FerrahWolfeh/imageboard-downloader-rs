@@ -14,6 +14,7 @@ use std::time::Duration;
 use tokio::fs::create_dir_all;
 
 pub mod models;
+mod auth;
 
 pub struct DanbooruDownloader {
     item_count: u64,

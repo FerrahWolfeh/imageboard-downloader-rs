@@ -19,9 +19,10 @@ pub struct DanbooruPostCount {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Auth {
+pub struct DanbooruAuthUser {
     pub success: Option<bool>,
     pub message: Option<String>,
     pub name: Option<String>,
     pub id: Option<u64>,
+    pub blacklisted_tags: Option<String>,
 }

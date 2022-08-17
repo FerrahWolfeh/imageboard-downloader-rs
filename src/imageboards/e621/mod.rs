@@ -1,7 +1,7 @@
 use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
 use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, ImageBoards};
+use crate::{client, join_tags, AuthCredentials, ImageBoards};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -13,7 +13,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 
-mod models;
+pub mod models;
+mod auth;
 
 const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
@@ -61,7 +62,7 @@ impl E621Downloader {
         })
     }
 
-    async fn check_tag_list(&mut self) -> Result<(), Error> {
+    async fn check_tag_list(&mut self, auth_creds: &Option<AuthCredentials>) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::E621.post_url(self.safe_mode).unwrap(),
@@ -69,13 +70,24 @@ impl E621Downloader {
         );
 
         // Get an estimate of total posts and pages to search
-        let count = &self
-            .client
-            .get(&count_endpoint)
-            .send()
-            .await?
-            .json::<E621TopLevel>()
-            .await?;
+        let count = if let Some(data) = auth_creds {
+            debug!("[AUTH] Checking tags");
+            self.client
+                .get(&count_endpoint)
+                .basic_auth(&data.username, Some(&data.api_key))
+                .send()
+                .await?
+                .json::<E621TopLevel>()
+                .await?
+        } else {
+            debug!("Checking tags");
+            self.client
+                .get(&count_endpoint)
+                .send()
+                .await?
+                .json::<E621TopLevel>()
+                .await?
+        };
 
         // Bail out if no posts are found
         if count.posts.is_empty() {
@@ -92,8 +104,11 @@ impl E621Downloader {
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
+        // Get auth data
+        let auth_res = AuthCredentials::read_from_fs(ImageBoards::E621).await?;
+
         // Generate post count data
-        Self::check_tag_list(self).await?;
+        Self::check_tag_list(self, &auth_res).await?;
 
         // Create output dir
         create_dir_all(&self.out_dir).await?;
@@ -119,14 +134,26 @@ impl E621Downloader {
         while self.item_count != 0 {
             page += 1;
 
-            let items = &self
-                .client
-                .get(&self.posts_endpoint)
-                .query(&[("page", page), ("limit", 320)])
-                .send()
-                .await?
-                .json::<E621TopLevel>()
-                .await?;
+            let items = if let Some(data) = &auth_res {
+                debug!("[AUTH] Fetching posts from page {}", page);
+                self.client
+                    .get(&self.posts_endpoint)
+                    .query(&[("page", page), ("limit", 320)])
+                    .basic_auth(&data.username, Some(&data.api_key))
+                    .send()
+                    .await?
+                    .json::<E621TopLevel>()
+                    .await?
+            } else {
+                debug!("Fetching posts from page {}", page);
+                self.client
+                    .get(&self.posts_endpoint)
+                    .query(&[("page", page), ("limit", 320)])
+                    .send()
+                    .await?
+                    .json::<E621TopLevel>()
+                    .await?
+            };
 
             let posts = items.posts.len() as u64;
 

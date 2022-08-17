@@ -136,6 +136,10 @@ impl ImageBoards {
     }
 }
 
+pub trait UserData {
+
+}
+
 // impl fmt::Display for ImageBoards {
 //     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
 //         fmt.pad(self.as_str())

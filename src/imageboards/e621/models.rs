@@ -17,3 +17,13 @@ pub struct E621File {
     pub md5: Option<String>,
     pub url: Option<String>,
 }
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct E621AuthUser {
+    pub success: Option<bool>,
+    pub message: Option<String>,
+    pub id: Option<u64>,
+    pub name: Option<String>,
+    pub blacklisted_tags: Option<String>,
+}
