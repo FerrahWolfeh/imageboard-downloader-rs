@@ -1,8 +1,6 @@
-=====================
-Imageboard Downloader
-=====================
+# Imageboard Downloader
 
-*imageboard-downloader-rs* is one of the first command-line multi image gallery downloader made in rust.
+*imageboard-downloader-rs* a command-line multi image gallery downloader made in rust.
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as it's main features.
 
 Dependencies
@@ -74,8 +72,7 @@ Download images from rule34 with 100 simultaneous downloads:
 
 ```
 
-| By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1+tag2+.../<file_md5>.png`.
-| In case you want to download files to another place use:
+| By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1+tag2+.../<file_md5>.png`. In case you want to download files to another place use:
 ```bash
 
     imageboard_downloader "kroos_(arknights)" -o /any/other/dir
