@@ -7,7 +7,7 @@ description = "Cli utility to bulk download images from popular imageboard sites
 license = "MIT"
 readme = "README.md"
 repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
-keywords = ["download", "api", "e621", "danbooru", "rule34", "booru", "async"]
+keywords = ["download", "api", "e621", "danbooru", "rule34"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
