@@ -1,6 +1,8 @@
+use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
+use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, ImageBoards, ImageboardConfig};
+use crate::{client, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;

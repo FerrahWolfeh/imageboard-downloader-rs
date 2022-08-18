@@ -1,10 +1,11 @@
 mod models;
 
+use crate::extract_ext_from_url;
 use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::rule34::models::R34Post;
+use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
-use crate::{extract_ext_from_url, ImageBoards};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;

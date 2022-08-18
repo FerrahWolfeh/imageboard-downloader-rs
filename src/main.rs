@@ -1,19 +1,9 @@
-use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::danbooru::DanbooruDownloader;
-use crate::imageboards::e621::E621Downloader;
-use crate::imageboards::konachan::KonachanDownloader;
-use crate::imageboards::rule34::R34Downloader;
-use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
-
+use imageboard_downloader::*;
 use std::path::PathBuf;
-use crate::imageboards::realbooru::RealbooruDownloader;
 
 extern crate tokio;
-
-mod imageboards;
-mod progress_bars;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]

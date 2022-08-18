@@ -1,6 +1,7 @@
 //! Common functions for all imageboard downloader modules.
+use crate::imageboards::auth::ImageboardConfig;
+use crate::imageboards::ImageBoards;
 use crate::progress_bars::download_progress_style;
-use crate::{ImageBoards, ImageboardConfig};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -24,6 +25,11 @@ use tokio::io::AsyncWriteExt;
 /// The path chosen will always end with the imageboard name followed by the tags used.
 ///
 /// ```rust
+///
+/// use std::path::PathBuf;
+/// use imageboard_downloader::imageboards::ImageBoards;
+/// use imageboard_downloader::join_tags;
+///
 /// let tags = join_tags!(["kroos_(arknights)", "weapon"]);
 /// let path = Some(PathBuf::from("./"));
 ///

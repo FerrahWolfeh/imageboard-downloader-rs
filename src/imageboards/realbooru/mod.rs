@@ -1,6 +1,7 @@
 use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
+use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, extract_ext_from_url, join_tags, ImageBoards};
+use crate::{client, extract_ext_from_url, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -138,7 +139,7 @@ impl RealbooruDownloader {
                         url: file.to_string(),
                         md5: c.attribute("md5").unwrap().to_string(),
                         extension: extract_ext_from_url!(file),
-                        tags: Default::default()
+                        tags: Default::default(),
                     }
                 })
                 .collect();
@@ -165,11 +166,7 @@ impl RealbooruDownloader {
         Ok(())
     }
 
-    async fn download_item(
-        &self,
-        item: Post,
-        bars: Arc<ProgressArcs>,
-    ) -> Result<(), Error> {
+    async fn download_item(&self, item: Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
         item.get(
             &self.client,
             &self.out_dir,
@@ -178,7 +175,7 @@ impl RealbooruDownloader {
             self.downloaded_files.clone(),
             self.save_as_id,
         )
-            .await?;
+        .await?;
         Ok(())
     }
 }

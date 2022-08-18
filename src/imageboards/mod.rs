@@ -1,5 +1,5 @@
+use crate::imageboards::auth::ImageboardConfig;
 use crate::progress_bars::BarTemplates;
-use crate::ImageboardConfig;
 use anyhow::Error;
 use bincode::deserialize;
 use clap::ValueEnum;
@@ -15,7 +15,7 @@ mod common;
 pub mod danbooru;
 pub mod e621;
 pub mod konachan;
-mod macros;
+pub mod macros;
 pub mod realbooru;
 pub mod rule34;
 
@@ -110,7 +110,9 @@ impl ImageBoards {
                     Some("https://konachan.com/post.json")
                 }
             }
-            ImageBoards::Realbooru => Some("http://realbooru.com/index.php?page=dapi&s=post&q=index"),
+            ImageBoards::Realbooru => {
+                Some("http://realbooru.com/index.php?page=dapi&s=post&q=index")
+            }
         }
     }
 
@@ -124,7 +126,7 @@ impl ImageBoards {
             ImageBoards::Danbooru | ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => BarTemplates::default(),
         }
     }
-    
+
     /// Returns the url used for validating the login input and parsing the user`s profile.
     pub fn auth_url(self) -> &'static str {
         match self {
@@ -133,7 +135,7 @@ impl ImageBoards {
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
         }
     }
-    
+
     /// Returns a `PathBuf` pointing to the imageboard`s authentication cache.
     ///
     /// This is XDG-compliant and saves cache files to
@@ -187,7 +189,8 @@ impl ImageBoards {
 #[cfg(test)]
 mod tests {
     use crate::imageboards::common::generate_out_dir;
-    use crate::{join_tags, ImageBoards};
+    use crate::imageboards::ImageBoards;
+    use crate::join_tags;
     use log::debug;
     use std::path::PathBuf;
 
