@@ -114,7 +114,7 @@ impl DanbooruDownloader {
                 &self.item_count, &self.tag_list
             );
         } else {
-            bail!("Malformed JSON response.")
+            bail!("Danbooru returned a malformed JSON response while fetching post count.")
         }
         Ok(())
     }
