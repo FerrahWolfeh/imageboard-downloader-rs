@@ -1,3 +1,4 @@
+//! All methods and structs related to user authentication and configuration for imageboard websites
 use crate::ImageBoards;
 use anyhow::{bail, Error};
 use bincode::serialize;
@@ -8,14 +9,21 @@ use std::collections::HashSet;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
+/// Struct that defines all user configuration for a specific imageboard.
 #[derive(Serialize, Deserialize)]
 pub struct ImageboardConfig {
+    /// Used as a identification tag for handling the cache outside of a imageboard downloader
+    /// struct.
     imageboard: ImageBoards,
     pub username: String,
     pub api_key: String,
     pub user_data: UserData,
 }
 
+/// Aggregates common user info and it's blacklisted tags in a `HashSet`.
+///
+/// It's principally used to filter which posts to download according to the user's blacklist
+/// configured in the imageboard profile settings.
 #[derive(Serialize, Deserialize)]
 pub struct UserData {
     pub id: u64,
@@ -104,6 +112,8 @@ impl ImageboardConfig {
         Ok(())
     }
 
+    /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
+    /// it in the directory provided by a `ImageBoards` `auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), Error> {
         let config_path = self.imageboard.auth_cache_dir()?;
         let mut cfg_cache = OpenOptions::new()
