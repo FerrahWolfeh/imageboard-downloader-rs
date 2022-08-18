@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::progress_bars::master_progress_style;
 use crate::{client, extract_ext_from_url, join_tags, ImageBoards};
 use anyhow::{bail, Error};
@@ -127,17 +127,18 @@ impl RealbooruDownloader {
                 .await?;
 
             let doc = Document::parse(items)?;
-            let stuff: Vec<CommonPostItem> = doc
+            let stuff: Vec<Post> = doc
                 .root_element()
                 .children()
                 .filter(|c| c.attribute("file_url").is_some())
                 .map(|c| {
                     let file = c.attribute("file_url").unwrap();
-                    CommonPostItem {
+                    Post {
                         id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
                         url: file.to_string(),
                         md5: c.attribute("md5").unwrap().to_string(),
-                        ext: extract_ext_from_url!(file),
+                        extension: extract_ext_from_url!(file),
+                        tags: Default::default()
                     }
                 })
                 .collect();
@@ -166,7 +167,7 @@ impl RealbooruDownloader {
 
     async fn download_item(
         &self,
-        item: CommonPostItem,
+        item: Post,
         bars: Arc<ProgressArcs>,
     ) -> Result<(), Error> {
         item.get(
