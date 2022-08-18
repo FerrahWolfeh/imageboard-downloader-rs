@@ -110,7 +110,7 @@ impl ImageBoards {
                     Some("https://konachan.com/post.json")
                 }
             }
-            _ => None,
+            ImageBoards::Realbooru => Some("http://realbooru.com/index.php?page=dapi&s=post&q=index"),
         }
     }
 
