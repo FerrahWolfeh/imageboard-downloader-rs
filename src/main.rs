@@ -86,7 +86,7 @@ async fn main() -> Result<(), Error> {
                 args.auth,
                 args.save_file_as_id,
             )
-                .await?;
+            .await?;
 
             dl.download().await?;
         }
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Error> {
                 args.safe_mode,
                 args.save_file_as_id,
             )
-                .await?;
+            .await?;
 
             dl.download().await?;
         }

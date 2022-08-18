@@ -111,11 +111,12 @@ impl ImageboardConfig {
             .truncate(true)
             .read(true)
             .write(true)
-            .open(config_path)
+            .open(&config_path)
             .await?;
         let cfg = serialize(&self)?;
         let compressed_data = zstd::encode_all(cfg.as_slice(), 7)?;
         cfg_cache.write_all(&compressed_data).await?;
+        debug!("Wrote auth cache to {}", &config_path.display());
         Ok(())
     }
 }

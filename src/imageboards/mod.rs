@@ -6,7 +6,7 @@ use clap::ValueEnum;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tokio::fs::read;
+use tokio::fs::{read, remove_file};
 use xdg::BaseDirectories;
 
 pub mod auth;
@@ -141,18 +141,23 @@ impl ImageBoards {
         if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
             debug!("Authentication cache found");
 
-            let decompressed = zstd::decode_all(config_auth.as_slice())?;
-
-            return if let Ok(rd) = deserialize::<ImageboardConfig>(&decompressed) {
-                debug!("Authentication cache decoded.");
-                debug!("User id: {}", rd.user_data.id);
-                debug!("Username: {}", rd.user_data.name);
-                debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
-                Ok(Some(rd))
+            if let Ok(decompressed) = zstd::decode_all(config_auth.as_slice()) {
+                debug!("Authentication cache decompressed.");
+                return if let Ok(rd) = deserialize::<ImageboardConfig>(&decompressed) {
+                    debug!("Authentication cache decoded.");
+                    debug!("User id: {}", rd.user_data.id);
+                    debug!("Username: {}", rd.user_data.name);
+                    debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
+                    Ok(Some(rd))
+                } else {
+                    debug!("Authentication cache is invalid or empty. Using normal mode");
+                    Ok(None)
+                };
             } else {
-                debug!("Authentication cache is invalid or empty. Using normal mode");
-                Ok(None)
-            };
+                debug!("Failed to decompress authentication cache.");
+                debug!("Removing corrupted file");
+                remove_file(self.auth_cache_dir()?).await?;
+            }
         };
         debug!("Running without authentication");
         Ok(None)
