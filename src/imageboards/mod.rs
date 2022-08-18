@@ -114,7 +114,7 @@ impl ImageBoards {
         }
     }
 
-    /// Returns special-themed progress bars for each variant
+    /// Returns special-themed progress bar templates for each variant
     pub fn progress_template(self) -> BarTemplates {
         match self {
             ImageBoards::E621 => BarTemplates {
@@ -124,7 +124,8 @@ impl ImageBoards {
             ImageBoards::Danbooru | ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => BarTemplates::default(),
         }
     }
-
+    
+    /// Returns the url used for validating the login input and parsing the user`s profile.
     pub fn auth_url(self) -> &'static str {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
@@ -132,7 +133,11 @@ impl ImageBoards {
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
         }
     }
-
+    
+    /// Returns a `PathBuf` pointing to the imageboard`s authentication cache.
+    ///
+    /// This is XDG-compliant and saves cache files to
+    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>`
     pub fn auth_cache_dir(self) -> Result<PathBuf, Error> {
         let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
 
@@ -140,6 +145,9 @@ impl ImageBoards {
         Ok(dir)
     }
 
+    /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
+    ///
+    /// Returns `None` if the file is corrupted or does not exist.
     pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, Error> {
         if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
             debug!("Authentication cache found");
