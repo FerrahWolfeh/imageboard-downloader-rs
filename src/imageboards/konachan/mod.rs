@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::konachan::models::KonachanPost;
 use crate::progress_bars::master_progress_style;
 use crate::{client, extract_ext_from_url, join_tags, ImageBoards};
@@ -162,11 +162,12 @@ impl KonachanDownloader {
     ) -> Result<(), Error> {
         if item.file_url.is_some() {
             let extension = extract_ext_from_url!(item.file_url.as_ref().unwrap());
-            let entity = CommonPostItem {
+            let entity = Post {
                 id: item.id.unwrap(),
                 url: item.file_url.clone().unwrap(),
                 md5: item.md5.clone().unwrap(),
-                ext: extension,
+                extension,
+                tags: Default::default(),
             };
             entity
                 .get(

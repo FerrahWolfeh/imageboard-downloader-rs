@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, try_auth, CommonPostItem, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
 use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, ImageBoards, ImageboardConfig};
@@ -192,11 +192,12 @@ impl E621Downloader {
 
     async fn download_item(&self, item: &E621Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
         if item.file.url.is_some() {
-            let entity = CommonPostItem {
+            let entity = Post {
                 id: item.id.unwrap(),
                 url: item.file.url.clone().unwrap(),
                 md5: item.file.md5.clone().unwrap(),
-                ext: item.file.ext.clone().unwrap(),
+                extension: item.file.ext.clone().unwrap(),
+                tags: Default::default(),
             };
             entity
                 .get(

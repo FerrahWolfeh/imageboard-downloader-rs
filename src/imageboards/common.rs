@@ -8,6 +8,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
+use std::collections::HashSet;
 use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -58,9 +59,10 @@ pub struct ProgressArcs {
     pub multi: Arc<MultiProgress>,
 }
 
+/// Generic representation of a imageboard post
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
-pub struct CommonPostItem {
+pub struct Post {
     pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
@@ -68,11 +70,15 @@ pub struct CommonPostItem {
     pub md5: String,
     /// The original file extension provided by the imageboard.
     ///
-    /// ```https://konachan.com``` or other imageboards based on MoeBooru doesn't provide this field. So, additional work is required to get the file extension from the url
-    pub ext: String,
+    /// ```https://konachan.com``` and some other imageboards doesn't provide this field. So, additional work is required to get the file extension from the url
+    pub extension: String,
+    /// Set of tags associated with the post.
+    ///
+    /// Used to exclude posts according to a blacklist
+    pub tags: HashSet<String>,
 }
 
-impl CommonPostItem {
+impl Post {
     /// Main routine to download posts.
     ///
     /// This method should be coupled into a function block to run inside a ```futures::stream``` in order to prevent issues with ```await```
@@ -90,7 +96,7 @@ impl CommonPostItem {
         } else {
             self.md5.clone()
         };
-        let output = output.join(format!("{}.{}", name, &self.ext));
+        let output = output.join(format!("{}.{}", name, &self.extension));
 
         if Self::check_file_exists(
             self,
@@ -128,7 +134,7 @@ impl CommonPostItem {
                 multi_progress.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
-                    format!("{}.{}", &name, &self.ext).bold().green(),
+                    format!("{}.{}", &name, &self.extension).bold().green(),
                     "already exists. Skipping.".bold().green()
                 ))?;
                 main_bar.inc(1);
@@ -139,7 +145,7 @@ impl CommonPostItem {
             multi_progress.println(format!(
                 "{} {} {}",
                 "File".bold().red(),
-                format!("{}.{}", &name, &self.ext).bold().red(),
+                format!("{}.{}", &name, &self.extension).bold().red(),
                 "is corrupted. Re-downloading...".bold().red()
             ))?;
 

@@ -1,5 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, try_auth, CommonPostItem, ProgressArcs};
-use crate::imageboards::danbooru::models::DanbooruItem;
+use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags, ImageBoards, ImageboardConfig};
 use anyhow::{bail, Error};
@@ -15,8 +14,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
-
-pub mod models;
 
 pub struct DanbooruDownloader {
     item_count: u64,
@@ -174,7 +171,7 @@ impl DanbooruDownloader {
             };
 
             let start_point = Instant::now();
-            let mut posts: Vec<DanbooruItem> = jj
+            let mut posts: Vec<Post> = jj
                 .as_array()
                 .unwrap()
                 .iter()
@@ -188,11 +185,11 @@ impl DanbooruDownloader {
                         }
                     }
 
-                    DanbooruItem {
+                    Post {
                         id: c["id"].as_u64().unwrap(),
                         md5: c["md5"].as_str().unwrap().to_string(),
-                        file_ext: c["file_ext"].as_str().unwrap().to_string(),
-                        file_url: c["file_url"].as_str().unwrap().to_string(),
+                        url: c["file_url"].as_str().unwrap().to_string(),
+                        extension: c["file_ext"].as_str().unwrap().to_string(),
                         tags: tag_list,
                     }
                 })
@@ -241,27 +238,16 @@ impl DanbooruDownloader {
         Ok(())
     }
 
-    async fn download_item(
-        &self,
-        item: DanbooruItem,
-        bars: Arc<ProgressArcs>,
-    ) -> Result<(), Error> {
-        let entity = CommonPostItem {
-            id: item.id,
-            url: item.file_url,
-            md5: item.md5,
-            ext: item.file_ext,
-        };
-        entity
-            .get(
-                &self.client,
-                &self.out_dir,
-                bars,
-                ImageBoards::Danbooru,
-                self.downloaded_files.clone(),
-                self.save_as_id,
-            )
-            .await?;
+    async fn download_item(&self, item: Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
+        item.get(
+            &self.client,
+            &self.out_dir,
+            bars,
+            ImageBoards::Danbooru,
+            self.downloaded_files.clone(),
+            self.save_as_id,
+        )
+        .await?;
         Ok(())
     }
 }
