@@ -114,7 +114,8 @@ impl ImageboardConfig {
             .open(config_path)
             .await?;
         let cfg = serialize(&self)?;
-        cfg_cache.write_all(&cfg).await?;
+        let compressed_data = zstd::encode_all(cfg.as_slice(), 7)?;
+        cfg_cache.write_all(&compressed_data).await?;
         Ok(())
     }
 }

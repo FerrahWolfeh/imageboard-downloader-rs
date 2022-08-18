@@ -141,7 +141,9 @@ impl ImageBoards {
         if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
             debug!("Authentication cache found");
 
-            return if let Ok(rd) = deserialize::<ImageboardConfig>(&config_auth) {
+            let decompressed = zstd::decode_all(config_auth.as_slice())?;
+
+            return if let Ok(rd) = deserialize::<ImageboardConfig>(&decompressed) {
                 debug!("Authentication cache decoded.");
                 debug!("User id: {}", rd.user_data.id);
                 debug!("Username: {}", rd.user_data.name);
