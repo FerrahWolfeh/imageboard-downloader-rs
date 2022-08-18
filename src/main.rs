@@ -126,7 +126,6 @@ async fn main() -> Result<(), Error> {
             dl.download().await?;
         }
         ImageBoards::Realbooru => {
-            try_auth(args.auth, args.imageboard).await?;
             let mut dl = RealbooruDownloader::new(
                 &args.tags,
                 args.output,
