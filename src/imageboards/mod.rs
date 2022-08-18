@@ -3,9 +3,10 @@ use crate::ImageboardConfig;
 use anyhow::Error;
 use bincode::deserialize;
 use clap::ValueEnum;
-use log::debug;
+use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use colored::Colorize;
 use tokio::fs::{read, remove_file};
 use xdg::BaseDirectories;
 
@@ -150,13 +151,14 @@ impl ImageBoards {
                     debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
                     Ok(Some(rd))
                 } else {
-                    debug!("Authentication cache is invalid or empty. Using normal mode");
+                    warn!("{}", "Auth cache is invalid or empty. Running without authentication");
                     Ok(None)
                 };
             } else {
                 debug!("Failed to decompress authentication cache.");
                 debug!("Removing corrupted file");
                 remove_file(self.auth_cache_dir()?).await?;
+                error!("{}", "Auth cache is corrupted. Please authenticate again.".bold().red());
             }
         };
         debug!("Running without authentication");
