@@ -19,7 +19,7 @@ md5 = "0.7.0"
 colored = "2.0.0"
 xdg = "2.4.1"
 bincode = "1.3.3"
-zstd = "0.11.2+zstd.1.5.2"
+zstd = "0.11.2"
 
 [dependencies.tokio]
 version = "1"
