@@ -58,6 +58,7 @@ pub struct ProgressArcs {
 
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
+#[derive(Debug)]
 pub struct CommonPostItem {
     pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server

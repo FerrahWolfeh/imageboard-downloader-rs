@@ -11,6 +11,7 @@ use log::debug;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
+use crate::imageboards::realbooru::RealbooruDownloader;
 
 extern crate tokio;
 
@@ -154,7 +155,17 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Realbooru => todo!(),
+        ImageBoards::Realbooru => {
+            try_auth(args.auth, args.imageboard).await?;
+            let mut dl = RealbooruDownloader::new(
+                &args.tags,
+                args.output,
+                args.simultaneous_downloads,
+                args.save_file_as_id,
+            )?;
+
+            dl.download().await?;
+        }
     };
 
     Ok(())
