@@ -1,7 +1,7 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, try_auth, CommonPostItem, ProgressArcs};
 use crate::imageboards::e621::models::{E621Post, E621TopLevel};
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, AuthCredentials, ImageBoards};
+use crate::{client, join_tags, ImageBoards, ImageboardConfig};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -14,7 +14,6 @@ use std::time::Duration;
 use tokio::fs::create_dir_all;
 
 pub mod models;
-mod auth;
 
 const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
@@ -29,13 +28,15 @@ pub struct E621Downloader {
     safe_mode: bool,
     save_as_id: bool,
     downloaded_files: Arc<Mutex<u64>>,
+    _blacklisted_posts: u64,
 }
 
 impl E621Downloader {
-    pub fn new(
+    pub async fn new(
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        auth_state: bool,
         safe_mode: bool,
         save_as_id: bool,
     ) -> Result<Self, Error> {
@@ -48,6 +49,9 @@ impl E621Downloader {
         // Place downloaded items in current dir or in /tmp
         let out = generate_out_dir(out_dir, &tag_string, ImageBoards::E621)?;
 
+        // Try to authenticate, does nothing if auth flag is not set
+        try_auth(auth_state, ImageBoards::E621, &client).await?;
+
         Ok(Self {
             item_count: 0,
             client,
@@ -59,10 +63,11 @@ impl E621Downloader {
             safe_mode,
             save_as_id,
             downloaded_files: Arc::new(Mutex::new(0)),
+            _blacklisted_posts: 0,
         })
     }
 
-    async fn check_tag_list(&mut self, auth_creds: &Option<AuthCredentials>) -> Result<(), Error> {
+    async fn check_tag_list(&mut self, auth_creds: &Option<ImageboardConfig>) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::E621.post_url(self.safe_mode).unwrap(),
@@ -105,7 +110,7 @@ impl E621Downloader {
 
     pub async fn download(&mut self) -> Result<(), Error> {
         // Get auth data
-        let auth_res = AuthCredentials::read_from_fs(ImageBoards::E621).await?;
+        let auth_res = ImageBoards::E621.read_config_from_fs().await?;
 
         // Generate post count data
         Self::check_tag_list(self, &auth_res).await?;

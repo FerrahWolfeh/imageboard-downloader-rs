@@ -1,6 +1,6 @@
 //! Common functions for all imageboard downloader modules.
 use crate::progress_bars::download_progress_style;
-use crate::ImageBoards;
+use crate::{ImageBoards, ImageboardConfig};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -8,10 +8,10 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
+use std::io;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use bincode::serialize;
-use serde::Serialize;
 use tokio::fs;
 use tokio::fs::{read, OpenOptions};
 use tokio::io::AsyncWriteExt;
@@ -48,20 +48,6 @@ pub fn generate_out_dir(
     )));
     debug!("Target dir: {}", out.display());
     Ok(out)
-}
-
-pub async fn write_cache<T: Serialize>(imageboard: ImageBoards, data: T) -> Result<(), Error> {
-    let config_path = imageboard.auth_cache_dir()?;
-    let mut cfg_cache = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .read(true)
-        .write(true)
-        .open(config_path)
-        .await?;
-    let cfg = serialize(&data)?;
-    cfg_cache.write_all(&cfg).await?;
-    Ok(())
 }
 
 /// Struct to condense a commonly used duo of progress bar instances.
@@ -213,4 +199,41 @@ impl CommonPostItem {
         bars.main.inc(1);
         Ok(())
     }
+}
+
+pub async fn try_auth(
+    auth_state: bool,
+    imageboard: ImageBoards,
+    client: &Client,
+) -> Result<(), Error> {
+    if auth_state {
+        let mut username = String::new();
+        let mut api_key = String::new();
+        let stdin = io::stdin();
+        println!(
+            "{} {}",
+            "Logging into:".bold(),
+            imageboard.to_string().green().bold()
+        );
+        print!("{}", "Username: ".bold());
+        io::stdout().flush()?;
+        stdin.read_line(&mut username)?;
+        print!("{}", "API Key: ".bold());
+        io::stdout().flush()?;
+        stdin.read_line(&mut api_key)?;
+
+        debug!("Username: {:?}", username.trim());
+        debug!("API key: {:?}", api_key.trim());
+
+        let mut at = ImageboardConfig::new(
+            imageboard,
+            username.trim().to_string(),
+            api_key.trim().to_string(),
+        );
+
+        at.authenticate(client).await?;
+
+        return Ok(());
+    }
+    Ok(())
 }

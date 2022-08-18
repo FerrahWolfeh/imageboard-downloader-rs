@@ -18,7 +18,6 @@ pub struct E621File {
     pub url: Option<String>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct E621AuthUser {
     pub success: Option<bool>,

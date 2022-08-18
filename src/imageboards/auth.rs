@@ -1,46 +1,80 @@
-use crate::imageboards::danbooru::models::DanbooruAuthUser;
 use crate::ImageBoards;
 use anyhow::{bail, Error};
-use bincode::{deserialize, serialize};
+use bincode::serialize;
 use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
-use tokio::fs::{read, OpenOptions};
+use std::collections::HashSet;
+use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
-use crate::imageboards::common::write_cache;
-use crate::imageboards::e621::models::E621AuthUser;
 
 #[derive(Serialize, Deserialize)]
-pub struct AuthCredentials {
+pub struct ImageboardConfig {
+    imageboard: ImageBoards,
     pub username: String,
     pub api_key: String,
+    pub user_data: UserData,
 }
 
-impl AuthCredentials {
-    pub fn new(username: String, api_key: String) -> Self {
-        Self { username, api_key }
-    }
+#[derive(Serialize, Deserialize)]
+pub struct UserData {
+    pub id: u64,
+    pub name: String,
+    pub blacklisted_tags: HashSet<String>,
+}
 
-    pub async fn authenticate(&self, imageboard: ImageBoards) -> Result<(), Error> {
-        match imageboard {
-            ImageBoards::Danbooru => Self::danbooru_auth(self).await,
-            ImageBoards::E621 => todo!(),
-            _ => todo!(),
+impl Default for ImageboardConfig {
+    fn default() -> Self {
+        Self {
+            imageboard: ImageBoards::Danbooru,
+            username: "".to_string(),
+            api_key: "".to_string(),
+            user_data: UserData {
+                id: 0,
+                name: "".to_string(),
+                blacklisted_tags: HashSet::new(),
+            },
+        }
+    }
+}
+
+impl ImageboardConfig {
+    pub fn new(imageboard: ImageBoards, username: String, api_key: String) -> Self {
+        Self {
+            imageboard,
+            username,
+            api_key,
+            user_data: UserData {
+                id: 0,
+                name: "".to_string(),
+                blacklisted_tags: HashSet::new(),
+            },
         }
     }
 
-    async fn e621_auth(&self) -> Result<(), Error> {
-        let imageboard = ImageBoards::E621;
-        let client = Client::builder()
-            .user_agent(imageboard.user_agent())
-            .build()?;
+    pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
+        #[derive(Debug, Serialize, Deserialize)]
+        struct AuthTest {
+            pub success: Option<bool>,
+            pub id: Option<u64>,
+            pub name: Option<String>,
+            pub blacklisted_tags: Option<String>,
+        }
+
+        let url = match self.imageboard {
+            ImageBoards::Danbooru => self.imageboard.auth_url().to_string(),
+            ImageBoards::E621 => format!("{}{}.json", self.imageboard.auth_url(), self.username),
+            _ => String::new(),
+        };
+
+        debug!("Authenticating to {}", self.imageboard.to_string());
+
         let req = client
-            .get(imageboard.auth_url())
+            .get(url)
             .basic_auth(&self.username, Some(&self.api_key))
             .send()
             .await?
-            .json::<E621AuthUser>()
+            .json::<AuthTest>()
             .await?;
 
         debug!("{:?}", req);
@@ -50,35 +84,37 @@ impl AuthCredentials {
         }
 
         if req.id.is_some() {
-            write_cache(imageboard, req).await?;
+            let tag_list = req.blacklisted_tags.unwrap();
+
+            self.user_data.id = req.id.unwrap();
+            self.user_data.name = req.name.unwrap();
+
+            for i in tag_list.lines() {
+                if !i.contains("//") {
+                    self.user_data.blacklisted_tags.insert(i.to_string());
+                }
+            }
+
+            debug!("User id: {}", self.user_data.id);
+            debug!("Blacklisted tags: '{:?}'", self.user_data.blacklisted_tags);
+
+            Self::write_cache(self).await?;
         }
 
         Ok(())
     }
 
-    async fn danbooru_auth(&self) -> Result<(), Error> {
-        let imageboard = ImageBoards::Danbooru;
-        let client = Client::builder()
-            .user_agent(imageboard.user_agent())
-            .build()?;
-        let req = client
-            .get(imageboard.auth_url())
-            .basic_auth(&self.username, Some(&self.api_key))
-            .send()
-            .await?
-            .json::<DanbooruAuthUser>()
+    async fn write_cache(&self) -> Result<(), Error> {
+        let config_path = self.imageboard.auth_cache_dir()?;
+        let mut cfg_cache = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .read(true)
+            .write(true)
+            .open(config_path)
             .await?;
-
-        debug!("{:?}", req);
-
-        if req.success.is_some() {
-            bail!("Invalid username or api key!")
-        }
-
-        if req.id.is_some() {
-            write_cache(imageboard, req).await?;
-        }
-
+        let cfg = serialize(&self)?;
+        cfg_cache.write_all(&cfg).await?;
         Ok(())
     }
 }

@@ -1,20 +1,22 @@
-use crate::imageboards::common::{generate_out_dir, CommonPostItem, ProgressArcs};
-use crate::imageboards::danbooru::models::{DanbooruItem, DanbooruPostCount};
+use crate::imageboards::common::{generate_out_dir, try_auth, CommonPostItem, ProgressArcs};
+use crate::imageboards::danbooru::models::DanbooruItem;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, AuthCredentials, ImageBoards};
+use crate::{client, join_tags, ImageBoards, ImageboardConfig};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
-use log::debug;
+use log::{debug, trace};
 use reqwest::Client;
+use serde_json::Value;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
+use tokio::time::Instant;
 
 pub mod models;
-mod auth;
 
 pub struct DanbooruDownloader {
     item_count: u64,
@@ -27,14 +29,16 @@ pub struct DanbooruDownloader {
     safe_mode: bool,
     save_as_id: bool,
     downloaded_files: Arc<Mutex<u64>>,
+    blacklisted_posts: u64,
 }
 
 impl DanbooruDownloader {
-    pub fn new(
+    pub async fn new(
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
         safe_mode: bool,
+        auth_state: bool,
         save_as_id: bool,
     ) -> Result<Self, Error> {
         if tags.len() > 2 {
@@ -49,6 +53,9 @@ impl DanbooruDownloader {
         // Place downloaded items in current dir or in /tmp
         let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Danbooru)?;
 
+        // Try to authenticate, does nothing if auth flag is not set
+        try_auth(auth_state, ImageBoards::Danbooru, &client).await?;
+
         Ok(Self {
             item_count: 0,
             page_count: 0.0,
@@ -60,10 +67,11 @@ impl DanbooruDownloader {
             safe_mode,
             save_as_id,
             downloaded_files: Arc::new(Mutex::new(0)),
+            blacklisted_posts: 0,
         })
     }
 
-    async fn get_post_count(&mut self, auth_creds: &Option<AuthCredentials>) -> Result<(), Error> {
+    async fn get_post_count(&mut self, auth_creds: &Option<ImageboardConfig>) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::Danbooru
@@ -80,7 +88,7 @@ impl DanbooruDownloader {
                 .basic_auth(&data.username, Some(&data.api_key))
                 .send()
                 .await?
-                .json::<DanbooruPostCount>()
+                .json::<Value>()
                 .await?
         } else {
             debug!("Fetching post count");
@@ -88,29 +96,32 @@ impl DanbooruDownloader {
                 .get(count_endpoint)
                 .send()
                 .await?
-                .json::<DanbooruPostCount>()
+                .json::<Value>()
                 .await?
         };
 
-        // Bail out if no posts are found
-        if count.counts.posts == 0 {
-            bail!("No posts found for tag selection!")
+        if let Some(count) = count["counts"]["posts"].as_u64() {
+            // Bail out if no posts are found
+            if count == 0 {
+                bail!("No posts found for tag selection!")
+            }
+
+            self.item_count = count;
+            self.page_count = (self.item_count as f32 / 200.0).ceil();
+
+            debug!(
+                "{} Posts for tag list '{:?}'",
+                &self.item_count, &self.tag_list
+            );
+        } else {
+            bail!("Malformed JSON response.")
         }
-
-        self.item_count = count.counts.posts;
-        self.page_count = (self.item_count as f32 / 200.0).ceil();
-
-        debug!(
-            "{} Posts for tag list '{:?}'",
-            &self.item_count, &self.tag_list
-        );
-
         Ok(())
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
         // Get auth data
-        let auth_res = AuthCredentials::read_from_fs(ImageBoards::Danbooru).await?;
+        let auth_res = ImageBoards::Danbooru.read_config_from_fs().await?;
 
         // Generate post count data
         Self::get_post_count(self, &auth_res).await?;
@@ -149,7 +160,7 @@ impl DanbooruDownloader {
                     .basic_auth(&data.username, Some(&data.api_key))
                     .send()
                     .await?
-                    .json::<Vec<DanbooruItem>>()
+                    .json::<Value>()
                     .await?
             } else {
                 debug!("Fetching posts from page {}", i);
@@ -158,12 +169,48 @@ impl DanbooruDownloader {
                     .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
                     .send()
                     .await?
-                    .json::<Vec<DanbooruItem>>()
+                    .json::<Value>()
                     .await?
             };
 
+            let start_point = Instant::now();
+            let mut posts: Vec<DanbooruItem> = jj
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|c| c["file_url"].as_str().is_some())
+                .map(|c| {
+                    let mut tag_list = HashSet::new();
+
+                    for i in c["tag_string"].as_str().unwrap().split(' ') {
+                        if !i.contains("//") {
+                            tag_list.insert(i.to_string());
+                        }
+                    }
+
+                    DanbooruItem {
+                        id: c["id"].as_u64().unwrap(),
+                        md5: c["md5"].as_str().unwrap().to_string(),
+                        file_ext: c["file_ext"].as_str().unwrap().to_string(),
+                        file_url: c["file_url"].as_str().unwrap().to_string(),
+                        tags: tag_list,
+                    }
+                })
+                .collect();
+
+            if let Some(auth) = &auth_res {
+                posts.retain(|c| {
+                    c.tags
+                        .iter()
+                        .any(|s| !auth.user_data.blacklisted_tags.contains(s))
+                });
+                self.blacklisted_posts += 1;
+            }
+            let end_iter = Instant::now();
+            trace!("Post mapping took {:?}", end_iter - start_point);
+
             // Download everything got in the above function
-            futures::stream::iter(jj)
+            futures::stream::iter(posts)
                 .map(|d| Self::download_item(self, d, bars.clone()))
                 .buffer_unordered(self.concurrent_downloads)
                 .collect::<Vec<Result<(), Error>>>()
@@ -182,6 +229,15 @@ impl DanbooruDownloader {
             "files".bold().green(),
             "downloaded".bold()
         );
+        if auth_res.is_some() && self.blacklisted_posts > 0 {
+            println!(
+                "{} {}",
+                self.blacklisted_posts.to_string().bold().red(),
+                "posts with blacklisted tags were not downloaded."
+                    .bold()
+                    .red()
+            )
+        }
         Ok(())
     }
 
@@ -190,27 +246,22 @@ impl DanbooruDownloader {
         item: DanbooruItem,
         bars: Arc<ProgressArcs>,
     ) -> Result<(), Error> {
-        if item.file_url.is_some() {
-            let entity = CommonPostItem {
-                id: item.id.unwrap(),
-                url: item.file_url.unwrap(),
-                md5: item.md5.unwrap(),
-                ext: item.file_ext.unwrap(),
-            };
-            entity
-                .get(
-                    &self.client,
-                    &self.out_dir,
-                    bars,
-                    ImageBoards::Danbooru,
-                    self.downloaded_files.clone(),
-                    self.save_as_id,
-                )
-                .await?;
-            Ok(())
-        } else {
-            bars.main.set_length(bars.main.length().unwrap() - 1);
-            bail!("")
-        }
+        let entity = CommonPostItem {
+            id: item.id,
+            url: item.file_url,
+            md5: item.md5,
+            ext: item.file_ext,
+        };
+        entity
+            .get(
+                &self.client,
+                &self.out_dir,
+                bars,
+                ImageBoards::Danbooru,
+                self.downloaded_files.clone(),
+                self.save_as_id,
+            )
+            .await?;
+        Ok(())
     }
 }

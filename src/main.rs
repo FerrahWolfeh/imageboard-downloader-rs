@@ -1,4 +1,4 @@
-use crate::imageboards::auth::AuthCredentials;
+use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::danbooru::DanbooruDownloader;
 use crate::imageboards::e621::E621Downloader;
 use crate::imageboards::konachan::KonachanDownloader;
@@ -6,10 +6,7 @@ use crate::imageboards::rule34::R34Downloader;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use clap::Parser;
-use colored::Colorize;
-use log::debug;
-use std::io;
-use std::io::Write;
+
 use std::path::PathBuf;
 
 extern crate tokio;
@@ -51,7 +48,9 @@ struct Cli {
     /// Authenticate to the imageboard website.
     ///
     /// This flag only needs to be set a single time.
-    #[clap(short, long, action, help_heading = "Danbooru Specific Options")]
+    ///
+    /// Once authenticated, it's possible to use your blacklist to exclude posts with unwanted tags
+    #[clap(short, long, action, help_heading = "GENERAL")]
     auth: bool,
 
     /// Download images from the safe version of the selected Imageboard.
@@ -72,35 +71,6 @@ struct Cli {
     save_file_as_id: bool,
 }
 
-async fn try_auth(auth_state: bool, imageboard: ImageBoards) -> Result<(), Error> {
-    if auth_state {
-        let mut username = String::new();
-        let mut api_key = String::new();
-        let stdin = io::stdin();
-        println!(
-            "{} {}",
-            "Logging into:".bold(),
-            imageboard.to_string().green().bold()
-        );
-        print!("{}", "Username: ".bold());
-        io::stdout().flush()?;
-        stdin.read_line(&mut username)?;
-        print!("{}", "API Key: ".bold());
-        io::stdout().flush()?;
-        stdin.read_line(&mut api_key)?;
-
-        debug!("Username: {:?}", username.trim());
-        debug!("API key: {:?}", api_key.trim());
-
-        let at = AuthCredentials::new(username.trim().to_string(), api_key.trim().to_string());
-
-        at.authenticate(imageboard).await?;
-
-        return Ok(());
-    }
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let args = Cli::parse();
@@ -108,31 +78,32 @@ async fn main() -> Result<(), Error> {
 
     match args.imageboard {
         ImageBoards::Danbooru => {
-            try_auth(args.auth, args.imageboard).await?;
             let mut dl = DanbooruDownloader::new(
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
+                args.auth,
                 args.save_file_as_id,
-            )?;
+            )
+                .await?;
 
             dl.download().await?;
         }
         ImageBoards::E621 => {
-            try_auth(args.auth, args.imageboard).await?;
             let mut dl = E621Downloader::new(
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
+                args.auth,
                 args.safe_mode,
                 args.save_file_as_id,
-            )?;
+            )
+                .await?;
 
             dl.download().await?;
         }
         ImageBoards::Rule34 => {
-            try_auth(args.auth, args.imageboard).await?;
             let mut dl = R34Downloader::new(
                 &args.tags,
                 args.output,
@@ -143,7 +114,6 @@ async fn main() -> Result<(), Error> {
             dl.download().await?;
         }
         ImageBoards::Konachan => {
-            try_auth(args.auth, args.imageboard).await?;
             let mut dl = KonachanDownloader::new(
                 &args.tags,
                 args.output,

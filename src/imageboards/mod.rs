@@ -1,8 +1,12 @@
 use crate::progress_bars::BarTemplates;
+use crate::ImageboardConfig;
 use anyhow::Error;
+use bincode::deserialize;
 use clap::ValueEnum;
 use log::debug;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tokio::fs::read;
 use xdg::BaseDirectories;
 
 pub mod auth;
@@ -14,7 +18,7 @@ mod macros;
 pub mod realbooru;
 pub mod rule34;
 
-#[derive(Debug, Copy, Clone, ValueEnum)]
+#[derive(Debug, Copy, Clone, ValueEnum, Serialize, Deserialize)]
 pub enum ImageBoards {
     /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
     Danbooru,
@@ -121,10 +125,8 @@ impl ImageBoards {
     pub fn auth_url(self) -> &'static str {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
-            ImageBoards::E621
-            | ImageBoards::Rule34
-            | ImageBoards::Realbooru
-            | ImageBoards::Konachan => todo!(),
+            ImageBoards::E621 => "https://e621.net/users/",
+            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
         }
     }
 
@@ -134,10 +136,25 @@ impl ImageBoards {
         let dir = xdg_dir.place_config_file(self.to_string())?;
         Ok(dir)
     }
-}
 
-pub trait UserData {
+    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, Error> {
+        if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
+            debug!("Authentication cache found");
 
+            return if let Ok(rd) = deserialize::<ImageboardConfig>(&config_auth) {
+                debug!("Authentication cache decoded.");
+                debug!("User id: {}", rd.user_data.id);
+                debug!("Username: {}", rd.user_data.name);
+                debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
+                Ok(Some(rd))
+            } else {
+                debug!("Authentication cache is invalid or empty. Using normal mode");
+                Ok(None)
+            };
+        };
+        debug!("Running without authentication");
+        Ok(None)
+    }
 }
 
 // impl fmt::Display for ImageBoards {
