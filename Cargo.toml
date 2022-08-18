@@ -5,7 +5,6 @@ version = "0.20.0"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"
-license-file = "LICENSE"
 readme = "README.md"
 repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
 keywords = ["download", "api", "e621", "danbooru", "rule34", "booru", "async"]
