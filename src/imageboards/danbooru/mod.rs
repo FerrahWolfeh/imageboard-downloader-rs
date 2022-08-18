@@ -1,3 +1,10 @@
+//! Auth and download logic for `https://danbooru.donmai.us`
+//!
+//! The danbooru downloader has the following features:
+//! * Multiple simultaneous downloads.
+//! * Authentication
+//! * Tag blacklist (defined in user profile page)
+//! * Safe mode (don't download NSFW posts)
 use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
@@ -17,6 +24,36 @@ use std::time::Duration;
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
 
+/// Main object to download posts
+///
+/// ```rust
+/// use std::path::PathBuf;
+/// use imageboard_downloader::DanbooruDownloader;
+///
+/// // Input tags
+/// let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+///
+/// // Dir where all will be saved
+/// let output = Some(PathBuf::from("./"));
+///
+/// // Number of simultaneous downloads
+/// let sd = 3;
+///
+/// // Disable download of NSFW posts
+/// let safe_mode = true;
+///
+/// // Login to the imageboard (only needs to be true once)
+/// let auth = true;
+///
+/// // Save files with as <post_id>.png rather than <image_md5>.png
+/// let save_as_id = false;
+///
+/// // Initialize the downloader
+/// let mut dl = DanbooruDownloader::new(&tags, output, sd, safe_mode, auth, save_as_id).await?;
+///
+/// // Download
+/// dl.download().await?;
+/// ```
 pub struct DanbooruDownloader {
     item_count: u64,
     page_count: f32,

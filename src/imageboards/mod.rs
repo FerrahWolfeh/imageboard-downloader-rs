@@ -1,3 +1,4 @@
+//! All internal logic for interacting with and downloading from imageboard websites.
 use crate::imageboards::auth::ImageboardConfig;
 use crate::progress_bars::BarTemplates;
 use anyhow::Error;
@@ -19,6 +20,7 @@ pub mod macros;
 pub mod realbooru;
 pub mod rule34;
 
+/// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, ValueEnum, Serialize, Deserialize)]
 pub enum ImageBoards {
     /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
@@ -27,7 +29,7 @@ pub enum ImageBoards {
     E621,
     /// Represents the website ```https://rule34.xxx```
     Rule34,
-    /// Represents the website ```https://realbooru.xxx```
+    /// Represents the website ```http://realbooru.com```
     Realbooru,
     /// Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```.
     Konachan,
