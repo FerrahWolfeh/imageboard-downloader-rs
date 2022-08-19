@@ -1,8 +1,5 @@
-mod models;
-
 use crate::extract_ext_from_url;
 use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
-use crate::imageboards::rule34::models::R34Post;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
@@ -12,6 +9,7 @@ use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
+use roxmltree::Document;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -19,6 +17,7 @@ use tokio::fs::create_dir_all;
 
 pub struct R34Downloader {
     item_count: usize,
+    page_count: usize,
     client: Client,
     tag_string: String,
     tag_list: Vec<String>,
@@ -47,6 +46,7 @@ impl R34Downloader {
 
         Ok(Self {
             item_count: 0,
+            page_count: 0,
             client,
             tag_string,
             tag_list: Vec::from(tags),
@@ -71,17 +71,26 @@ impl R34Downloader {
             .get(&count_endpoint)
             .send()
             .await?
-            .json::<Vec<R34Post>>()
+            .text()
             .await?;
 
+        let num = Document::parse(count)
+            .unwrap()
+            .root_element()
+            .attribute("count")
+            .unwrap()
+            .parse::<usize>()
+            .unwrap();
+
         // Bail out if no posts are found
-        if count.is_empty() {
+        if num == 0 {
             bail!("No posts found for tag selection!")
         }
         debug!("Tag list: {:?} is valid", &self.tag_list);
 
         // Fill memory with standard post count just to initialize the progress bar
-        self.item_count = count.len();
+        self.item_count = num;
+        self.page_count = (self.item_count as f32 / 1000.0).ceil() as usize;
 
         self.posts_endpoint = count_endpoint;
 
@@ -96,7 +105,7 @@ impl R34Downloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(0).with_style(master_progress_style(
+        let bar = ProgressBar::new(self.item_count as u64).with_style(master_progress_style(
             &ImageBoards::Rule34.progress_template(),
         ));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
@@ -108,35 +117,39 @@ impl R34Downloader {
 
         let bars = Arc::new(ProgressArcs { main, multi });
 
-        // Keep track of pages already downloaded
-        let mut page = 0;
-
         // Begin downloading all posts per page
-        // Since rule34 doesn't give a precise number of posts, we'll need to go through the pages until there's no more posts left to show
-        while self.item_count != 0 {
+        for i in 0..=self.page_count {
             let items = &self
                 .client
                 .get(&self.posts_endpoint)
-                .query(&[("pid", page), ("limit", 1000)])
+                .query(&[("pid", i), ("limit", 1000)])
                 .send()
                 .await?
-                .json::<Vec<R34Post>>()
+                .text()
                 .await?;
 
-            let posts = items.len();
+            let doc = Document::parse(items)?;
+            let stuff: Vec<Post> = doc
+                .root_element()
+                .children()
+                .filter(|c| c.attribute("file_url").is_some())
+                .map(|c| {
+                    let file = c.attribute("file_url").unwrap();
+                    Post {
+                        id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
+                        url: file.to_string(),
+                        md5: c.attribute("md5").unwrap().to_string(),
+                        extension: extract_ext_from_url!(file),
+                        tags: Default::default(),
+                    }
+                })
+                .collect();
 
-            self.item_count = posts;
-
-            bars.main.inc_length(posts as u64);
-
-            if self.item_count != 0 {
-                futures::stream::iter(items)
-                    .map(|d| Self::download_item(self, d, bars.clone()))
-                    .buffer_unordered(self.concurrent_downloads)
-                    .collect::<Vec<_>>()
-                    .await;
-            }
-            page += 1;
+            futures::stream::iter(stuff)
+                .map(|d| Self::download_item(self, d, bars.clone()))
+                .buffer_unordered(self.concurrent_downloads)
+                .collect::<Vec<_>>()
+                .await;
         }
 
         bars.main.finish_and_clear();
@@ -154,30 +167,16 @@ impl R34Downloader {
         Ok(())
     }
 
-    async fn download_item(&self, item: &R34Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
-        if item.file_url.is_some() {
-            let extension = extract_ext_from_url!(item.image.as_ref().unwrap());
-            let entity = Post {
-                id: item.id.unwrap(),
-                url: item.file_url.clone().unwrap(),
-                md5: item.hash.clone().unwrap(),
-                extension,
-                tags: Default::default(),
-            };
-            entity
-                .get(
-                    &self.client,
-                    &self.out_dir,
-                    bars,
-                    ImageBoards::Rule34,
-                    self.downloaded_files.clone(),
-                    self.save_as_id,
-                )
-                .await?;
-            Ok(())
-        } else {
-            bars.main.set_length(bars.main.length().unwrap() - 1);
-            Ok(())
-        }
+    async fn download_item(&self, item: Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
+        item.get(
+            &self.client,
+            &self.out_dir,
+            bars,
+            ImageBoards::Realbooru,
+            self.downloaded_files.clone(),
+            self.save_as_id,
+        )
+            .await?;
+        Ok(())
     }
 }
