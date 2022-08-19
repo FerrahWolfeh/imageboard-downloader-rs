@@ -9,7 +9,7 @@ use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags};
+use crate::{client, join_tags, print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -264,26 +264,7 @@ impl DanbooruDownloader {
         }
 
         bars.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            self.downloaded_files
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .green(),
-            "files".bold().green(),
-            "downloaded".bold()
-        );
-        if auth_res.is_some() && self.blacklisted_posts > 0 {
-            println!(
-                "{} {}",
-                self.blacklisted_posts.to_string().bold().red(),
-                "posts with blacklisted tags were not downloaded."
-                    .bold()
-                    .red()
-            )
-        }
+        print_results!(self, auth_res);
         Ok(())
     }
 }

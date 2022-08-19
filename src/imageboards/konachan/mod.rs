@@ -2,7 +2,7 @@ use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::konachan::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, extract_ext_from_url, join_tags};
+use crate::{client, extract_ext_from_url, join_tags, print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -142,17 +142,9 @@ impl KonachanDownloader {
         }
 
         bars.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            self.downloaded_files
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .blue(),
-            "files".bold().blue(),
-            "downloaded".bold()
-        );
+
+        print_results!(self);
+
         Ok(())
     }
 

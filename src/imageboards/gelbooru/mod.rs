@@ -1,4 +1,4 @@
-use crate::extract_ext_from_url;
+use crate::{extract_ext_from_url, print_results};
 use crate::imageboards::common::{generate_out_dir, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
@@ -162,17 +162,9 @@ impl GelbooruDownloader {
         }
 
         bars.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            self.downloaded_files
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .blue(),
-            "files".bold().blue(),
-            "downloaded".bold()
-        );
+
+        print_results!(self);
+
         Ok(())
     }
 }

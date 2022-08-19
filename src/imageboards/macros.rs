@@ -21,3 +21,43 @@ macro_rules! extract_ext_from_url {
         ext.to_string()
     }};
 }
+
+#[macro_export]
+macro_rules! print_results {
+    ($self:expr, $auth_res:expr) => {{
+        println!(
+            "{} {} {}",
+            $self.downloaded_files
+                .lock()
+                .unwrap()
+                .to_string()
+                .bold()
+                .blue(),
+            "files".bold().blue(),
+            "downloaded".bold()
+        );
+
+        if $auth_res.is_some() && $self.blacklisted_posts > 0 {
+            println!(
+                "{} {}",
+                $self.blacklisted_posts.to_string().bold().red(),
+                "posts with blacklisted tags were not downloaded."
+                    .bold()
+                    .red()
+            )
+        }
+    }};
+    ($self:expr) => {{
+        println!(
+            "{} {} {}",
+            $self.downloaded_files
+                .lock()
+                .unwrap()
+                .to_string()
+                .bold()
+                .blue(),
+            "files".bold().blue(),
+            "downloaded".bold()
+        );
+    }};
+}
