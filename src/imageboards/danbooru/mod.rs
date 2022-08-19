@@ -14,7 +14,7 @@ use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
-use log::{debug, trace};
+use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashSet;
@@ -243,7 +243,7 @@ impl DanbooruDownloader {
                 self.blacklisted_posts += 1;
             }
             let end_iter = Instant::now();
-            trace!("Post mapping took {:?}", end_iter - start_point);
+            debug!("Post mapping took {:?}", end_iter - start_point);
 
             // Download everything got in the above function
             futures::stream::iter(posts)
