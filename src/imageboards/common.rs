@@ -161,9 +161,7 @@ impl Post {
         .await
         .is_ok()
         {
-            Self::fetch(self, client, bars, &output, variant).await?;
-            let mut down_count = download_count.lock().unwrap();
-            *down_count += 1;
+            Self::fetch(self, client, bars, &output, variant, download_count).await?;
         }
         Ok(())
     }
@@ -214,12 +212,19 @@ impl Post {
         bars: Arc<ProgressArcs>,
         output: &Path,
         variant: ImageBoards,
+        download_count_mtx: Arc<Mutex<u64>>,
     ) -> Result<(), Error> {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
 
         if res.status().is_client_error() {
-            debug!("Image source returned status {}. Skipping download.", res.status().as_str());
+            bars.multi.println(format!(
+                "{} {}{}",
+                "Image source returned status".bold().red(),
+                res.status().as_str().bold().red(),
+                ". Skipping download.".bold().red()
+            ))?;
+            bars.main.inc(1);
             bail!("Post is valid but original file doesn't exist")
         }
 
@@ -261,6 +266,8 @@ impl Post {
         pb.finish_and_clear();
 
         bars.main.inc(1);
+        let mut down_count = download_count_mtx.lock().unwrap();
+        *down_count += 1;
         Ok(())
     }
 }
