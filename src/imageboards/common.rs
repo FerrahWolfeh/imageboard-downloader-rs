@@ -77,7 +77,7 @@ pub struct Post {
     pub md5: String,
     /// The original file extension provided by the imageboard.
     ///
-    /// ```https://konachan.com``` and some other imageboards doesn't provide this field. So, additional work is required to get the file extension from the url
+    /// ```https://konachan.com``` and some other imageboards don't provide this field. So, additional work is required to get the file extension from the url
     pub extension: String,
     /// Set of tags associated with the post.
     ///
@@ -132,9 +132,11 @@ impl DownloadQueue {
 }
 
 impl Post {
-    /// Main routine to download posts.
+    /// Main routine to download a single post.
     ///
-    /// This method should be coupled into a function block to run inside a ```futures::stream``` in order to prevent issues with ```await```
+    /// This function is normally part of a `DownloadQueue::download_post_list()` method.
+    ///
+    /// It can be used alone, but it's not advised.
     pub async fn get(
         &self,
         client: &Client,
