@@ -89,7 +89,7 @@ impl RealbooruDownloader {
 
         // Fill memory with standard post count just to initialize the progress bar
         self.item_count = num;
-        self.page_count = (self.item_count as f32 / 100.0).ceil() as usize;
+        self.page_count = (self.item_count as f32 / 1000.0).ceil() as usize;
 
         self.posts_endpoint = count_endpoint;
 
@@ -121,7 +121,7 @@ impl RealbooruDownloader {
             let items = &self
                 .client
                 .get(&self.posts_endpoint)
-                .query(&[("pid", i), ("limit", 100)])
+                .query(&[("pid", i), ("limit", 1000)])
                 .send()
                 .await?
                 .text()
