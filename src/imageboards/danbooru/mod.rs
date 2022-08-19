@@ -235,12 +235,13 @@ impl DanbooruDownloader {
                 .collect();
 
             if let Some(auth) = &auth_res {
+                let original_count = posts.len();
                 posts.retain(|c| {
                     c.tags
                         .iter()
                         .any(|s| !auth.user_data.blacklisted_tags.contains(s))
                 });
-                self.blacklisted_posts += 1;
+                self.blacklisted_posts += (original_count - posts.len()) as u64;
             }
             let end_iter = Instant::now();
             debug!("Post mapping took {:?}", end_iter - start_point);
