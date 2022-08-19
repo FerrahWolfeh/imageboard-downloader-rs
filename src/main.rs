@@ -94,8 +94,9 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Rule34 => {
-            let mut dl = R34Downloader::new(
+        ImageBoards::Rule34 | ImageBoards::Realbooru => {
+            let mut dl = GelbooruDownloader::new(
+                args.imageboard,
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
@@ -110,16 +111,6 @@ async fn main() -> Result<(), Error> {
                 args.output,
                 args.simultaneous_downloads,
                 args.safe_mode,
-                args.save_file_as_id,
-            )?;
-
-            dl.download().await?;
-        }
-        ImageBoards::Realbooru => {
-            let mut dl = RealbooruDownloader::new(
-                &args.tags,
-                args.output,
-                args.simultaneous_downloads,
                 args.save_file_as_id,
             )?;
 

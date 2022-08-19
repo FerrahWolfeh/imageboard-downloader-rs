@@ -7,6 +7,5 @@ pub use imageboards::ImageBoards;
 // Export all downloader interfaces
 pub use imageboards::danbooru::DanbooruDownloader;
 pub use imageboards::e621::E621Downloader;
+pub use imageboards::gelbooru::GelbooruDownloader;
 pub use imageboards::konachan::KonachanDownloader;
-pub use imageboards::realbooru::RealbooruDownloader;
-pub use imageboards::rule34::R34Downloader;

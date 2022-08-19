@@ -1,7 +1,8 @@
+use crate::extract_ext_from_url;
 use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, extract_ext_from_url, join_tags};
+use crate::{client, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -14,12 +15,12 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::fs::create_dir_all;
 
-pub struct RealbooruDownloader {
+pub struct GelbooruDownloader {
+    active_imageboard: ImageBoards,
     item_count: usize,
     page_count: usize,
     client: Client,
     tag_string: String,
-    tag_list: Vec<String>,
     concurrent_downloads: usize,
     posts_endpoint: String,
     out_dir: PathBuf,
@@ -27,28 +28,29 @@ pub struct RealbooruDownloader {
     downloaded_files: Arc<Mutex<u64>>,
 }
 
-impl RealbooruDownloader {
+impl GelbooruDownloader {
     pub fn new(
+        imageboard: ImageBoards,
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
         save_as_id: bool,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Realbooru.user_agent());
+        let client = client!(ImageBoards::Rule34.user_agent());
 
         // Join tags to a url format in case there's more than one
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Realbooru)?;
+        let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Rule34)?;
 
         Ok(Self {
+            active_imageboard: imageboard,
             item_count: 0,
             page_count: 0,
             client,
             tag_string,
-            tag_list: Vec::from(tags),
             concurrent_downloads: concurrent_downs,
             posts_endpoint: "".to_string(),
             out_dir: out,
@@ -60,7 +62,7 @@ impl RealbooruDownloader {
     async fn check_tag_list(&mut self) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}&tags={}",
-            ImageBoards::Realbooru.post_url(false).unwrap(),
+            self.active_imageboard.post_url(false).unwrap(),
             &self.tag_string
         );
 
@@ -85,7 +87,7 @@ impl RealbooruDownloader {
         if num == 0 {
             bail!("No posts found for tag selection!")
         }
-        debug!("Tag list: {:?} is valid", &self.tag_list);
+        debug!("Tag list is valid");
 
         // Fill memory with standard post count just to initialize the progress bar
         self.item_count = num;
@@ -105,7 +107,7 @@ impl RealbooruDownloader {
 
         // Setup global progress bar
         let bar = ProgressBar::new(self.item_count as u64).with_style(master_progress_style(
-            &ImageBoards::Rule34.progress_template(),
+            &self.active_imageboard.progress_template(),
         ));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
@@ -175,7 +177,7 @@ impl RealbooruDownloader {
             self.downloaded_files.clone(),
             self.save_as_id,
         )
-        .await?;
+            .await?;
         Ok(())
     }
 }
