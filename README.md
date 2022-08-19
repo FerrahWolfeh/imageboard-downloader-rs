@@ -1,6 +1,7 @@
 # Imageboard Downloader
 
-*imageboard-downloader-rs* a command-line multi image gallery downloader made in **Rust** with a very simple, yet extensible API.
+*imageboard-downloader-rs* is a command-line multi image gallery downloader made in **Rust** with a very simple, yet
+extensible API.
 
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
@@ -13,7 +14,7 @@ Dependencies
 Installation
 ============
 
-Currently you can install the latest version using `cargo`
+Currently, you can install the latest version using `cargo`
 
 ```bash
 cargo install imageboard_downloader
