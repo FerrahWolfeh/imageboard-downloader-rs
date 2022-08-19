@@ -27,7 +27,8 @@ macro_rules! print_results {
     ($self:expr, $auth_res:expr) => {{
         println!(
             "{} {} {}",
-            $self.downloaded_files
+            $self
+                .downloaded_files
                 .lock()
                 .unwrap()
                 .to_string()
@@ -50,7 +51,8 @@ macro_rules! print_results {
     ($self:expr) => {{
         println!(
             "{} {} {}",
-            $self.downloaded_files
+            $self
+                .downloaded_files
                 .lock()
                 .unwrap()
                 .to_string()

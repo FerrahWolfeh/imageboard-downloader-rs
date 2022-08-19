@@ -1,8 +1,8 @@
-use crate::{extract_ext_from_url, print_results};
 use crate::imageboards::common::{generate_out_dir, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
+use crate::{extract_ext_from_url, print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
