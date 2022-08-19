@@ -117,7 +117,7 @@ impl RealbooruDownloader {
         let bars = Arc::new(ProgressArcs { main, multi });
 
         // Begin downloading all posts per page
-        for i in 1..=self.page_count {
+        for i in 0..=self.page_count {
             let items = &self
                 .client
                 .get(&self.posts_endpoint)
