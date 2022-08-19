@@ -1,6 +1,6 @@
 use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
-use crate::imageboards::e621::models::{E621Post, E621TopLevel};
+use crate::imageboards::e621::models::E621TopLevel;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
@@ -10,6 +10,7 @@ use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -30,7 +31,7 @@ pub struct E621Downloader {
     safe_mode: bool,
     save_as_id: bool,
     downloaded_files: Arc<Mutex<u64>>,
-    _blacklisted_posts: u64,
+    blacklisted_posts: usize,
 }
 
 impl E621Downloader {
@@ -65,7 +66,7 @@ impl E621Downloader {
             safe_mode,
             save_as_id,
             downloaded_files: Arc::new(Mutex::new(0)),
-            _blacklisted_posts: 0,
+            blacklisted_posts: 0,
         })
     }
 
@@ -162,18 +163,57 @@ impl E621Downloader {
                     .await?
             };
 
-            let posts = items.posts.len() as u64;
+            let mut post_list: Vec<Post> = items
+                .posts
+                .iter()
+                .filter(|c| c.file.url.is_some())
+                .map(|c| {
+                    let mut tag_list = HashSet::new();
+                    tag_list.extend(c.tags.character.iter().cloned());
+                    tag_list.extend(c.tags.artist.iter().cloned());
+                    tag_list.extend(c.tags.general.iter().cloned());
+                    tag_list.extend(c.tags.invalid.iter().cloned());
+                    tag_list.extend(c.tags.copyright.iter().cloned());
+                    tag_list.extend(c.tags.lore.iter().cloned());
+                    tag_list.extend(c.tags.meta.iter().cloned());
+                    tag_list.extend(c.tags.species.iter().cloned());
+
+                    Post {
+                        id: c.id.unwrap(),
+                        url: c.file.url.clone().unwrap(),
+                        md5: c.file.md5.clone().unwrap(),
+                        extension: c.file.ext.clone().unwrap(),
+                        tags: tag_list,
+                    }
+                })
+                .collect();
+
+            if let Some(auth) = &auth_res {
+                let original_count = post_list.len();
+                post_list.retain(|c| {
+                    c.tags
+                        .iter()
+                        .any(|s| !auth.user_data.blacklisted_tags.contains(s))
+                });
+                self.blacklisted_posts += original_count - post_list.len();
+            }
+
+            let posts = post_list.len() as u64;
 
             self.item_count = posts;
 
-            bars.main.inc_length(posts);
+            bars.main.inc_length(posts - self.blacklisted_posts as u64);
 
             if self.item_count != 0 {
-                futures::stream::iter(&items.posts)
+                futures::stream::iter(&post_list)
                     .map(|d| Self::download_item(self, d, bars.clone()))
                     .buffer_unordered(self.concurrent_downloads)
                     .collect::<Vec<_>>()
                     .await;
+            }
+
+            if self.item_count < 320 {
+                self.item_count = 0
             }
         }
 
@@ -189,32 +229,29 @@ impl E621Downloader {
             "files".bold().blue(),
             "downloaded".bold()
         );
+
+        if auth_res.is_some() && self.blacklisted_posts > 0 {
+            println!(
+                "{} {}",
+                self.blacklisted_posts.to_string().bold().red(),
+                "posts with blacklisted tags were not downloaded."
+                    .bold()
+                    .red()
+            )
+        }
         Ok(())
     }
 
-    async fn download_item(&self, item: &E621Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
-        if item.file.url.is_some() {
-            let entity = Post {
-                id: item.id.unwrap(),
-                url: item.file.url.clone().unwrap(),
-                md5: item.file.md5.clone().unwrap(),
-                extension: item.file.ext.clone().unwrap(),
-                tags: Default::default(),
-            };
-            entity
-                .get(
-                    &self.client,
-                    &self.out_dir,
-                    bars,
-                    ImageBoards::E621,
-                    self.downloaded_files.clone(),
-                    self.save_as_id,
-                )
-                .await?;
-            Ok(())
-        } else {
-            bars.main.set_length(bars.main.length().unwrap() - 1);
-            Ok(())
-        }
+    async fn download_item(&self, item: &Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
+        item.get(
+            &self.client,
+            &self.out_dir,
+            bars,
+            ImageBoards::E621,
+            self.downloaded_files.clone(),
+            self.save_as_id,
+        )
+            .await?;
+        Ok(())
     }
 }

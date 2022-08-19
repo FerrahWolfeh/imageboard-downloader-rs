@@ -9,6 +9,7 @@ pub struct E621TopLevel {
 pub struct E621Post {
     pub id: Option<u64>,
     pub file: E621File,
+    pub tags: Tags,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,4 +26,16 @@ pub struct E621AuthUser {
     pub id: Option<u64>,
     pub name: Option<String>,
     pub blacklisted_tags: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Tags {
+    pub general: Vec<String>,
+    pub species: Vec<String>,
+    pub character: Vec<String>,
+    pub copyright: Vec<String>,
+    pub artist: Vec<String>,
+    pub invalid: Vec<String>,
+    pub lore: Vec<String>,
+    pub meta: Vec<String>,
 }
