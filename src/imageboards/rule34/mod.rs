@@ -20,7 +20,6 @@ pub struct R34Downloader {
     page_count: usize,
     client: Client,
     tag_string: String,
-    tag_list: Vec<String>,
     concurrent_downloads: usize,
     posts_endpoint: String,
     out_dir: PathBuf,
@@ -49,7 +48,6 @@ impl R34Downloader {
             page_count: 0,
             client,
             tag_string,
-            tag_list: Vec::from(tags),
             concurrent_downloads: concurrent_downs,
             posts_endpoint: "".to_string(),
             out_dir: out,
@@ -86,7 +84,7 @@ impl R34Downloader {
         if num == 0 {
             bail!("No posts found for tag selection!")
         }
-        debug!("Tag list: {:?} is valid", &self.tag_list);
+        debug!("Tag list is valid");
 
         // Fill memory with standard post count just to initialize the progress bar
         self.item_count = num;
