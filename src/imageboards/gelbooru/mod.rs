@@ -36,13 +36,13 @@ impl GelbooruDownloader {
         save_as_id: bool,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Rule34.user_agent());
+        let client = client!(imageboard.user_agent());
 
         // Join tags to a url format in case there's more than one
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Rule34)?;
+        let out = generate_out_dir(out_dir, &tag_string, imageboard)?;
 
         Ok(Self {
             active_imageboard: imageboard,
