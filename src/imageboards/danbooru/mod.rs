@@ -6,13 +6,12 @@
 //! * Tag blacklist (defined in user profile page)
 //! * Safe mode (don't download NSFW posts)
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
@@ -247,11 +246,21 @@ impl DanbooruDownloader {
             debug!("Post mapping took {:?}", end_iter - start_point);
 
             // Download everything got in the above function
-            futures::stream::iter(posts)
-                .map(|d| Self::download_item(self, d, bars.clone()))
-                .buffer_unordered(self.concurrent_downloads)
-                .collect::<Vec<Result<(), Error>>>()
-                .await;
+            let queue = DownloadQueue::new(
+                posts,
+                self.concurrent_downloads,
+                self.downloaded_files.clone(),
+            );
+
+            queue
+                .download_post_list(
+                    &self.client,
+                    &self.out_dir,
+                    bars.clone(),
+                    ImageBoards::Danbooru,
+                    self.save_as_id,
+                )
+                .await?;
         }
 
         bars.main.finish_and_clear();
@@ -275,19 +284,6 @@ impl DanbooruDownloader {
                     .red()
             )
         }
-        Ok(())
-    }
-
-    async fn download_item(&self, item: Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
-        item.get(
-            &self.client,
-            &self.out_dir,
-            bars,
-            ImageBoards::Danbooru,
-            self.downloaded_files.clone(),
-            self.save_as_id,
-        )
-        .await?;
         Ok(())
     }
 }

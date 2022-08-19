@@ -1,12 +1,11 @@
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::e621::models::E621TopLevel;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
@@ -205,11 +204,21 @@ impl E621Downloader {
             bars.main.inc_length(posts - self.blacklisted_posts as u64);
 
             if self.item_count != 0 {
-                futures::stream::iter(&post_list)
-                    .map(|d| Self::download_item(self, d, bars.clone()))
-                    .buffer_unordered(self.concurrent_downloads)
-                    .collect::<Vec<_>>()
-                    .await;
+                let queue = DownloadQueue::new(
+                    post_list,
+                    self.concurrent_downloads,
+                    self.downloaded_files.clone(),
+                );
+
+                queue
+                    .download_post_list(
+                        &self.client,
+                        &self.out_dir,
+                        bars.clone(),
+                        ImageBoards::Danbooru,
+                        self.save_as_id,
+                    )
+                    .await?;
             }
 
             if self.item_count < 320 {
@@ -239,19 +248,6 @@ impl E621Downloader {
                     .red()
             )
         }
-        Ok(())
-    }
-
-    async fn download_item(&self, item: &Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
-        item.get(
-            &self.client,
-            &self.out_dir,
-            bars,
-            ImageBoards::E621,
-            self.downloaded_files.clone(),
-            self.save_as_id,
-        )
-        .await?;
         Ok(())
     }
 }

@@ -85,6 +85,52 @@ pub struct Post {
     pub tags: HashSet<String>,
 }
 
+pub struct DownloadQueue {
+    pub list: Vec<Post>,
+    pub concurrent_downloads: usize,
+    pub download_count_mtx: Arc<Mutex<u64>>,
+}
+
+impl DownloadQueue {
+    pub fn new(
+        list: Vec<Post>,
+        concurrent_downloads: usize,
+        download_count_mtx: Arc<Mutex<u64>>,
+    ) -> Self {
+        Self {
+            list,
+            concurrent_downloads,
+            download_count_mtx,
+        }
+    }
+
+    pub async fn download_post_list(
+        self,
+        client: &Client,
+        output_dir: &Path,
+        bars: Arc<ProgressArcs>,
+        variant: ImageBoards,
+        save_as_id: bool,
+    ) -> Result<(), Error> {
+        futures::stream::iter(&self.list)
+            .map(|d| {
+                d.get(
+                    client,
+                    output_dir,
+                    bars.clone(),
+                    variant,
+                    self.download_count_mtx.clone(),
+                    save_as_id,
+                )
+            })
+            .buffer_unordered(self.concurrent_downloads)
+            .collect::<Vec<_>>()
+            .await;
+
+        Ok(())
+    }
+}
+
 impl Post {
     /// Main routine to download posts.
     ///

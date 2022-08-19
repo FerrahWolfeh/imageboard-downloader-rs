@@ -1,11 +1,10 @@
 use crate::extract_ext_from_url;
-use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
@@ -146,11 +145,20 @@ impl GelbooruDownloader {
                 })
                 .collect();
 
-            futures::stream::iter(stuff)
-                .map(|d| Self::download_item(self, d, bars.clone()))
-                .buffer_unordered(self.concurrent_downloads)
-                .collect::<Vec<_>>()
-                .await;
+            let queue = DownloadQueue::new(
+                stuff,
+                self.concurrent_downloads,
+                self.downloaded_files.clone(),
+            );
+            queue
+                .download_post_list(
+                    &self.client,
+                    &self.out_dir,
+                    bars.clone(),
+                    self.active_imageboard,
+                    self.save_as_id,
+                )
+                .await?;
         }
 
         bars.main.finish_and_clear();
@@ -165,19 +173,6 @@ impl GelbooruDownloader {
             "files".bold().blue(),
             "downloaded".bold()
         );
-        Ok(())
-    }
-
-    async fn download_item(&self, item: Post, bars: Arc<ProgressArcs>) -> Result<(), Error> {
-        item.get(
-            &self.client,
-            &self.out_dir,
-            bars,
-            ImageBoards::Realbooru,
-            self.downloaded_files.clone(),
-            self.save_as_id,
-        )
-            .await?;
         Ok(())
     }
 }
