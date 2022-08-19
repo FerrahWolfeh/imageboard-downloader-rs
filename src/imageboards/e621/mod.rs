@@ -251,7 +251,7 @@ impl E621Downloader {
             self.downloaded_files.clone(),
             self.save_as_id,
         )
-            .await?;
+        .await?;
         Ok(())
     }
 }
