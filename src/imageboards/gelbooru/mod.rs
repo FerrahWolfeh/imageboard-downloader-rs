@@ -135,9 +135,20 @@ impl GelbooruDownloader {
                 .filter(|c| c.attribute("file_url").is_some())
                 .map(|c| {
                     let file = c.attribute("file_url").unwrap();
+                    let md5 = c.attribute("md5").unwrap().to_string();
+
+                    let link = if self.active_imageboard == ImageBoards::Realbooru {
+                        let mut str: Vec<String> = file.split('/').map(|c| c.to_string()).collect();
+                        str.pop();
+                        //let modified = str.next().unwrap();
+                        format!("{}/{}.{}", str.join("/"), md5, extract_ext_from_url!(file))
+                    } else {
+                        file.to_string()
+                    };
+
                     Post {
                         id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
-                        url: file.to_string(),
+                        url: link,
                         md5: c.attribute("md5").unwrap().to_string(),
                         extension: extract_ext_from_url!(file),
                         tags: Default::default(),

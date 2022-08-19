@@ -20,7 +20,7 @@ pub mod konachan;
 pub mod macros;
 
 /// All currently supported imageboards and their underlying attributes
-#[derive(Debug, Copy, Clone, ValueEnum, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 pub enum ImageBoards {
     /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
     Danbooru,
