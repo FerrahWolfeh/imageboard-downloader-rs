@@ -218,6 +218,11 @@ impl Post {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
 
+        if res.status().is_client_error() {
+            debug!("Image source returned status {}. Skipping download.", res.status().as_str());
+            bail!("Post is valid but original file doesn't exist")
+        }
+
         let size = res.content_length().unwrap_or_default();
         let bar = ProgressBar::new(size)
             .with_style(download_progress_style(&variant.progress_template()));
