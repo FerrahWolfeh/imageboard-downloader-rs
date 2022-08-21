@@ -5,56 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'imageboard_downloader'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=imageboard_downloader"
-                ],
-                "filter": {
-                    "name": "imageboard_downloader",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'imageboard_downloader'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=imageboard_downloader",
-                    "--package=imageboard_downloader"
-                ],
-                "filter": {
-                    "name": "imageboard_downloader",
-                    "kind": "bin"
-                }
+          "type": "lldb",
+          "request": "launch",
+          "name": "Debug Danbooru default",
+          "cargo": {
+            "args": [
+              "build",
+              "--bin=imageboard_downloader",
+              "--package=imageboard_downloader"
+            ],
+            "filter": {
+              "name": "imageboard_downloader",
+              "kind": "bin"
+            }
             },
             "args": ["kroos_(arknights)", "--safe-mode"],
             "cwd": "${workspaceFolder}"
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable Gelbooru",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=imageboard_downloader",
-                    "--package=imageboard_downloader"
-                ],
-                "filter": {
-                    "name": "imageboard_downloader",
-                    "kind": "bin"
-                }
+      {
+        "type": "lldb",
+        "request": "launch",
+        "name": "Debug Gelbooru default",
+        "cargo": {
+          "args": [
+            "build",
+            "--bin=imageboard_downloader",
+            "--package=imageboard_downloader"
+          ],
+          "filter": {
+            "name": "imageboard_downloader",
+            "kind": "bin"
+          }
             },
             "args": ["-i", "gelbooru","kroos_(arknights)"],
             "cwd": "${workspaceFolder}"
@@ -93,25 +74,6 @@
                 }
             },
             "args": ["kroos_(arknights)", "-l", "50", "-i", "rule34"],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'imageboard_downloader'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=imageboard_downloader",
-                    "--package=imageboard_downloader"
-                ],
-                "filter": {
-                    "name": "imageboard_downloader",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
             "cwd": "${workspaceFolder}"
         }
     ]
