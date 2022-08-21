@@ -62,6 +62,42 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Test danbooru post limit",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": ["kroos_(arknights)", "-l", "10"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test R34 post limit",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": ["kroos_(arknights)", "-l", "50", "-i", "rule34"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'imageboard_downloader'",
             "cargo": {
                 "args": [
