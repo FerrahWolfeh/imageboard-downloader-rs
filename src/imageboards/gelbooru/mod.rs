@@ -130,6 +130,7 @@ impl GelbooruDownloader {
         let stuff: Vec<Post> = doc
             .root_element()
             .children()
+            .filter(|c| c.attribute("file_url").is_some())
             .map(|c| {
                 //c.children().map(|n| )
                 let file = c.attribute("file_url").unwrap();
