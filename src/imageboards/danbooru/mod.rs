@@ -59,11 +59,11 @@ use tokio::time::Instant;
 pub struct DanbooruDownloader {
     item_count: u64,
     page_count: f32,
+    client: Client,
     concurrent_downloads: usize,
-    item_limit: Option<usize>,
+    download_limit: Option<usize>,
     tag_list: Vec<String>,
     tag_string: String,
-    client: Client,
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
@@ -100,7 +100,7 @@ impl DanbooruDownloader {
             item_count: 0,
             page_count: 0.0,
             concurrent_downloads: concurrent_downs,
-            item_limit,
+            download_limit: item_limit,
             tag_list: Vec::from(tags),
             tag_string,
             client,
@@ -121,7 +121,7 @@ impl DanbooruDownloader {
             &self.tag_string
         );
 
-        if let Some(num) = self.item_limit {
+        if let Some(num) = self.download_limit {
             self.item_count = num as u64;
             self.page_count = (num as f32 / 200.0).ceil();
             return Ok(());
