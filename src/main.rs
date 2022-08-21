@@ -64,7 +64,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let args = Cli::parse();
+    let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
     match args.imageboard {
