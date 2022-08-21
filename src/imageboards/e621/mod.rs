@@ -141,6 +141,8 @@ impl E621Downloader {
         while self.item_count != 0 {
             page += 1;
 
+            bars.main.set_message(format!("Page {page}"));
+
             let items = if let Some(data) = &auth_res {
                 debug!("[AUTH] Fetching posts from page {}", page);
                 self.client

@@ -119,6 +119,9 @@ impl GelbooruDownloader {
 
         // Begin downloading all posts per page
         for i in 0..=self.page_count {
+
+            bars.main.set_message(format!("Page {i}"));
+
             let items = &self
                 .client
                 .get(&self.posts_endpoint)

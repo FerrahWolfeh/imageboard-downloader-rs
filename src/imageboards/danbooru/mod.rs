@@ -179,6 +179,9 @@ impl DanbooruDownloader {
 
         // Begin downloading all posts per page
         for i in 1..=self.page_count as u64 {
+
+            bars.main.set_message(format!("Page {i}"));
+
             // Check safe mode
             let url_mode = format!(
                 "{}?tags={}",
