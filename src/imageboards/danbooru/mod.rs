@@ -47,8 +47,11 @@ use tokio::time::Instant;
 /// // Save files with as <post_id>.png rather than <image_md5>.png
 /// let save_as_id = false;
 ///
+/// // Limit number of downloaded files
+/// let limit = Some(100);
+///
 /// // Initialize the downloader
-/// let mut dl = DanbooruDownloader::new(&tags, output, sd, safe_mode, auth, save_as_id).await?;
+/// let mut dl = DanbooruDownloader::new(&tags, output, sd, limit, safe_mode, auth, save_as_id).await?;
 ///
 /// // Download
 /// dl.download().await?;
