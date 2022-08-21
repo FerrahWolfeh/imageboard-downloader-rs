@@ -9,6 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use roxmltree::Document;
+use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -90,11 +91,69 @@ impl GelbooruDownloader {
 
         // Fill memory with standard post count just to initialize the progress bar
         self.item_count = num;
-        self.page_count = (self.item_count as f32 / 1000.0).ceil() as usize;
+        self.page_count =
+            (self.item_count as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
 
+        if self.active_imageboard == ImageBoards::Gelbooru {
+            let count_endpoint = format!("{}&json=1", count_endpoint);
         self.posts_endpoint = count_endpoint;
+        } else {
+            self.posts_endpoint = count_endpoint;
+        }
 
         Ok(())
+    }
+
+    fn generate_post_queue(&self, xml: &String) -> Result<Vec<Post>, Error> {
+        if self.active_imageboard == ImageBoards::Gelbooru {
+            let json: Value = serde_json::from_str(xml.as_str())?;
+            if let Some(it) = json["post"].as_array() {
+                let list: Vec<Post> = it
+                    .iter()
+                    .filter(|i| i["file_url"].as_str().is_some())
+                    .map(|post| {
+                        let url = post["file_url"].as_str().unwrap().to_string();
+                        Post {
+                            id: post["id"].as_u64().unwrap(),
+                            md5: post["md5"].as_str().unwrap().to_string(),
+                            url: url.clone(),
+                            extension: extract_ext_from_url!(url),
+                            tags: Default::default(),
+                        }
+                    })
+                    .collect();
+                return Ok(list);
+            }
+        }
+
+        let doc = Document::parse(xml)?;
+        let stuff: Vec<Post> = doc
+            .root_element()
+            .children()
+            .map(|c| {
+                //c.children().map(|n| )
+                let file = c.attribute("file_url").unwrap();
+                let md5 = c.attribute("md5").unwrap().to_string();
+
+                let link = if self.active_imageboard == ImageBoards::Realbooru {
+                    let mut str: Vec<String> = file.split('/').map(|c| c.to_string()).collect();
+                    str.pop();
+                    //let modified = str.next().unwrap();
+                    format!("{}/{}.{}", str.join("/"), md5, extract_ext_from_url!(file))
+                } else {
+                    file.to_string()
+                };
+
+                Post {
+                    id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
+                    url: link,
+                    md5: c.attribute("md5").unwrap().to_string(),
+                    extension: extract_ext_from_url!(file),
+                    tags: Default::default(),
+                }
+            })
+            .collect();
+        Ok(stuff)
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
@@ -119,7 +178,6 @@ impl GelbooruDownloader {
 
         // Begin downloading all posts per page
         for i in 0..=self.page_count {
-
             bars.main.set_message(format!("Page {i}"));
 
             let items = &self
@@ -131,33 +189,7 @@ impl GelbooruDownloader {
                 .text()
                 .await?;
 
-            let doc = Document::parse(items)?;
-            let stuff: Vec<Post> = doc
-                .root_element()
-                .children()
-                .filter(|c| c.attribute("file_url").is_some())
-                .map(|c| {
-                    let file = c.attribute("file_url").unwrap();
-                    let md5 = c.attribute("md5").unwrap().to_string();
-
-                    let link = if self.active_imageboard == ImageBoards::Realbooru {
-                        let mut str: Vec<String> = file.split('/').map(|c| c.to_string()).collect();
-                        str.pop();
-                        //let modified = str.next().unwrap();
-                        format!("{}/{}.{}", str.join("/"), md5, extract_ext_from_url!(file))
-                    } else {
-                        file.to_string()
-                    };
-
-                    Post {
-                        id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
-                        url: link,
-                        md5: c.attribute("md5").unwrap().to_string(),
-                        extension: extract_ext_from_url!(file),
-                        tags: Default::default(),
-                    }
-                })
-                .collect();
+            let stuff = Self::generate_post_queue(&self, items)?;
 
             let queue = DownloadQueue::new(
                 stuff,

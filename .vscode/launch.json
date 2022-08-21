@@ -44,6 +44,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable Gelbooru",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": ["-i", "gelbooru","kroos_(arknights)"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'imageboard_downloader'",
             "cargo": {
                 "args": [

@@ -32,6 +32,8 @@ pub enum ImageBoards {
     Realbooru,
     /// Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```.
     Konachan,
+    /// Represents the website ```https://gelbooru.com```.
+    Gelbooru,
 }
 
 impl ToString for ImageBoards {
@@ -42,6 +44,7 @@ impl ToString for ImageBoards {
             ImageBoards::Rule34 => String::from("rule34"),
             ImageBoards::Realbooru => String::from("realbooru"),
             ImageBoards::Konachan => String::from("konachan"),
+            ImageBoards::Gelbooru => String::from("gelbooru"),
         }
     }
 }
@@ -114,6 +117,19 @@ impl ImageBoards {
             ImageBoards::Realbooru => {
                 Some("http://realbooru.com/index.php?page=dapi&s=post&q=index")
             }
+            ImageBoards::Gelbooru => Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index"),
+        }
+    }
+
+    /// Returns max number of posts per page a imageboard can have
+    pub fn max_post_limit(self) -> f32 {
+        match self {
+            ImageBoards::Danbooru => 200.0,
+            ImageBoards::E621 => 320.0,
+            ImageBoards::Rule34 => 1000.0,
+            ImageBoards::Realbooru => 1000.0,
+            ImageBoards::Konachan => 100.0,
+            ImageBoards::Gelbooru => 100.0,
         }
     }
 
@@ -124,7 +140,7 @@ impl ImageBoards {
                 main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} ({msg:.bold.blue} | eta. {eta})",
                 download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:.blue})",
             },
-            ImageBoards::Danbooru | ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => BarTemplates::default(),
+            _ => BarTemplates::default(),
         }
     }
 
@@ -133,7 +149,7 @@ impl ImageBoards {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
             ImageBoards::E621 => "https://e621.net/users/",
-            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Konachan => todo!(),
+            _ => todo!(),
         }
     }
 

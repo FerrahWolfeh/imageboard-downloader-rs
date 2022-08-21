@@ -94,7 +94,7 @@ async fn main() -> Result<(), Error> {
 
             dl.download().await?;
         }
-        ImageBoards::Rule34 | ImageBoards::Realbooru => {
+        ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut dl = GelbooruDownloader::new(
                 args.imageboard,
                 &args.tags,
