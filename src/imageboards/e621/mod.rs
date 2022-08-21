@@ -29,6 +29,7 @@ pub struct E621Downloader {
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
+    download_limit: Option<usize>,
     downloaded_files: Arc<Mutex<u64>>,
     blacklisted_posts: usize,
 }
@@ -38,6 +39,7 @@ impl E621Downloader {
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        download_limit: Option<usize>,
         auth_state: bool,
         safe_mode: bool,
         save_as_id: bool,
@@ -64,6 +66,7 @@ impl E621Downloader {
             out_dir: out,
             safe_mode,
             save_as_id,
+            download_limit,
             downloaded_files: Arc::new(Mutex::new(0)),
             blacklisted_posts: 0,
         })
@@ -103,7 +106,11 @@ impl E621Downloader {
         debug!("Tag list: {:?} is valid", &self.tag_list);
 
         // Fill memory with standard post count just to initialize the progress bar
-        self.item_count = count.posts.len() as u64;
+        if let Some(num) = self.download_limit {
+            self.item_count = num as u64;
+        } else {
+            self.item_count = count.posts.len() as u64;
+        }
 
         self.posts_endpoint = count_endpoint;
 
@@ -120,8 +127,14 @@ impl E621Downloader {
         // Create output dir
         create_dir_all(&self.out_dir).await?;
 
+        let initial_len = if self.download_limit.is_some() {
+            self.download_limit.unwrap() as u64
+        } else {
+            0
+        };
+
         // Setup global progress bar
-        let bar = ProgressBar::new(0).with_style(master_progress_style(
+        let bar = ProgressBar::new(initial_len).with_style(master_progress_style(
             &ImageBoards::E621.progress_template(),
         ));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
@@ -138,7 +151,7 @@ impl E621Downloader {
 
         // Begin downloading all posts per page
         // Since e621 doesn't give a precise number of posts, we'll need to go through the pages until there's no more posts left to show
-        while self.item_count != 0 {
+        loop {
             page += 1;
 
             bars.main.set_message(format!("Page {page}"));
@@ -199,16 +212,26 @@ impl E621Downloader {
                 self.blacklisted_posts += original_count - post_list.len();
             }
 
-            let posts = post_list.len() as u64;
+            let list_len = post_list.len() as u64;
 
-            self.item_count = posts;
+            if let Some(dl) = self.download_limit {
+                if list_len < dl as u64 {
+                    self.item_count = post_list.len() as u64
+                } else {
+                    self.item_count = self.download_limit.unwrap() as u64
+                }
+            } else {
+                self.item_count = list_len;
 
-            bars.main.inc_length(posts - self.blacklisted_posts as u64);
+                bars.main
+                    .inc_length(list_len - self.blacklisted_posts as u64);
+            };
 
             if self.item_count != 0 {
                 let queue = DownloadQueue::new(
                     post_list,
                     self.concurrent_downloads,
+                    self.download_limit,
                     self.downloaded_files.clone(),
                 );
 
@@ -223,8 +246,14 @@ impl E621Downloader {
                     .await?;
             }
 
+            if let Some(n) = self.download_limit {
+                if n as u64 == *self.downloaded_files.lock().unwrap() {
+                    break;
+                }
+            }
+
             if self.item_count < 320 {
-                self.item_count = 0
+                break;
             }
         }
 

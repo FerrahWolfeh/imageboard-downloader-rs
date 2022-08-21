@@ -25,6 +25,7 @@ pub struct GelbooruDownloader {
     posts_endpoint: String,
     out_dir: PathBuf,
     save_as_id: bool,
+    download_limit: Option<usize>,
     downloaded_files: Arc<Mutex<u64>>,
 }
 
@@ -34,6 +35,7 @@ impl GelbooruDownloader {
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        download_limit: Option<usize>,
         save_as_id: bool,
     ) -> Result<Self, Error> {
         // Use common client for all connections with a set User-Agent
@@ -55,6 +57,7 @@ impl GelbooruDownloader {
             posts_endpoint: "".to_string(),
             out_dir: out,
             save_as_id,
+            download_limit,
             downloaded_files: Arc::new(Mutex::new(0)),
         })
     }
@@ -90,13 +93,25 @@ impl GelbooruDownloader {
         debug!("Tag list is valid");
 
         // Fill memory with standard post count just to initialize the progress bar
-        self.item_count = num;
-        self.page_count =
-            (self.item_count as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+        if let Some(n) = self.download_limit {
+            if num < n {
+                self.item_count = num;
+                self.page_count = (self.item_count as f32 / self.active_imageboard.max_post_limit())
+                    .ceil() as usize;
+            } else {
+                self.item_count = n;
+                self.page_count =
+                    (n as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+            }
+        } else {
+            self.item_count = num;
+            self.page_count =
+                (self.item_count as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+        }
 
         if self.active_imageboard == ImageBoards::Gelbooru {
             let count_endpoint = format!("{}&json=1", count_endpoint);
-        self.posts_endpoint = count_endpoint;
+            self.posts_endpoint = count_endpoint;
         } else {
             self.posts_endpoint = count_endpoint;
         }
@@ -195,6 +210,7 @@ impl GelbooruDownloader {
             let queue = DownloadQueue::new(
                 stuff,
                 self.concurrent_downloads,
+                self.download_limit,
                 self.downloaded_files.clone(),
             );
             queue
@@ -206,6 +222,12 @@ impl GelbooruDownloader {
                     self.save_as_id,
                 )
                 .await?;
+
+            if let Some(n) = self.download_limit {
+                if n as u64 == *self.downloaded_files.lock().unwrap() {
+                    break;
+                }
+            }
         }
 
         bars.main.finish_and_clear();

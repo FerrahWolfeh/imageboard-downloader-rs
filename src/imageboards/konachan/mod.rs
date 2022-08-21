@@ -26,6 +26,7 @@ pub struct KonachanDownloader {
     out_dir: PathBuf,
     save_as_id: bool,
     safe_mode: bool,
+    _download_limit: Option<usize>,
     downloaded_files: Arc<Mutex<u64>>,
 }
 
@@ -34,6 +35,7 @@ impl KonachanDownloader {
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        download_limit: Option<usize>,
         safe_mode: bool,
         save_as_id: bool,
     ) -> Result<Self, Error> {
@@ -56,6 +58,7 @@ impl KonachanDownloader {
             out_dir: out,
             save_as_id,
             safe_mode,
+            _download_limit: download_limit,
             downloaded_files: Arc::new(Mutex::new(0)),
         })
     }

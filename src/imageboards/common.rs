@@ -68,7 +68,7 @@ pub struct ProgressArcs {
 /// Generic representation of a imageboard post
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Post {
     pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server
@@ -95,8 +95,15 @@ impl DownloadQueue {
     pub fn new(
         list: Vec<Post>,
         concurrent_downloads: usize,
+        limit: Option<usize>,
         download_count_mtx: Arc<Mutex<u64>>,
     ) -> Self {
+        let list = if limit.is_some() {
+            list[0..limit.unwrap()].to_vec()
+        } else {
+            list
+        };
+
         Self {
             list,
             concurrent_downloads,

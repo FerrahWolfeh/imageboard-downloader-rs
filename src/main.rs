@@ -60,6 +60,10 @@ struct Cli {
         help_heading = "DOWNLOAD"
     )]
     save_file_as_id: bool,
+
+    /// Limit max number of downloads
+    #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
+    limit: Option<usize>,
 }
 
 #[tokio::main]
@@ -73,6 +77,7 @@ async fn main() -> Result<(), Error> {
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
+                args.limit,
                 args.safe_mode,
                 args.auth,
                 args.save_file_as_id,
@@ -86,6 +91,7 @@ async fn main() -> Result<(), Error> {
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
+                args.limit,
                 args.auth,
                 args.safe_mode,
                 args.save_file_as_id,
@@ -100,6 +106,7 @@ async fn main() -> Result<(), Error> {
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
+                args.limit,
                 args.save_file_as_id,
             )?;
 
@@ -110,6 +117,7 @@ async fn main() -> Result<(), Error> {
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,
+                args.limit,
                 args.safe_mode,
                 args.save_file_as_id,
             )?;

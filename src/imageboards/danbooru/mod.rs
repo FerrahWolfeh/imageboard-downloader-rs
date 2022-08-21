@@ -57,6 +57,7 @@ pub struct DanbooruDownloader {
     item_count: u64,
     page_count: f32,
     concurrent_downloads: usize,
+    item_limit: Option<usize>,
     tag_list: Vec<String>,
     tag_string: String,
     client: Client,
@@ -72,6 +73,7 @@ impl DanbooruDownloader {
         tags: &[String],
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
+        item_limit: Option<usize>,
         safe_mode: bool,
         auth_state: bool,
         save_as_id: bool,
@@ -95,6 +97,7 @@ impl DanbooruDownloader {
             item_count: 0,
             page_count: 0.0,
             concurrent_downloads: concurrent_downs,
+            item_limit,
             tag_list: Vec::from(tags),
             tag_string,
             client,
@@ -114,6 +117,12 @@ impl DanbooruDownloader {
                 .unwrap(),
             &self.tag_string
         );
+
+        if let Some(num) = self.item_limit {
+            self.item_count = num as u64;
+            self.page_count = (num as f32 / 200.0).ceil();
+            return Ok(());
+        }
 
         // Get an estimate of total posts and pages to search
         let count = if let Some(data) = auth_creds {
@@ -179,7 +188,6 @@ impl DanbooruDownloader {
 
         // Begin downloading all posts per page
         for i in 1..=self.page_count as u64 {
-
             bars.main.set_message(format!("Page {i}"));
 
             // Check safe mode
@@ -252,6 +260,7 @@ impl DanbooruDownloader {
             let queue = DownloadQueue::new(
                 posts,
                 self.concurrent_downloads,
+                self.item_limit,
                 self.downloaded_files.clone(),
             );
 
