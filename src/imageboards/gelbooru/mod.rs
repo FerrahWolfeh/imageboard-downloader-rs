@@ -62,7 +62,7 @@ impl GelbooruDownloader {
         })
     }
 
-    async fn check_tag_list(&mut self) -> Result<(), Error> {
+    async fn get_post_count(&mut self) -> Result<(), Error> {
         let count_endpoint = format!(
             "{}&tags={}",
             self.active_imageboard.post_url(false).unwrap(),
@@ -92,69 +92,48 @@ impl GelbooruDownloader {
         }
         debug!("Tag list is valid");
 
-        // Fill memory with standard post count just to initialize the progress bar
+        // In case the limit is set, use a whole other cascade of stuff
         if let Some(n) = self.download_limit {
-            if num < n {
-                self.item_count = num;
-                self.page_count = (self.item_count as f32 / self.active_imageboard.max_post_limit())
-                    .ceil() as usize;
-            } else {
+            // When it is set, we artificially set the counts to the limit in order to trick the progress bar.
+            if n < num && n != 0 {
                 self.item_count = n;
                 self.page_count =
                     (n as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
             }
+            // Or else, the usual
         } else {
             self.item_count = num;
             self.page_count =
                 (self.item_count as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
         }
 
+        // Gelbooru has a newer API that's a complete hell to decode in xml format, so we slightly change the url to the json endpoint.
         if self.active_imageboard == ImageBoards::Gelbooru {
             let count_endpoint = format!("{}&json=1", count_endpoint);
             self.posts_endpoint = count_endpoint;
-        } else {
-            self.posts_endpoint = count_endpoint;
+            return Ok(());
         }
+
+        self.posts_endpoint = count_endpoint;
 
         Ok(())
     }
 
-    fn generate_post_queue(&self, xml: &String) -> Result<Vec<Post>, Error> {
-        if self.active_imageboard == ImageBoards::Gelbooru {
-            let json: Value = serde_json::from_str(xml.as_str())?;
-            if let Some(it) = json["post"].as_array() {
-                let list: Vec<Post> = it
-                    .iter()
-                    .filter(|i| i["file_url"].as_str().is_some())
-                    .map(|post| {
-                        let url = post["file_url"].as_str().unwrap().to_string();
-                        Post {
-                            id: post["id"].as_u64().unwrap(),
-                            md5: post["md5"].as_str().unwrap().to_string(),
-                            url: url.clone(),
-                            extension: extract_ext_from_url!(url),
-                            tags: Default::default(),
-                        }
-                    })
-                    .collect();
-                return Ok(list);
-            }
-        }
-
+    // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
+    fn generate_queue_xml(&self, xml: &str) -> Result<DownloadQueue, Error> {
         let doc = Document::parse(xml)?;
         let stuff: Vec<Post> = doc
             .root_element()
             .children()
             .filter(|c| c.attribute("file_url").is_some())
             .map(|c| {
-                //c.children().map(|n| )
                 let file = c.attribute("file_url").unwrap();
                 let md5 = c.attribute("md5").unwrap().to_string();
 
                 let link = if self.active_imageboard == ImageBoards::Realbooru {
                     let mut str: Vec<String> = file.split('/').map(|c| c.to_string()).collect();
                     str.pop();
-                    //let modified = str.next().unwrap();
+
                     format!("{}/{}.{}", str.join("/"), md5, extract_ext_from_url!(file))
                 } else {
                     file.to_string()
@@ -169,12 +148,46 @@ impl GelbooruDownloader {
                 }
             })
             .collect();
-        Ok(stuff)
+
+        Ok(DownloadQueue::new(
+            stuff,
+            self.concurrent_downloads,
+            self.download_limit,
+            self.downloaded_files.clone(),
+        ))
+    }
+
+    // This is for gelbooru.com itself, since it uses a new API that, while better on the JSON side, the XML part is an absolute hell to parse
+    fn generate_queue_json(&self, json: &str) -> Result<DownloadQueue, Error> {
+        let json: Value = serde_json::from_str(json)?;
+        if let Some(it) = json["post"].as_array() {
+            let posts: Vec<Post> = it
+                .iter()
+                .filter(|i| i["file_url"].as_str().is_some())
+                .map(|post| {
+                    let url = post["file_url"].as_str().unwrap().to_string();
+                    Post {
+                        id: post["id"].as_u64().unwrap(),
+                        md5: post["md5"].as_str().unwrap().to_string(),
+                        url: url.clone(),
+                        extension: extract_ext_from_url!(url),
+                        tags: Default::default(),
+                    }
+                })
+                .collect();
+            return Ok(DownloadQueue::new(
+                posts,
+                self.concurrent_downloads,
+                self.download_limit,
+                self.downloaded_files.clone(),
+            ));
+        }
+        bail!("Failed to parse json")
     }
 
     pub async fn download(&mut self) -> Result<(), Error> {
         // Generate post count data
-        Self::check_tag_list(self).await?;
+        Self::get_post_count(self).await?;
 
         // Create output dir
         create_dir_all(&self.out_dir).await?;
@@ -205,14 +218,12 @@ impl GelbooruDownloader {
                 .text()
                 .await?;
 
-            let stuff = Self::generate_post_queue(&self, items)?;
+            let queue = if self.active_imageboard == ImageBoards::Gelbooru {
+                Self::generate_queue_json(self, items)?
+            } else {
+                Self::generate_queue_xml(self, items)?
+            };
 
-            let queue = DownloadQueue::new(
-                stuff,
-                self.concurrent_downloads,
-                self.download_limit,
-                self.downloaded_files.clone(),
-            );
             queue
                 .download_post_list(
                     &self.client,
