@@ -17,13 +17,13 @@ use tokio::fs::create_dir_all;
 
 pub mod models;
 
-const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
+//const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
 pub struct E621Downloader {
     item_count: u64,
     client: Client,
     tag_string: String,
-    tag_list: Vec<String>,
+    //tag_list: Vec<String>,
     concurrent_downloads: usize,
     posts_endpoint: String,
     out_dir: PathBuf,
@@ -60,7 +60,7 @@ impl E621Downloader {
             item_count: 0,
             client,
             tag_string,
-            tag_list: Vec::from(tags),
+            //tag_list: Vec::from(tags),
             concurrent_downloads: concurrent_downs,
             posts_endpoint: "".to_string(),
             out_dir: out,
@@ -103,7 +103,7 @@ impl E621Downloader {
         if count.posts.is_empty() {
             bail!("No posts found for tag selection!")
         }
-        debug!("Tag list: {:?} is valid", &self.tag_list);
+        debug!("Tag list is valid");
 
         // Fill memory with standard post count just to initialize the progress bar
         if let Some(num) = self.download_limit {
