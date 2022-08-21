@@ -1,8 +1,8 @@
 use crate::imageboards::common::{generate_out_dir, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags};
-use crate::{extract_ext_from_url, print_results};
+use crate::{client, initialize_progress_bars, join_tags};
+use crate::{extract_ext_from_url, finish_and_print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -193,17 +193,7 @@ impl GelbooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(self.item_count as u64).with_style(master_progress_style(
-            &self.active_imageboard.progress_template(),
-        ));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
-
-        // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
-
-        let bars = Arc::new(ProgressArcs { main, multi });
+        let bars = initialize_progress_bars!(self.item_count as u64, self.active_imageboard);
 
         // Begin downloading all posts per page
         for i in 0..=self.page_count {
@@ -241,9 +231,7 @@ impl GelbooruDownloader {
             }
         }
 
-        bars.main.finish_and_clear();
-
-        print_results!(self);
+        finish_and_print_results!(bars, self);
 
         Ok(())
     }

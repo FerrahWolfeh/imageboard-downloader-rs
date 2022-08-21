@@ -2,7 +2,7 @@ use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::konachan::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, extract_ext_from_url, join_tags, print_results};
+use crate::{client, extract_ext_from_url, initialize_progress_bars, join_tags, finish_and_print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -101,17 +101,7 @@ impl KonachanDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(0).with_style(master_progress_style(
-            &ImageBoards::Konachan.progress_template(),
-        ));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
-
-        // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
-
-        let bars = Arc::new(ProgressArcs { main, multi });
+        let bars = initialize_progress_bars!(0, ImageBoards::Konachan);
 
         // Keep track of pages already downloaded
         let mut page = 1;
@@ -144,9 +134,7 @@ impl KonachanDownloader {
             page += 1;
         }
 
-        bars.main.finish_and_clear();
-
-        print_results!(self);
+        finish_and_print_results!(bars, self);
 
         Ok(())
     }

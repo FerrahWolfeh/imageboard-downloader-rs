@@ -9,7 +9,7 @@ use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, print_results};
+use crate::{client, initialize_progress_bars, join_tags, finish_and_print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -177,17 +177,7 @@ impl DanbooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bar = ProgressBar::new(self.item_count).with_style(master_progress_style(
-            &ImageBoards::Danbooru.progress_template(),
-        ));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
-
-        // Initialize the bar
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
-
-        let bars = Arc::new(ProgressArcs { main, multi });
+        let bars = initialize_progress_bars!(self.item_count, ImageBoards::Danbooru);
 
         // Begin downloading all posts per page
         for i in 1..=self.page_count as u64 {
@@ -263,7 +253,7 @@ impl DanbooruDownloader {
             let queue = DownloadQueue::new(
                 posts,
                 self.concurrent_downloads,
-                self.item_limit,
+                self.download_limit,
                 self.downloaded_files.clone(),
             );
 
@@ -278,8 +268,7 @@ impl DanbooruDownloader {
                 .await?;
         }
 
-        bars.main.finish_and_clear();
-        print_results!(self, auth_res);
+        finish_and_print_results!(bars, self, auth_res);
         Ok(())
     }
 }

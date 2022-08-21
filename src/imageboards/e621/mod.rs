@@ -3,7 +3,7 @@ use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post
 use crate::imageboards::e621::models::E621TopLevel;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, join_tags, print_results};
+use crate::{client, initialize_progress_bars, join_tags, finish_and_print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
@@ -127,24 +127,15 @@ impl E621Downloader {
         // Create output dir
         create_dir_all(&self.out_dir).await?;
 
-        let initial_len = if self.download_limit.is_some() {
-            self.download_limit.unwrap() as u64
+        // In case the limit is set, we can initialize the main progress bar with a known value
+        let initial_len = if let Some(n) = self.download_limit {
+            n as u64
         } else {
             0
         };
 
         // Setup global progress bar
-        let bar = ProgressBar::new(initial_len).with_style(master_progress_style(
-            &ImageBoards::E621.progress_template(),
-        ));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
-
-        // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
-
-        let bars = Arc::new(ProgressArcs { main, multi });
+        let bars = initialize_progress_bars!(initial_len, ImageBoards::E621);
 
         // Keep track of pages already downloaded
         let mut page = 0;
@@ -257,8 +248,7 @@ impl E621Downloader {
             }
         }
 
-        bars.main.finish_and_clear();
-        print_results!(self, auth_res);
+        finish_and_print_results!(bars, self, auth_res);
         Ok(())
     }
 }
