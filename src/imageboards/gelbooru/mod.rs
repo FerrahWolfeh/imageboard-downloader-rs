@@ -91,6 +91,7 @@ impl GelbooruDownloader {
             bail!("No posts found for tag selection!")
         }
         debug!("Tag list is valid");
+        debug!("{} total posts found", num);
 
         // In case the limit is set, use a whole other cascade of stuff
         if let Some(n) = self.download_limit {
@@ -99,6 +100,10 @@ impl GelbooruDownloader {
                 self.item_count = n;
                 self.page_count =
                     (n as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+            } else {
+                self.item_count = num;
+                self.page_count = (self.item_count as f32 / self.active_imageboard.max_post_limit())
+                    .ceil() as usize;
             }
             // Or else, the usual
         } else {

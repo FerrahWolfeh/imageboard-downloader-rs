@@ -98,8 +98,15 @@ impl DownloadQueue {
         limit: Option<usize>,
         download_count_mtx: Arc<Mutex<u64>>,
     ) -> Self {
-        let list = if limit.is_some() {
-            list[0..limit.unwrap()].to_vec()
+        let list = if let Some(max) = limit {
+            let dt = *download_count_mtx.lock().unwrap() as usize;
+            let l_len = list.len();
+            let ran = max - dt;
+            if ran >= l_len {
+                list
+            } else {
+                list[0..ran].to_vec()
+            }
         } else {
             list
         };
