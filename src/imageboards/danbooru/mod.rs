@@ -9,7 +9,7 @@ use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, initialize_progress_bars, join_tags, finish_and_print_results};
+use crate::{client, finish_and_print_results, initialize_progress_bars, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};

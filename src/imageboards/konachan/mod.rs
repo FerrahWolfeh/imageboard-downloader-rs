@@ -2,7 +2,9 @@ use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
 use crate::imageboards::konachan::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
-use crate::{client, extract_ext_from_url, initialize_progress_bars, join_tags, finish_and_print_results};
+use crate::{
+    client, extract_ext_from_url, finish_and_print_results, initialize_progress_bars, join_tags,
+};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
