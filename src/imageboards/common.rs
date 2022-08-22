@@ -126,15 +126,7 @@ impl Post {
         .await
         .is_ok()
         {
-            Self::fetch(
-                self,
-                client,
-                bars,
-                &output,
-                variant,
-                counters.clone(),
-            )
-                .await?;
+            Self::fetch(self, client, bars, &output, variant, counters.clone()).await?;
         }
         Ok(())
     }
@@ -308,7 +300,6 @@ impl DownloadQueue {
         Ok(())
     }
 }
-
 
 pub async fn try_auth(
     auth_state: bool,
