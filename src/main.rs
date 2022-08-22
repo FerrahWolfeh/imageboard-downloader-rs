@@ -113,7 +113,7 @@ async fn main() -> Result<(), Error> {
             dl.download().await?;
         }
         ImageBoards::Konachan => {
-            let mut dl = KonachanDownloader::new(
+            let mut dl = MoebooruDownloader::new(
                 &args.tags,
                 args.output,
                 args.simultaneous_downloads,

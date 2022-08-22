@@ -16,8 +16,8 @@ mod common;
 pub mod danbooru;
 pub mod e621;
 pub mod gelbooru;
-pub mod konachan;
 pub mod macros;
+pub mod moebooru;
 
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]

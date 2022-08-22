@@ -1,5 +1,5 @@
 use crate::imageboards::common::{generate_out_dir, Counters, Post, ProgressArcs};
-use crate::imageboards::konachan::models::KonachanPost;
+use crate::imageboards::moebooru::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{
@@ -18,7 +18,7 @@ use tokio::fs::create_dir_all;
 
 mod models;
 
-pub struct KonachanDownloader {
+pub struct MoebooruDownloader {
     item_count: usize,
     client: Client,
     tag_string: String,
@@ -32,7 +32,7 @@ pub struct KonachanDownloader {
     counters: Counters,
 }
 
-impl KonachanDownloader {
+impl MoebooruDownloader {
     pub fn new(
         tags: &[String],
         out_dir: Option<PathBuf>,

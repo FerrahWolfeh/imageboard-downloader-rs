@@ -8,4 +8,4 @@ pub use imageboards::ImageBoards;
 pub use imageboards::danbooru::DanbooruDownloader;
 pub use imageboards::e621::E621Downloader;
 pub use imageboards::gelbooru::GelbooruDownloader;
-pub use imageboards::konachan::KonachanDownloader;
+pub use imageboards::moebooru::MoebooruDownloader;
