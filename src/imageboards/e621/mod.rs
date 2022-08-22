@@ -231,7 +231,7 @@ impl E621Downloader {
                         &self.client,
                         &self.out_dir,
                         bars.clone(),
-                        ImageBoards::Danbooru,
+                        ImageBoards::E621,
                         self.save_as_id,
                     )
                     .await?;
