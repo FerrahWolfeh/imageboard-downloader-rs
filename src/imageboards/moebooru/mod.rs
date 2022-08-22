@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, Counters, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Counters, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::moebooru::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
@@ -7,7 +7,6 @@ use crate::{
 };
 use anyhow::{bail, Error};
 use colored::Colorize;
-use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
@@ -130,11 +129,36 @@ impl MoebooruDownloader {
             bars.main.inc_length(posts as u64);
 
             if self.item_count != 0 {
-                futures::stream::iter(items)
-                    .map(|d| Self::download_item(self, d, bars.clone()))
-                    .buffer_unordered(self.concurrent_downloads)
-                    .collect::<Vec<_>>()
-                    .await;
+                let post_list: Vec<Post> = items
+                    .iter()
+                    .filter(|c| c.file_url.is_some())
+                    .map(|c| {
+                        let url = c.file_url.clone().unwrap();
+                        Post {
+                            id: c.id.unwrap(),
+                            url: url.clone(),
+                            md5: c.md5.clone().unwrap(),
+                            extension: extract_ext_from_url!(url),
+                            tags: Default::default(),
+                        }
+                    })
+                    .collect();
+                let queue = DownloadQueue::new(
+                    post_list,
+                    self.concurrent_downloads,
+                    self._download_limit,
+                    self.counters.clone(),
+                );
+
+                queue
+                    .download_post_list(
+                        &self.client,
+                        &self.out_dir,
+                        bars.clone(),
+                        ImageBoards::E621,
+                        self.save_as_id,
+                    )
+                    .await?;
             }
             page += 1;
         }
@@ -142,36 +166,5 @@ impl MoebooruDownloader {
         finish_and_print_results!(bars, self);
 
         Ok(())
-    }
-
-    async fn download_item(
-        &self,
-        item: &KonachanPost,
-        bars: Arc<ProgressArcs>,
-    ) -> Result<(), Error> {
-        if item.file_url.is_some() {
-            let extension = extract_ext_from_url!(item.file_url.as_ref().unwrap());
-            let entity = Post {
-                id: item.id.unwrap(),
-                url: item.file_url.clone().unwrap(),
-                md5: item.md5.clone().unwrap(),
-                extension,
-                tags: Default::default(),
-            };
-            entity
-                .get(
-                    &self.client,
-                    &self.out_dir,
-                    bars,
-                    ImageBoards::Konachan,
-                    Arc::new(self.counters.clone()),
-                    self.save_as_id,
-                )
-                .await?;
-            Ok(())
-        } else {
-            bars.main.set_length(bars.main.length().unwrap() - 1);
-            Ok(())
-        }
     }
 }
