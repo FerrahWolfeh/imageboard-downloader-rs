@@ -217,7 +217,7 @@ mod tests {
         let out_dir = generate_out_dir(path, &tags, ImageBoards::Danbooru).unwrap();
 
         assert_eq!(
-            PathBuf::from("./danbooru/kroos_(arknights)+weapon"),
+            PathBuf::from("./danbooru/kroos_(arknights) weapon"),
             out_dir
         );
     }
