@@ -5,6 +5,15 @@ extensible API.
 
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
+
+Features
+========
+- [x] Multiple simultaneous downloads
+- [x] Authentication and blacklist
+- [x] Download limit
+- [] Download user favorites
+- [] Store downloads in `cbz` file.
+
 Dependencies
 ============
 
@@ -75,7 +84,7 @@ imageboard_downloader -i rule34 -d 100 "moe"
 ```
 ***
 
-By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1+tag2+.../<file_md5>.png`. In case you want to download files to another place use:
+By default, the program will download files to your current dir with the following structure `./<gallery_name>/tag1 tag2 .../<file_md5>.png`. In case you want to download files to another place use:
 ```bash
 imageboard_downloader "kroos_(arknights)" -o /any/other/dir
 ```
