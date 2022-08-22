@@ -94,16 +94,18 @@ impl GelbooruDownloader {
             bail!("No posts found for tag selection!")
         }
         debug!("Tag list is valid");
-        debug!("{} total posts found", num);
+        debug!("{} posts found", num);
 
         // In case the limit is set, use a whole other cascade of stuff
         if let Some(n) = self.download_limit {
+            debug!("Using post limiter");
             // When it is set, we artificially set the counts to the limit in order to trick the progress bar.
             if n < num && n != 0 {
                 self.item_count = n;
                 self.page_count =
                     (n as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
             } else {
+                debug!("Number of posts is lower than limit");
                 self.item_count = num;
                 self.page_count = (self.item_count as f32 / self.active_imageboard.max_post_limit())
                     .ceil() as usize;
@@ -129,6 +131,7 @@ impl GelbooruDownloader {
 
     // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
     fn generate_queue_xml(&self, xml: &str) -> Result<DownloadQueue, Error> {
+        debug!("Using gelbooru XML API");
         let doc = Document::parse(xml)?;
         let stuff: Vec<Post> = doc
             .root_element()
@@ -157,6 +160,7 @@ impl GelbooruDownloader {
             })
             .collect();
 
+        debug!("Current queue size: {}", stuff.len());
         Ok(DownloadQueue::new(
             stuff,
             self.concurrent_downloads,
@@ -167,6 +171,7 @@ impl GelbooruDownloader {
 
     // This is for gelbooru.com itself, since it uses a new API that, while better on the JSON side, the XML part is an absolute hell to parse
     fn generate_queue_json(&self, json: &str) -> Result<DownloadQueue, Error> {
+        debug!("Using gelbooru JSON API");
         let json: Value = serde_json::from_str(json)?;
         if let Some(it) = json["post"].as_array() {
             let posts: Vec<Post> = it
@@ -183,6 +188,8 @@ impl GelbooruDownloader {
                     }
                 })
                 .collect();
+
+            debug!("Current queue size: {}", posts.len());
             return Ok(DownloadQueue::new(
                 posts,
                 self.concurrent_downloads,

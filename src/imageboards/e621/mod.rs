@@ -198,6 +198,8 @@ impl E621Downloader {
                 })
                 .collect();
 
+            debug!("List size: {}", post_list.len());
+
             if let Some(auth) = &auth_res {
                 let original_count = post_list.len();
                 post_list.retain(|c| {
@@ -205,7 +207,10 @@ impl E621Downloader {
                         .iter()
                         .any(|s| !auth.user_data.blacklisted_tags.contains(s))
                 });
-                self.blacklisted_posts += original_count - post_list.len();
+
+                let bp = original_count - post_list.len();
+                debug!("Removed {} blacklisted posts", bp);
+                self.blacklisted_posts += bp;
             }
 
             let list_len = post_list.len() as u64;

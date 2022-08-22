@@ -1,5 +1,5 @@
 //! Auth and download logic for `https://danbooru.donmai.us`
-//!
+//&!
 //! The danbooru downloader has the following features:
 //! * Multiple simultaneous downloads.
 //! * Authentication
@@ -241,6 +241,7 @@ impl DanbooruDownloader {
                     }
                 })
                 .collect();
+            debug!("List size: {}", posts.len());
 
             if let Some(auth) = &auth_res {
                 let original_count = posts.len();
@@ -249,7 +250,11 @@ impl DanbooruDownloader {
                         .iter()
                         .any(|s| !auth.user_data.blacklisted_tags.contains(s))
                 });
-                self.blacklisted_posts += (original_count - posts.len()) as u64;
+
+                let bp = original_count - posts.len();
+
+                debug!("Removed {} blacklisted posts", bp);
+                self.blacklisted_posts += bp as u64;
             }
             let end_iter = Instant::now();
             debug!("Post mapping took {:?}", end_iter - start_point);

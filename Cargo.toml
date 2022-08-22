@@ -1,7 +1,7 @@
 [package]
 name = "imageboard_downloader"
 authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
-version = "0.24.2-1"
+version = "0.24.3"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"

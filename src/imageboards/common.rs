@@ -282,6 +282,7 @@ impl DownloadQueue {
         variant: ImageBoards,
         save_as_id: bool,
     ) -> Result<(), Error> {
+        debug!("Fetching {} posts", self.list.len());
         futures::stream::iter(&self.list)
             .map(|d| {
                 d.get(
