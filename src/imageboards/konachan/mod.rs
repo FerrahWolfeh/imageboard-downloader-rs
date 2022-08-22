@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Counters, Post, ProgressArcs};
 use crate::imageboards::konachan::models::KonachanPost;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
@@ -29,7 +29,7 @@ pub struct KonachanDownloader {
     save_as_id: bool,
     safe_mode: bool,
     _download_limit: Option<usize>,
-    downloaded_files: Arc<Mutex<u64>>,
+    counters: Counters,
 }
 
 impl KonachanDownloader {
@@ -61,7 +61,10 @@ impl KonachanDownloader {
             save_as_id,
             safe_mode,
             _download_limit: download_limit,
-            downloaded_files: Arc::new(Mutex::new(0)),
+            counters: Counters {
+                total_mtx: Arc::new(Mutex::new(0)),
+                downloaded_mtx: Arc::new(Mutex::new(0)),
+            },
         })
     }
 
@@ -161,7 +164,7 @@ impl KonachanDownloader {
                     &self.out_dir,
                     bars,
                     ImageBoards::Konachan,
-                    self.downloaded_files.clone(),
+                    Arc::new(self.counters.clone()),
                     self.save_as_id,
                 )
                 .await?;

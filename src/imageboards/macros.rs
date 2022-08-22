@@ -44,7 +44,8 @@ macro_rules! finish_and_print_results {
         println!(
             "{} {} {}",
             $self
-                .downloaded_files
+                .counters
+                .downloaded_mtx
                 .lock()
                 .unwrap()
                 .to_string()
@@ -69,7 +70,8 @@ macro_rules! finish_and_print_results {
         println!(
             "{} {} {}",
             $self
-                .downloaded_files
+                .counters
+                .downloaded_mtx
                 .lock()
                 .unwrap()
                 .to_string()

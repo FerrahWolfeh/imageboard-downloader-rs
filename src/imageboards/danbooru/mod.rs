@@ -6,7 +6,9 @@
 //! * Tag blacklist (defined in user profile page)
 //! * Safe mode (don't download NSFW posts)
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
+use crate::imageboards::common::{
+    generate_out_dir, try_auth, Counters, DownloadQueue, Post, ProgressArcs,
+};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, finish_and_print_results, initialize_progress_bars, join_tags};
@@ -67,7 +69,7 @@ pub struct DanbooruDownloader {
     out_dir: PathBuf,
     safe_mode: bool,
     save_as_id: bool,
-    downloaded_files: Arc<Mutex<u64>>,
+    counters: Counters,
     blacklisted_posts: u64,
 }
 
@@ -107,8 +109,11 @@ impl DanbooruDownloader {
             out_dir: out,
             safe_mode,
             save_as_id,
-            downloaded_files: Arc::new(Mutex::new(0)),
             blacklisted_posts: 0,
+            counters: Counters {
+                total_mtx: Arc::new(Mutex::new(0)),
+                downloaded_mtx: Arc::new(Mutex::new(0)),
+            },
         })
     }
 
@@ -254,7 +259,7 @@ impl DanbooruDownloader {
                 posts,
                 self.concurrent_downloads,
                 self.download_limit,
-                self.downloaded_files.clone(),
+                self.counters.clone(),
             );
 
             queue

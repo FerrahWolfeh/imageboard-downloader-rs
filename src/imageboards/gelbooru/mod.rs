@@ -1,4 +1,4 @@
-use crate::imageboards::common::{generate_out_dir, DownloadQueue, Post, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Counters, DownloadQueue, Post, ProgressArcs};
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, initialize_progress_bars, join_tags};
@@ -26,7 +26,7 @@ pub struct GelbooruDownloader {
     out_dir: PathBuf,
     save_as_id: bool,
     download_limit: Option<usize>,
-    downloaded_files: Arc<Mutex<u64>>,
+    counters: Counters,
 }
 
 impl GelbooruDownloader {
@@ -58,7 +58,10 @@ impl GelbooruDownloader {
             out_dir: out,
             save_as_id,
             download_limit,
-            downloaded_files: Arc::new(Mutex::new(0)),
+            counters: Counters {
+                total_mtx: Arc::new(Mutex::new(0)),
+                downloaded_mtx: Arc::new(Mutex::new(0)),
+            },
         })
     }
 
@@ -158,7 +161,7 @@ impl GelbooruDownloader {
             stuff,
             self.concurrent_downloads,
             self.download_limit,
-            self.downloaded_files.clone(),
+            self.counters.clone(),
         ))
     }
 
@@ -184,7 +187,7 @@ impl GelbooruDownloader {
                 posts,
                 self.concurrent_downloads,
                 self.download_limit,
-                self.downloaded_files.clone(),
+                self.counters.clone(),
             ));
         }
         bail!("Failed to parse json")
@@ -230,7 +233,7 @@ impl GelbooruDownloader {
                 .await?;
 
             if let Some(n) = self.download_limit {
-                if n as u64 == *self.downloaded_files.lock().unwrap() {
+                if n == *self.counters.total_mtx.lock().unwrap() {
                     break;
                 }
             }

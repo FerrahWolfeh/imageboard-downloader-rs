@@ -1,5 +1,7 @@
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, DownloadQueue, Post, ProgressArcs};
+use crate::imageboards::common::{
+    generate_out_dir, try_auth, Counters, DownloadQueue, Post, ProgressArcs,
+};
 use crate::imageboards::e621::models::E621TopLevel;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
@@ -30,7 +32,7 @@ pub struct E621Downloader {
     safe_mode: bool,
     save_as_id: bool,
     download_limit: Option<usize>,
-    downloaded_files: Arc<Mutex<u64>>,
+    counters: Counters,
     blacklisted_posts: usize,
 }
 
@@ -67,7 +69,10 @@ impl E621Downloader {
             safe_mode,
             save_as_id,
             download_limit,
-            downloaded_files: Arc::new(Mutex::new(0)),
+            counters: Counters {
+                total_mtx: Arc::new(Mutex::new(0)),
+                downloaded_mtx: Arc::new(Mutex::new(0)),
+            },
             blacklisted_posts: 0,
         })
     }
@@ -223,7 +228,7 @@ impl E621Downloader {
                     post_list,
                     self.concurrent_downloads,
                     self.download_limit,
-                    self.downloaded_files.clone(),
+                    self.counters.clone(),
                 );
 
                 queue
@@ -238,7 +243,7 @@ impl E621Downloader {
             }
 
             if let Some(n) = self.download_limit {
-                if n as u64 == *self.downloaded_files.lock().unwrap() {
+                if n == *self.counters.total_mtx.lock().unwrap() {
                     break;
                 }
             }

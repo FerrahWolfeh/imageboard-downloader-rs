@@ -65,6 +65,13 @@ pub struct ProgressArcs {
     pub multi: Arc<MultiProgress>,
 }
 
+/// Struct to condense both counters that are used when downloading and checking limits
+#[derive(Clone)]
+pub struct Counters {
+    pub total_mtx: Arc<Mutex<usize>>,
+    pub downloaded_mtx: Arc<Mutex<u64>>,
+}
+
 /// Generic representation of a imageboard post
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
@@ -88,7 +95,7 @@ pub struct Post {
 pub struct DownloadQueue {
     pub list: Vec<Post>,
     pub concurrent_downloads: usize,
-    pub download_count_mtx: Arc<Mutex<u64>>,
+    pub counters: Arc<Counters>,
 }
 
 impl DownloadQueue {
@@ -96,10 +103,10 @@ impl DownloadQueue {
         list: Vec<Post>,
         concurrent_downloads: usize,
         limit: Option<usize>,
-        download_count_mtx: Arc<Mutex<u64>>,
+        counters: Counters,
     ) -> Self {
         let list = if let Some(max) = limit {
-            let dt = *download_count_mtx.lock().unwrap() as usize;
+            let dt = *counters.total_mtx.lock().unwrap();
             let l_len = list.len();
             let ran = max - dt;
             if ran >= l_len {
@@ -114,7 +121,7 @@ impl DownloadQueue {
         Self {
             list,
             concurrent_downloads,
-            download_count_mtx,
+            counters: Arc::new(counters),
         }
     }
 
@@ -133,7 +140,7 @@ impl DownloadQueue {
                     output_dir,
                     bars.clone(),
                     variant,
-                    self.download_count_mtx.clone(),
+                    self.counters.clone(),
                     save_as_id,
                 )
             })
@@ -157,7 +164,7 @@ impl Post {
         output: &Path,
         bars: Arc<ProgressArcs>,
         variant: ImageBoards,
-        download_count: Arc<Mutex<u64>>,
+        counters: Arc<Counters>,
         name_id: bool,
     ) -> Result<(), Error> {
         let name = if name_id {
@@ -173,11 +180,20 @@ impl Post {
             bars.multi.clone(),
             bars.main.clone(),
             name_id,
+            counters.total_mtx.clone(),
         )
         .await
         .is_ok()
         {
-            Self::fetch(self, client, bars, &output, variant, download_count).await?;
+            Self::fetch(
+                self,
+                client,
+                bars,
+                &output,
+                variant,
+                counters.clone(),
+            )
+                .await?;
         }
         Ok(())
     }
@@ -188,6 +204,7 @@ impl Post {
         multi_progress: Arc<MultiProgress>,
         main_bar: Arc<ProgressBar>,
         name_id: bool,
+        total_ct_mtx: Arc<Mutex<usize>>,
     ) -> Result<(), Error> {
         if output.exists() {
             let name = if name_id {
@@ -205,6 +222,7 @@ impl Post {
                     "already exists. Skipping.".bold().green()
                 ))?;
                 main_bar.inc(1);
+                *total_ct_mtx.lock().unwrap() += 1;
                 bail!("")
             }
 
@@ -228,7 +246,7 @@ impl Post {
         bars: Arc<ProgressArcs>,
         output: &Path,
         variant: ImageBoards,
-        download_count_mtx: Arc<Mutex<u64>>,
+        counters: Arc<Counters>,
     ) -> Result<(), Error> {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
@@ -282,7 +300,9 @@ impl Post {
         pb.finish_and_clear();
 
         bars.main.inc(1);
-        let mut down_count = download_count_mtx.lock().unwrap();
+        let mut down_count = counters.downloaded_mtx.lock().unwrap();
+        let mut total_count = counters.total_mtx.lock().unwrap();
+        *total_count += 1;
         *down_count += 1;
         Ok(())
     }
