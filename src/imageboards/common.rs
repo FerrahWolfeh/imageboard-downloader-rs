@@ -39,7 +39,7 @@ use tokio::io::AsyncWriteExt;
 /// ```
 pub fn generate_out_dir(
     out_dir: Option<PathBuf>,
-    tag_string: &String,
+    tags: &[String],
     imageboard: ImageBoards,
 ) -> Result<PathBuf, Error> {
     // If out_dir is not set via cli flags, use current dir
@@ -47,11 +47,12 @@ pub fn generate_out_dir(
         None => std::env::current_dir()?,
         Some(dir) => dir,
     };
+    let tags = tags.join(" ");
 
     let out = place.join(PathBuf::from(format!(
         "{}/{}",
         imageboard.to_string(),
-        tag_string
+        tags
     )));
     debug!("Target dir: {}", out.display());
     Ok(out)

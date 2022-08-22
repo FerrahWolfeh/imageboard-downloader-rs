@@ -45,7 +45,7 @@ impl GelbooruDownloader {
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tag_string, imageboard)?;
+        let out = generate_out_dir(out_dir, &tags, imageboard)?;
 
         Ok(Self {
             active_imageboard: imageboard,

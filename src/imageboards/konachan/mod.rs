@@ -48,7 +48,7 @@ impl KonachanDownloader {
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tag_string, ImageBoards::Konachan)?;
+        let out = generate_out_dir(out_dir, tags, ImageBoards::Konachan)?;
 
         Ok(Self {
             item_count: 0,
