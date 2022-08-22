@@ -207,13 +207,11 @@ impl ImageBoards {
 mod tests {
     use crate::imageboards::common::generate_out_dir;
     use crate::imageboards::ImageBoards;
-    use crate::join_tags;
-    use log::debug;
     use std::path::PathBuf;
 
     #[test]
     fn test_dir_generation() {
-        let tags = join_tags!(["kroos_(arknights)", "weapon"]);
+        let tags = ["kroos_(arknights)".to_string(), "weapon".to_string()];
         let path = Some(PathBuf::from("./"));
 
         let out_dir = generate_out_dir(path, &tags, ImageBoards::Danbooru).unwrap();
