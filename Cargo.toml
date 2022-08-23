@@ -1,7 +1,7 @@
 [package]
 name = "imageboard_downloader"
 authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
-version = "0.24.3"
+version = "0.23.4"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"
@@ -9,6 +9,7 @@ readme = "README.md"
 repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
 documentation = "https://docs.rs/imageboard_downloader"
 keywords = ["download", "api", "e621", "danbooru", "rule34"]
+categories = ["command-line-utilities", "multimedia::images"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,6 +27,10 @@ xdg = "2.4.1"
 bincode = "1.3.3"
 zstd = "0.11.2"
 roxmltree = "0.15.0"
+
+[dependencies.ahash]
+version = "0.8.0"
+features = ["serde"]
 
 [dependencies.tokio]
 version = "1"

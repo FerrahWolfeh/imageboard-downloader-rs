@@ -46,12 +46,12 @@ use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, finish_and_print_results, join_tags};
+use ahash::AHashSet;
 use anyhow::{bail, Error};
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
@@ -223,7 +223,7 @@ impl DanbooruDownloader {
                 .iter()
                 .filter(|c| c["file_url"].as_str().is_some())
                 .map(|c| {
-                    let mut tag_list = HashSet::new();
+                    let mut tag_list = AHashSet::new();
 
                     for i in c["tag_string"].as_str().unwrap().split(' ') {
                         if !i.contains("//") {

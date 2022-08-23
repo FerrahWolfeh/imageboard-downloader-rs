@@ -3,6 +3,7 @@ use crate::{
     progress_bars::{download_progress_style, ProgressArcs},
     ImageBoards,
 };
+use ahash::AHashSet;
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
@@ -11,7 +12,6 @@ use log::debug;
 use md5::compute;
 use reqwest::Client;
 use std::{
-    collections::HashSet,
     path::Path,
     sync::{Arc, Mutex},
 };
@@ -37,7 +37,7 @@ pub struct Post {
     /// Set of tags associated with the post.
     ///
     /// Used to exclude posts according to a blacklist
-    pub tags: HashSet<String>,
+    pub tags: AHashSet<String>,
 }
 
 impl Post {

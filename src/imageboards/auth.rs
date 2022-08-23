@@ -1,11 +1,11 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use crate::ImageBoards;
+use ahash::AHashSet;
 use anyhow::{bail, Error};
 use bincode::serialize;
 use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
@@ -28,7 +28,7 @@ pub struct ImageboardConfig {
 pub struct UserData {
     pub id: u64,
     pub name: String,
-    pub blacklisted_tags: HashSet<String>,
+    pub blacklisted_tags: AHashSet<String>,
 }
 
 impl Default for ImageboardConfig {
@@ -40,7 +40,7 @@ impl Default for ImageboardConfig {
             user_data: UserData {
                 id: 0,
                 name: "".to_string(),
-                blacklisted_tags: HashSet::new(),
+                blacklisted_tags: AHashSet::new(),
             },
         }
     }
@@ -55,7 +55,7 @@ impl ImageboardConfig {
             user_data: UserData {
                 id: 0,
                 name: "".to_string(),
-                blacklisted_tags: HashSet::new(),
+                blacklisted_tags: AHashSet::new(),
             },
         }
     }
