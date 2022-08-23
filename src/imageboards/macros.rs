@@ -23,21 +23,6 @@ macro_rules! extract_ext_from_url {
 }
 
 #[macro_export]
-macro_rules! initialize_progress_bars {
-    ($len:expr, $x:expr) => {{
-        let bar = ProgressBar::new($len).with_style(master_progress_style(&$x.progress_template()));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
-
-        // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
-
-        Arc::new(ProgressArcs { main, multi })
-    }};
-}
-
-#[macro_export]
 macro_rules! finish_and_print_results {
     ($bars:expr, $self:expr, $auth_res:expr) => {{
         $bars.main.finish_and_clear();

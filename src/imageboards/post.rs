@@ -6,7 +6,7 @@ use crate::{
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
+use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
@@ -65,8 +65,7 @@ impl Post {
         if Self::check_file_exists(
             self,
             &output,
-            bars.multi.clone(),
-            bars.main.clone(),
+            bars.clone(),
             name_id,
             counters.total_mtx.clone(),
         )
@@ -81,8 +80,7 @@ impl Post {
     async fn check_file_exists(
         &self,
         output: &Path,
-        multi_progress: Arc<MultiProgress>,
-        main_bar: Arc<ProgressBar>,
+        bars: Arc<ProgressArcs>,
         name_id: bool,
         total_ct_mtx: Arc<Mutex<usize>>,
     ) -> Result<(), Error> {
@@ -95,19 +93,19 @@ impl Post {
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
-                multi_progress.println(format!(
+                bars.multi.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
                     format!("{}.{}", &name, &self.extension).bold().green(),
                     "already exists. Skipping.".bold().green()
                 ))?;
-                main_bar.inc(1);
+                bars.main.inc(1);
                 *total_ct_mtx.lock().unwrap() += 1;
                 bail!("")
             }
 
             fs::remove_file(&output).await?;
-            multi_progress.println(format!(
+            bars.multi.println(format!(
                 "{} {} {}",
                 "File".bold().red(),
                 format!("{}.{}", &name, &self.extension).bold().red(),

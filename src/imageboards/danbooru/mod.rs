@@ -10,19 +10,16 @@ use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::master_progress_style;
 use crate::progress_bars::ProgressArcs;
-use crate::{client, finish_and_print_results, initialize_progress_bars, join_tags};
+use crate::{client, finish_and_print_results, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
 
@@ -182,7 +179,7 @@ impl DanbooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bars = initialize_progress_bars!(self.item_count, ImageBoards::Danbooru);
+        let bars = ProgressArcs::initialize(self.item_count, ImageBoards::Danbooru);
 
         // Begin downloading all posts per page
         for i in 1..=self.page_count as u64 {

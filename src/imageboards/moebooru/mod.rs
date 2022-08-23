@@ -3,19 +3,14 @@ use crate::imageboards::moebooru::models::KonachanPost;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::master_progress_style;
 use crate::progress_bars::ProgressArcs;
-use crate::{
-    client, extract_ext_from_url, finish_and_print_results, initialize_progress_bars, join_tags,
-};
+use crate::{client, extract_ext_from_url, finish_and_print_results, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tokio::fs::create_dir_all;
 
 mod models;
@@ -108,7 +103,7 @@ impl MoebooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bars = initialize_progress_bars!(0, ImageBoards::Konachan);
+        let bars = ProgressArcs::initialize(0, ImageBoards::Konachan);
 
         // Keep track of pages already downloaded
         let mut page = 1;

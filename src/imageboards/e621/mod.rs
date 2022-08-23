@@ -4,18 +4,15 @@ use crate::imageboards::e621::models::E621TopLevel;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::master_progress_style;
 use crate::progress_bars::ProgressArcs;
-use crate::{client, finish_and_print_results, initialize_progress_bars, join_tags};
+use crate::{client, finish_and_print_results, join_tags};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tokio::fs::create_dir_all;
 
 pub mod models;
@@ -141,7 +138,7 @@ impl E621Downloader {
         };
 
         // Setup global progress bar
-        let bars = initialize_progress_bars!(initial_len, ImageBoards::E621);
+        let bars = ProgressArcs::initialize(initial_len, ImageBoards::E621);
 
         // Keep track of pages already downloaded
         let mut page = 0;

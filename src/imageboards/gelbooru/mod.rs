@@ -2,20 +2,17 @@ use super::queue::DownloadQueue;
 use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::master_progress_style;
 use crate::progress_bars::ProgressArcs;
-use crate::{client, initialize_progress_bars, join_tags};
+use crate::{client, join_tags};
 use crate::{extract_ext_from_url, finish_and_print_results};
 use anyhow::{bail, Error};
 use colored::Colorize;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use log::debug;
 use reqwest::Client;
 use roxmltree::Document;
 use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tokio::fs::create_dir_all;
 
 pub struct GelbooruDownloader {
@@ -211,7 +208,7 @@ impl GelbooruDownloader {
         create_dir_all(&self.out_dir).await?;
 
         // Setup global progress bar
-        let bars = initialize_progress_bars!(self.item_count as u64, self.active_imageboard);
+        let bars = ProgressArcs::initialize(self.item_count as u64, self.active_imageboard);
 
         // Begin downloading all posts per page
         for i in 0..=self.page_count {
