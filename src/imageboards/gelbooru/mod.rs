@@ -276,7 +276,7 @@ impl GelbooruDownloader {
             };
 
             queue
-                .download_post_list(
+                .download_all(
                     &self.client,
                     &self.out_dir,
                     bars.clone(),

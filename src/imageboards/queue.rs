@@ -39,7 +39,7 @@ impl DownloadQueue {
         }
     }
 
-    pub async fn download_post_list(
+    pub async fn download_all(
         self,
         client: &Client,
         output_dir: &Path,
