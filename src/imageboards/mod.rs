@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use tokio::fs::{read, remove_file};
 use xdg::BaseDirectories;
 
+pub mod archive;
 pub mod auth;
 mod common;
 pub mod danbooru;
