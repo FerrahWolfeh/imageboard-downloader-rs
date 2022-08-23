@@ -126,12 +126,6 @@ impl DanbooruDownloader {
             &self.tag_string
         );
 
-        if let Some(num) = self.download_limit {
-            self.item_count = num as u64;
-            self.page_count = (num as f32 / 200.0).ceil();
-            return Ok(());
-        }
-
         // Get an estimate of total posts and pages to search
         let count = if let Some(data) = auth_creds {
             debug!("[AUTH] Fetching post count");
@@ -158,8 +152,13 @@ impl DanbooruDownloader {
                 bail!("No posts found for tag selection!")
             }
 
-            self.item_count = count;
-            self.page_count = (self.item_count as f32 / 200.0).ceil();
+            if let Some(num) = self.download_limit {
+                self.item_count = num as u64;
+                self.page_count = (num as f32 / 200.0).ceil();
+            } else {
+                self.item_count = count;
+                self.page_count = (self.item_count as f32 / 200.0).ceil();
+            }
 
             debug!(
                 "{} Posts for tag list '{:?}'",
