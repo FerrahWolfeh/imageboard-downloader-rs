@@ -1,5 +1,9 @@
-use indicatif::{HumanBytes, ProgressState, ProgressStyle};
-use std::fmt::Write;
+use indicatif::{
+    HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
+};
+use std::{fmt::Write, sync::Arc, time::Duration};
+
+use crate::ImageBoards;
 
 const PROGRESS_CHARS: &str = "━━";
 
@@ -14,6 +18,29 @@ impl Default for BarTemplates {
             main: "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} ({msg:.bold.blue} | eta. {eta:.blue})",
             download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} | {byte_progress:.green} @ {bytes_per_sec:>13.red} (eta. {eta:.blue})",
         }
+    }
+}
+
+/// Struct to condense a commonly used duo of progress bar instances.
+///
+/// The main usage for this is to pass references of the progress bars across multiple threads while downloading.
+pub struct ProgressArcs {
+    pub main: Arc<ProgressBar>,
+    pub multi: Arc<MultiProgress>,
+}
+
+impl ProgressArcs {
+    pub fn initialize(len: u64, imageboard: ImageBoards) -> Arc<Self> {
+        let bar = ProgressBar::new(len)
+            .with_style(master_progress_style(&imageboard.progress_template()));
+        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.enable_steady_tick(Duration::from_millis(100));
+
+        // Initialize the bars
+        let multi = Arc::new(MultiProgress::new());
+        let main = Arc::new(multi.add(bar));
+
+        Arc::new(Self { main, multi })
     }
 }
 

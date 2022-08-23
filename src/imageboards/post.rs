@@ -1,5 +1,8 @@
-use super::common::{Counters, ProgressArcs};
-use crate::{progress_bars::download_progress_style, ImageBoards};
+use super::common::Counters;
+use crate::{
+    progress_bars::{download_progress_style, ProgressArcs},
+    ImageBoards,
+};
 use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;

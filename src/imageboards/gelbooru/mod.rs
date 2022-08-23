@@ -1,8 +1,9 @@
 use super::queue::DownloadQueue;
-use crate::imageboards::common::{generate_out_dir, Counters, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
+use crate::progress_bars::ProgressArcs;
 use crate::{client, initialize_progress_bars, join_tags};
 use crate::{extract_ext_from_url, finish_and_print_results};
 use anyhow::{bail, Error};

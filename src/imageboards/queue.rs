@@ -1,8 +1,5 @@
-use super::{
-    common::{Counters, ProgressArcs},
-    post::Post,
-};
-use crate::ImageBoards;
+use super::{common::Counters, post::Post};
+use crate::{progress_bars::ProgressArcs, ImageBoards};
 use anyhow::Error;
 use futures::StreamExt;
 use log::debug;

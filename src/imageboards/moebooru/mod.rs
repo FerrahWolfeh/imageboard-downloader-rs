@@ -1,9 +1,10 @@
-use crate::imageboards::common::{generate_out_dir, Counters, ProgressArcs};
+use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::moebooru::models::KonachanPost;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
+use crate::progress_bars::ProgressArcs;
 use crate::{
     client, extract_ext_from_url, finish_and_print_results, initialize_progress_bars, join_tags,
 };

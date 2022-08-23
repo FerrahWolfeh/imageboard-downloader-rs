@@ -3,7 +3,6 @@ use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::ImageBoards;
 use anyhow::Error;
 use colored::Colorize;
-use indicatif::{MultiProgress, ProgressBar};
 use log::debug;
 use reqwest::Client;
 use std::io;
@@ -49,14 +48,6 @@ pub fn generate_out_dir(
     )));
     debug!("Target dir: {}", out.display());
     Ok(out)
-}
-
-/// Struct to condense a commonly used duo of progress bar instances.
-///
-/// The main usage for this is to pass references of the progress bars across multiple threads while downloading.
-pub struct ProgressArcs {
-    pub main: Arc<ProgressBar>,
-    pub multi: Arc<MultiProgress>,
 }
 
 /// Struct to condense both counters that are used when downloading and checking limits
