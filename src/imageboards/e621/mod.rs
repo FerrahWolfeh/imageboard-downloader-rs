@@ -1,3 +1,44 @@
+//! Auth and download logic for `https://e621.net`
+//!
+//! The e621 downloader has the following features:
+//! * Multiple simultaneous downloads.
+//! * Authentication
+//! * Tag blacklist (defined in user profile page)
+//! * Safe mode (don't download NSFW posts)
+//!
+//! # Example usage
+//!
+//! ```rust
+//! use std::path::PathBuf;
+//! use imageboard_downloader::E621Downloader;
+//!
+//! // Input tags
+//! let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+//!
+//! // Dir where all will be saved
+//! let output = Some(PathBuf::from("./"));
+//!
+//! // Number of simultaneous downloads
+//! let sd = 3;
+//!
+//! // Disable download of NSFW posts
+//! let safe_mode = true;
+//!
+//! // Login to the imageboard (only needs to be true once)
+//! let auth = true;
+//!
+//! // Save files with as <post_id>.png rather than <image_md5>.png
+//! let save_as_id = false;
+//!
+//! // Limit number of downloaded files
+//! let limit = Some(100);
+//!
+//! // Initialize the downloader
+//! let mut dl = E621Downloader::new(&tags, output, sd, limit, auth, safe_mode, save_as_id).await?;
+//!
+//! // Download
+//! dl.download().await?;
+//! ```
 use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
 use crate::imageboards::e621::models::E621TopLevel;
@@ -19,6 +60,7 @@ pub mod models;
 
 //const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
+/// Main object to download posts
 pub struct E621Downloader {
     item_count: u64,
     client: Client,

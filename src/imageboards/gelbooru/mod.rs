@@ -1,3 +1,49 @@
+//! Download logic for Gelbooru-based imageboards
+//!
+//! The gelbooru downloader has the following features:
+//! * Multiple simultaneous downloads.
+//!
+//! ***
+//!
+//! This downloader is compatible with these imageboards:
+//! * `Imageboards::Rule34`
+//! * `Imageboards::Realbooru`
+//! * `Imageboards::Gelbooru`
+//!
+//! # Example usage
+//!
+//! ```rust
+//! use std::path::PathBuf;
+//! use imageboard_downloader::{ImageBoards, GelbooruDownloader};
+//!
+//! // Input tags
+//! let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+//!
+//! // Dir where all will be saved
+//! let output = Some(PathBuf::from("./"));
+//!
+//! // Number of simultaneous downloads
+//! let sd = 3;
+//!
+//! // Disable download of NSFW posts
+//! let safe_mode = true;
+//!
+//! // Login to the imageboard (only needs to be true once)
+//! let auth = true;
+//!
+//! // Save files with as <post_id>.png rather than <image_md5>.png
+//! let save_as_id = false;
+//!
+//! // Limit number of downloaded files
+//! let limit = Some(100);
+//!
+//! // Initialize the downloader
+//! // In this case, download from Rule34
+//! let mut dl = GelbooruDownloader::new(ImageBoards::Rule34, &tags, output, sd, limit, save_as_id)?;
+//!
+//! // Download
+//! dl.download().await?;
+//! ```
 use super::queue::DownloadQueue;
 use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;

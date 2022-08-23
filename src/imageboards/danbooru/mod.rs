@@ -1,10 +1,44 @@
 //! Auth and download logic for `https://danbooru.donmai.us`
-//&!
+//!
 //! The danbooru downloader has the following features:
 //! * Multiple simultaneous downloads.
 //! * Authentication
 //! * Tag blacklist (defined in user profile page)
 //! * Safe mode (don't download NSFW posts)
+//!
+//! # Example usage
+//!
+//! ```rust
+//! use std::path::PathBuf;
+//! use imageboard_downloader::DanbooruDownloader;
+//!
+//! // Input tags
+//! let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+//!
+//! // Dir where all will be saved
+//! let output = Some(PathBuf::from("./"));
+//!
+//! // Number of simultaneous downloads
+//! let sd = 3;
+//!
+//! // Disable download of NSFW posts
+//! let safe_mode = true;
+//!
+//! // Login to the imageboard (only needs to be true once)
+//! let auth = true;
+//!
+//! // Save files with as <post_id>.png rather than <image_md5>.png
+//! let save_as_id = false;
+//!
+//1 // Limit number of downloaded files
+//! let limit = Some(100);
+//!
+//! // Initialize the downloader
+//! let mut dl = DanbooruDownloader::new(&tags, output, sd, limit, auth, safe_mode, save_as_id).await?;
+//!
+//! // Download
+//! dl.download().await?;
+//! ```
 use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
 use crate::imageboards::post::Post;
@@ -24,38 +58,6 @@ use tokio::fs::create_dir_all;
 use tokio::time::Instant;
 
 /// Main object to download posts
-///
-/// ```rust
-/// use std::path::PathBuf;
-/// use imageboard_downloader::DanbooruDownloader;
-///
-/// // Input tags
-/// let tags = vec!["umbreon".to_string(), "espeon".to_string()];
-///
-/// // Dir where all will be saved
-/// let output = Some(PathBuf::from("./"));
-///
-/// // Number of simultaneous downloads
-/// let sd = 3;
-///
-/// // Disable download of NSFW posts
-/// let safe_mode = true;
-///
-/// // Login to the imageboard (only needs to be true once)
-/// let auth = true;
-///
-/// // Save files with as <post_id>.png rather than <image_md5>.png
-/// let save_as_id = false;
-///
-/// // Limit number of downloaded files
-/// let limit = Some(100);
-///
-/// // Initialize the downloader
-/// let mut dl = DanbooruDownloader::new(&tags, output, sd, limit, safe_mode, auth, save_as_id).await?;
-///
-/// // Download
-/// dl.download().await?;
-/// ```
 pub struct DanbooruDownloader {
     item_count: u64,
     page_count: f32,
@@ -77,8 +79,8 @@ impl DanbooruDownloader {
         out_dir: Option<PathBuf>,
         concurrent_downs: usize,
         item_limit: Option<usize>,
-        safe_mode: bool,
         auth_state: bool,
+        safe_mode: bool,
         save_as_id: bool,
     ) -> Result<Self, Error> {
         if tags.len() > 2 {

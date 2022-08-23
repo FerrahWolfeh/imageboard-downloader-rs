@@ -78,8 +78,8 @@ async fn main() -> Result<(), Error> {
                 args.output,
                 args.simultaneous_downloads,
                 args.limit,
-                args.safe_mode,
                 args.auth,
+                args.safe_mode,
                 args.save_file_as_id,
             )
             .await?;
