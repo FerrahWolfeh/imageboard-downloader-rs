@@ -1,4 +1,6 @@
-use crate::imageboards::common::{generate_out_dir, Counters, DownloadQueue, Post, ProgressArcs};
+use super::queue::DownloadQueue;
+use crate::imageboards::common::{generate_out_dir, Counters, ProgressArcs};
+use crate::imageboards::post::Post;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, initialize_progress_bars, join_tags};

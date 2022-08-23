@@ -1,8 +1,8 @@
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{
-    generate_out_dir, try_auth, Counters, DownloadQueue, Post, ProgressArcs,
-};
+use crate::imageboards::common::{generate_out_dir, try_auth, Counters, ProgressArcs};
 use crate::imageboards::e621::models::E621TopLevel;
+use crate::imageboards::post::Post;
+use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::master_progress_style;
 use crate::{client, finish_and_print_results, initialize_progress_bars, join_tags};
