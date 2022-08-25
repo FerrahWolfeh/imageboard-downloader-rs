@@ -202,6 +202,7 @@ impl GelbooruDownloader {
                     md5: c.attribute("md5").unwrap().to_string(),
                     extension: extract_ext_from_url!(file),
                     tags: Default::default(),
+                    rating: Default::default(),
                 }
             })
             .collect();
@@ -231,6 +232,7 @@ impl GelbooruDownloader {
                         url: url.clone(),
                         extension: extract_ext_from_url!(url),
                         tags: Default::default(),
+                        rating: Default::default(),
                     }
                 })
                 .collect();

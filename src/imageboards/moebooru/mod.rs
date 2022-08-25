@@ -138,6 +138,7 @@ impl MoebooruDownloader {
                             md5: c.md5.clone().unwrap(),
                             extension: extract_ext_from_url!(url),
                             tags: Default::default(),
+                            rating: Default::default(),
                         }
                     })
                     .collect();

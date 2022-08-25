@@ -10,6 +10,7 @@ pub struct E621Post {
     pub id: Option<u64>,
     pub file: E621File,
     pub tags: Tags,
+    pub rating: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

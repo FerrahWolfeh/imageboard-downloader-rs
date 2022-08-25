@@ -16,6 +16,7 @@ pub mod auth;
 mod common;
 pub mod danbooru;
 pub mod e621;
+pub mod error;
 pub mod gelbooru;
 pub mod macros;
 pub mod moebooru;

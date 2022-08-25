@@ -43,6 +43,7 @@ use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
+use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, finish_and_print_results, join_tags};
@@ -53,6 +54,7 @@ use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
@@ -235,6 +237,7 @@ impl DanbooruDownloader {
                         url: c["file_url"].as_str().unwrap().to_string(),
                         extension: c["file_ext"].as_str().unwrap().to_string(),
                         tags: tag_list,
+                        rating: Rating::from_str(c["rating"].as_str().unwrap()).unwrap(),
                     }
                 })
                 .collect();
