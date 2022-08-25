@@ -2,6 +2,7 @@ use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::moebooru::models::KonachanPost;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
+use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, extract_ext_from_url, finish_and_print_results, join_tags};
@@ -10,6 +11,7 @@ use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 
@@ -138,7 +140,7 @@ impl MoebooruDownloader {
                             md5: c.md5.clone().unwrap(),
                             extension: extract_ext_from_url!(url),
                             tags: Default::default(),
-                            rating: Default::default(),
+                            rating: Rating::from_str(&c.rating).unwrap(),
                         }
                     })
                     .collect();
