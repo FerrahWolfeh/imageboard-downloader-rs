@@ -4,4 +4,7 @@ use thiserror::Error;
 pub enum ParseErrors {
     #[error("Invalid rating tag: {0}")]
     RatingParseError(String),
+
+    #[error("Invalid global blacklist file")]
+    BlacklistParseError,
 }

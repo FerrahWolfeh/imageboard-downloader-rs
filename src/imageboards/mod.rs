@@ -13,6 +13,7 @@ use xdg::BaseDirectories;
 
 pub mod archive;
 pub mod auth;
+pub mod blacklist;
 mod common;
 pub mod danbooru;
 pub mod e621;
