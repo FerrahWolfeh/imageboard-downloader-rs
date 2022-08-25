@@ -1,4 +1,4 @@
-use super::{common::Counters, post::Post};
+use super::{blacklist::GlobalBlacklist, common::Counters, post::Post};
 use crate::{progress_bars::ProgressArcs, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
@@ -44,13 +44,28 @@ impl DownloadQueue {
     }
 
     pub async fn download(
-        self,
+        &mut self,
         client: &Client,
         output_dir: &Path,
         bars: Arc<ProgressArcs>,
         variant: ImageBoards,
         save_as_id: bool,
     ) -> Result<(), Error> {
+        let original_size = self.list.len();
+
+        let gbl = GlobalBlacklist::get().await?;
+
+        if let Some(tags) = gbl.global_blacklist {
+            if !tags.is_empty() {
+                self.list
+                    .retain(|c| c.tags.iter().any(|s| !tags.contains(s)));
+
+                let bp = original_size - self.list.len();
+                debug!("Global blacklist removed {} posts", bp);
+                self.blacklisted += bp;
+            }
+        }
+
         debug!("Fetching {} posts", self.list.len());
         futures::stream::iter(&self.list)
             .map(|d| {
@@ -70,7 +85,7 @@ impl DownloadQueue {
         Ok(())
     }
 
-    pub fn use_blacklist(&mut self, blacklist: &AHashSet<String>) {
+    pub fn user_blacklist(&mut self, blacklist: &AHashSet<String>) {
         let original_size = self.list.len();
 
         if !blacklist.is_empty() {
@@ -79,7 +94,7 @@ impl DownloadQueue {
 
             let bp = original_size - self.list.len();
             debug!("Removed {} blacklisted posts", bp);
-            self.blacklisted = bp;
+            self.blacklisted += bp;
         } else {
             self.blacklisted = 0;
         }

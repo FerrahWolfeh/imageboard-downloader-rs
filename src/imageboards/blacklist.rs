@@ -9,16 +9,14 @@ use xdg::BaseDirectories;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
-    global_blacklist: Option<AHashSet<String>>,
+    pub global_blacklist: Option<AHashSet<String>>,
 }
 
 impl GlobalBlacklist {
-    pub async fn get() -> Result<Option<Self>, Error> {
-        if let Ok(gbl) = read_to_string(Self::path()?).await {
-            let deserialized = from_str::<Self>(&gbl)?;
-            return Ok(Some(deserialized));
-        }
-        Ok(None)
+    pub async fn get() -> Result<Self, Error> {
+        let gbl_string = read_to_string(Self::path()?).await?;
+        let deserialized = from_str::<Self>(&gbl_string)?;
+        Ok(deserialized)
     }
 
     fn path() -> Result<PathBuf, Error> {

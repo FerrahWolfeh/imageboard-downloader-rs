@@ -144,7 +144,7 @@ impl MoebooruDownloader {
                         }
                     })
                     .collect();
-                let queue = DownloadQueue::new(
+                let mut queue = DownloadQueue::new(
                     post_list,
                     self.concurrent_downloads,
                     self._download_limit,

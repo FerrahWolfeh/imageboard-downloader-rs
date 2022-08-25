@@ -273,7 +273,7 @@ impl GelbooruDownloader {
                 .text()
                 .await?;
 
-            let queue = if self.active_imageboard == ImageBoards::Gelbooru {
+            let mut queue = if self.active_imageboard == ImageBoards::Gelbooru {
                 Self::generate_queue_json(self, items)?
             } else {
                 Self::generate_queue_xml(self, items)?
