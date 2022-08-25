@@ -231,13 +231,20 @@ impl DanbooruDownloader {
                         tag_list.insert(i.to_string());
                     }
 
+                    let rt = c["rating"].as_str().unwrap();
+                    let rating = if rt == "s" {
+                        Rating::Questionable
+                    } else {
+                        Rating::from_str(rt).unwrap()
+                    };
+
                     Post {
                         id: c["id"].as_u64().unwrap(),
                         md5: c["md5"].as_str().unwrap().to_string(),
                         url: c["file_url"].as_str().unwrap().to_string(),
                         extension: c["file_ext"].as_str().unwrap().to_string(),
                         tags: tag_list,
-                        rating: Rating::from_str(c["rating"].as_str().unwrap()).unwrap(),
+                        rating,
                     }
                 })
                 .collect();
