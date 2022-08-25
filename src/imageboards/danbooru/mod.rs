@@ -262,7 +262,7 @@ impl DanbooruDownloader {
             );
 
             if let Some(auth) = &auth_res {
-                queue.user_blacklist(&auth.user_data.blacklisted_tags);
+                queue.blacklist_filter(&auth.user_data.blacklisted_tags);
                 self.blacklisted_posts += queue.blacklisted_ct();
             }
 

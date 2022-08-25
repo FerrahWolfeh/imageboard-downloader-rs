@@ -51,19 +51,10 @@ impl DownloadQueue {
         variant: ImageBoards,
         save_as_id: bool,
     ) -> Result<(), Error> {
-        let original_size = self.list.len();
-
         let gbl = GlobalBlacklist::get().await?;
 
         if let Some(tags) = gbl.global_blacklist {
-            if !tags.is_empty() {
-                self.list
-                    .retain(|c| c.tags.iter().any(|s| !tags.contains(s)));
-
-                let bp = original_size - self.list.len();
-                debug!("Global blacklist removed {} posts", bp);
-                self.blacklisted += bp;
-            }
+            Self::blacklist_filter(self, &tags)
         }
 
         debug!("Fetching {} posts", self.list.len());
@@ -85,7 +76,7 @@ impl DownloadQueue {
         Ok(())
     }
 
-    pub fn user_blacklist(&mut self, blacklist: &AHashSet<String>) {
+    pub fn blacklist_filter(&mut self, blacklist: &AHashSet<String>) {
         let original_size = self.list.len();
 
         if !blacklist.is_empty() {
@@ -95,8 +86,6 @@ impl DownloadQueue {
             let bp = original_size - self.list.len();
             debug!("Removed {} blacklisted posts", bp);
             self.blacklisted += bp;
-        } else {
-            self.blacklisted = 0;
         }
     }
 
