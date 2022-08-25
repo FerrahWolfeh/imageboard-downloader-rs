@@ -8,6 +8,8 @@ pub enum Rating {
     Safe,
     Questionable,
     Explicit,
+    /// Danbooru only
+    Gold,
     Unknown,
 }
 
@@ -22,9 +24,10 @@ impl FromStr for Rating {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "s" => Ok(Self::Safe),
-            "q" => Ok(Self::Questionable),
-            "e" => Ok(Self::Explicit),
+            "s" | "safe" | "sensitive" => Ok(Self::Safe),
+            "q" | "questionable" => Ok(Self::Questionable),
+            "e" | "explicit" => Ok(Self::Explicit),
+            "g" => Ok(Self::Gold),
             _ => Err(ParseErrors::RatingParseError(s.to_string())),
         }
     }
@@ -36,6 +39,7 @@ impl ToString for Rating {
             Rating::Safe => String::from("Safe"),
             Rating::Questionable => String::from("Questionable"),
             Rating::Explicit => String::from("Explicit"),
+            Rating::Gold => String::from("Gold"),
             Rating::Unknown => String::from("Unknown"),
         }
     }
