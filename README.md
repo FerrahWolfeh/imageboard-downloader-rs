@@ -9,10 +9,11 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 Features
 ========
 - [x] Multiple simultaneous downloads
-- [x] Authentication and blacklist
+- [x] Authentication and user blacklist
 - [x] Download limit
 - [ ] Download user favorites
 - [ ] Store downloads in `cbz` file.
+- [ ] Global blacklist
 
 Dependencies
 ============
