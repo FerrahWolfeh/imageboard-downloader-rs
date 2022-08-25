@@ -47,6 +47,7 @@
 use super::queue::DownloadQueue;
 use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;
+use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, join_tags};
@@ -58,6 +59,7 @@ use reqwest::Client;
 use roxmltree::Document;
 use serde_json::Value;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 
@@ -202,7 +204,7 @@ impl GelbooruDownloader {
                     md5: c.attribute("md5").unwrap().to_string(),
                     extension: extract_ext_from_url!(file),
                     tags: Default::default(),
-                    rating: Default::default(),
+                    rating: Rating::from_str(c.attribute("rating").unwrap()).unwrap(),
                 }
             })
             .collect();
@@ -232,7 +234,7 @@ impl GelbooruDownloader {
                         url: url.clone(),
                         extension: extract_ext_from_url!(url),
                         tags: Default::default(),
-                        rating: Default::default(),
+                        rating: Rating::from_str(post["rating"].as_str().unwrap()).unwrap(),
                     }
                 })
                 .collect();
