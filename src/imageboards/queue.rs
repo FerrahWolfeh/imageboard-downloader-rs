@@ -1,5 +1,6 @@
 use super::{common::Counters, post::Post};
 use crate::{progress_bars::ProgressArcs, ImageBoards};
+use ahash::AHashSet;
 use anyhow::Error;
 use futures::StreamExt;
 use log::debug;
