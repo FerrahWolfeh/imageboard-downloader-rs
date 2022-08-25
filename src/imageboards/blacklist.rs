@@ -9,7 +9,7 @@ use xdg::BaseDirectories;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
-    global_blacklist: AHashSet<String>,
+    global_blacklist: Option<AHashSet<String>>,
 }
 
 impl GlobalBlacklist {
