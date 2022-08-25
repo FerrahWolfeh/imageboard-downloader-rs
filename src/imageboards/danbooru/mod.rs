@@ -70,7 +70,7 @@ pub struct DanbooruDownloader {
     safe_mode: bool,
     save_as_id: bool,
     counters: Counters,
-    blacklisted_posts: u64,
+    blacklisted_posts: usize,
 }
 
 impl DanbooruDownloader {
@@ -217,7 +217,7 @@ impl DanbooruDownloader {
             };
 
             let start_point = Instant::now();
-            let mut posts: Vec<Post> = jj
+            let posts: Vec<Post> = jj
                 .as_array()
                 .unwrap()
                 .iter()
@@ -242,29 +242,21 @@ impl DanbooruDownloader {
                 .collect();
             debug!("List size: {}", posts.len());
 
-            if let Some(auth) = &auth_res {
-                let original_count = posts.len();
-                posts.retain(|c| {
-                    c.tags
-                        .iter()
-                        .any(|s| !auth.user_data.blacklisted_tags.contains(s))
-                });
-
-                let bp = original_count - posts.len();
-
-                debug!("Removed {} blacklisted posts", bp);
-                self.blacklisted_posts += bp as u64;
-            }
             let end_iter = Instant::now();
             debug!("Post mapping took {:?}", end_iter - start_point);
 
             // Download everything got in the above function
-            let queue = DownloadQueue::new(
+            let mut queue = DownloadQueue::new(
                 posts,
                 self.concurrent_downloads,
                 self.download_limit,
                 self.counters.clone(),
             );
+
+            if let Some(auth) = &auth_res {
+                queue.use_blacklist(&auth.user_data.blacklisted_tags);
+                self.blacklisted_posts += queue.blacklisted_ct();
+            }
 
             queue
                 .download_all(

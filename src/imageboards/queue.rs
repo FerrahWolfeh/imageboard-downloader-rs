@@ -7,9 +7,10 @@ use reqwest::Client;
 use std::{path::Path, sync::Arc};
 
 pub struct DownloadQueue {
-    pub list: Vec<Post>,
-    pub concurrent_downloads: usize,
-    pub counters: Arc<Counters>,
+    list: Vec<Post>,
+    concurrent_downloads: usize,
+    counters: Arc<Counters>,
+    blacklisted: usize,
 }
 
 impl DownloadQueue {
@@ -36,6 +37,7 @@ impl DownloadQueue {
             list,
             concurrent_downloads,
             counters: Arc::new(counters),
+            blacklisted: 0,
         }
     }
 
@@ -64,5 +66,24 @@ impl DownloadQueue {
             .await;
 
         Ok(())
+    }
+
+    pub fn use_blacklist(&mut self, blacklist: &AHashSet<String>) {
+        let original_size = self.list.len();
+
+        if !blacklist.is_empty() {
+            self.list
+                .retain(|c| c.tags.iter().any(|s| !blacklist.contains(s)));
+
+            let bp = original_size - self.list.len();
+            debug!("Removed {} blacklisted posts", bp);
+            self.blacklisted = bp;
+        } else {
+            self.blacklisted = 0;
+        }
+    }
+
+    pub fn blacklisted_ct(&self) -> usize {
+        self.blacklisted
     }
 }

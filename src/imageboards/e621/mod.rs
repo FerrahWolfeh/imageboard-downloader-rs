@@ -213,7 +213,7 @@ impl E621Downloader {
                     .await?
             };
 
-            let mut post_list: Vec<Post> = items
+            let post_list: Vec<Post> = items
                 .posts
                 .iter()
                 .filter(|c| c.file.url.is_some())
@@ -240,19 +240,6 @@ impl E621Downloader {
 
             debug!("List size: {}", post_list.len());
 
-            if let Some(auth) = &auth_res {
-                let original_count = post_list.len();
-                post_list.retain(|c| {
-                    c.tags
-                        .iter()
-                        .any(|s| !auth.user_data.blacklisted_tags.contains(s))
-                });
-
-                let bp = original_count - post_list.len();
-                debug!("Removed {} blacklisted posts", bp);
-                self.blacklisted_posts += bp;
-            }
-
             let list_len = post_list.len() as u64;
 
             if let Some(dl) = self.download_limit {
@@ -269,12 +256,17 @@ impl E621Downloader {
             };
 
             if self.item_count != 0 {
-                let queue = DownloadQueue::new(
+                let mut queue = DownloadQueue::new(
                     post_list,
                     self.concurrent_downloads,
                     self.download_limit,
                     self.counters.clone(),
                 );
+
+                if let Some(auth) = &auth_res {
+                    queue.use_blacklist(&auth.user_data.blacklisted_tags);
+                    self.blacklisted_posts += queue.blacklisted_ct();
+                }
 
                 queue
                     .download_all(
