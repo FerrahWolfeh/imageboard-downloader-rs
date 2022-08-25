@@ -53,8 +53,9 @@ impl DownloadQueue {
     ) -> Result<(), Error> {
         let gbl = GlobalBlacklist::get().await?;
 
-        if let Some(tags) = gbl.global_blacklist {
-            Self::blacklist_filter(self, &tags)
+        if let Some(tags) = gbl.blacklist {
+            debug!("Removing posts with tags [{:?}]", tags);
+            Self::blacklist_filter(self, &tags);
         }
 
         debug!("Fetching {} posts", self.list.len());
