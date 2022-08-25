@@ -226,9 +226,7 @@ impl DanbooruDownloader {
                     let mut tag_list = AHashSet::new();
 
                     for i in c["tag_string"].as_str().unwrap().split(' ') {
-                        if !i.contains("//") {
-                            tag_list.insert(i.to_string());
-                        }
+                        tag_list.insert(i.to_string());
                     }
 
                     Post {
@@ -259,7 +257,7 @@ impl DanbooruDownloader {
             }
 
             queue
-                .download_all(
+                .download(
                     &self.client,
                     &self.out_dir,
                     bars.clone(),

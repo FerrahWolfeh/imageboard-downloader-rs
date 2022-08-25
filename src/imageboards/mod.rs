@@ -21,6 +21,7 @@ pub mod macros;
 pub mod moebooru;
 pub mod post;
 pub mod queue;
+pub mod rating;
 
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]

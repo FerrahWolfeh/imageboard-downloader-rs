@@ -149,7 +149,7 @@ impl MoebooruDownloader {
                 );
 
                 queue
-                    .download_all(
+                    .download(
                         &self.client,
                         &self.out_dir,
                         bars.clone(),

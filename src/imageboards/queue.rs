@@ -25,6 +25,7 @@ impl DownloadQueue {
             let dt = *counters.total_mtx.lock().unwrap();
             let l_len = list.len();
             let ran = max - dt;
+
             if ran >= l_len {
                 list
             } else {
@@ -42,7 +43,7 @@ impl DownloadQueue {
         }
     }
 
-    pub async fn download_all(
+    pub async fn download(
         self,
         client: &Client,
         output_dir: &Path,
