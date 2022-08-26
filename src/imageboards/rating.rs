@@ -1,3 +1,12 @@
+//! General enum for rating posts found by the imageboard downloader
+//! # Post Rating
+//! In general, most imageboard websites also classify posts considering how explicit they are
+//!
+//! Posts are usually classified into 4 special tags:
+//! * `Safe` or `General`: Posts that don't involve nothing suggestive. Usually normal fanart.
+//! * `Questionable` or `Sensitive`: Posts that involve nude/semi-nude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
+//! * `Explicit`: Posts that are explicity pornographic or have other sensitive content such as gore, etc.
+//!
 use serde::{Deserialize, Serialize};
 
 use super::error::ParseErrors;
@@ -25,7 +34,7 @@ impl FromStr for Rating {
             "s" | "g" | "safe" | "sensitive" | "general" => Ok(Self::Safe),
             "q" | "questionable" => Ok(Self::Questionable),
             "e" | "explicit" => Ok(Self::Explicit),
-            _ => Err(ParseErrors::RatingParseError(s.to_string())),
+            _ => Ok(Self::Unknown),
         }
     }
 }

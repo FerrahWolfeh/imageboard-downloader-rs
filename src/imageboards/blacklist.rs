@@ -9,6 +9,21 @@ use xdg::BaseDirectories;
 
 const BF_INIT_TEXT: &[u8; 93] = b"# Place in this array all the tags that will be excluded from all imageboards\n\nblacklist = []";
 
+/// # The Global Blacklist
+/// Imageboard websites tag their posts in order to facilitate searching.
+///
+/// ## Config file
+/// The global blacklist is created in `$XDG_CONFIG_HOME/imageboard-downloader/blacklist.toml`
+///
+/// The user can define the tags as follows
+/// ```
+/// // Place in this array all the tags that will be excluded from all imageboards
+///
+/// blacklist = ["tag1", "tag2"]
+/// ```
+///
+/// With this, the user can input all tags that they do not want to download. In case a post has
+/// any of the tags set in the blacklist, it will be removed from the download queue.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
@@ -16,6 +31,8 @@ pub struct GlobalBlacklist {
 }
 
 impl GlobalBlacklist {
+    /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
+    /// or first run), it will be created.
     pub async fn get() -> Result<Self, Error> {
         let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
 

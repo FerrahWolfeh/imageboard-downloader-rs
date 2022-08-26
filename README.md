@@ -11,9 +11,9 @@ Features
 - [x] Multiple simultaneous downloads
 - [x] Authentication and user blacklist
 - [x] Download limit
+- [x] Global blacklist
 - [ ] Download user favorites
 - [ ] Store downloads in `cbz` file.
-- [ ] Global blacklist
 
 Dependencies
 ============
