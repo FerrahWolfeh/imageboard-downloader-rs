@@ -46,7 +46,7 @@ use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
-use crate::{client, finish_and_print_results, join_tags};
+use crate::{bail_error, client, finish_and_print_results, join_tags};
 use ahash::AHashSet;
 use anyhow::{bail, Error};
 use colored::Colorize;
@@ -57,6 +57,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
+
+use super::error::ExtractorError;
 
 /// Main object to download posts
 pub struct DanbooruDownloader {
@@ -85,7 +87,10 @@ impl DanbooruDownloader {
         save_as_id: bool,
     ) -> Result<Self, Error> {
         if tags.len() > 2 {
-            bail!("Danbooru downloader currently doesn't support more than 2 tags")
+            bail_error!(ExtractorError::TooManyTagsError {
+                current: tags.len(),
+                max: 2,
+            });
         };
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Danbooru.user_agent());

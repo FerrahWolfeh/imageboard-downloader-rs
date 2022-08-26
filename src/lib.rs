@@ -55,6 +55,13 @@ macro_rules! extract_ext_from_url {
 }
 
 #[macro_export]
+macro_rules! bail_error {
+    ($err:expr) => {{
+        return Err($err.into());
+    }};
+}
+
+#[macro_export]
 macro_rules! finish_and_print_results {
     ($bars:expr, $self:expr, $auth_res:expr) => {{
         $bars.main.finish_and_clear();
