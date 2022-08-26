@@ -52,6 +52,7 @@ use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, join_tags};
 use crate::{extract_ext_from_url, finish_and_print_results};
+use ahash::AHashSet;
 use anyhow::{bail, Error};
 use colored::Colorize;
 use log::debug;
@@ -198,12 +199,20 @@ impl GelbooruDownloader {
                     file.to_string()
                 };
 
+                let mut tags = AHashSet::new();
+
+                for i in c.attribute("tags").unwrap().split(' ') {
+                    if i != "" {
+                        tags.insert(i.to_string());
+                    }
+                }
+
                 Post {
                     id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
                     url: link,
                     md5: c.attribute("md5").unwrap().to_string(),
                     extension: extract_ext_from_url!(file),
-                    tags: Default::default(),
+                    tags,
                     rating: Rating::from_str(c.attribute("rating").unwrap()).unwrap(),
                 }
             })
@@ -228,12 +237,18 @@ impl GelbooruDownloader {
                 .filter(|i| i["file_url"].as_str().is_some())
                 .map(|post| {
                     let url = post["file_url"].as_str().unwrap().to_string();
+                    let mut tags = AHashSet::new();
+
+                    for i in post["tags"].as_str().unwrap().split(' ') {
+                        tags.insert(i.to_string());
+                    }
+
                     Post {
                         id: post["id"].as_u64().unwrap(),
                         md5: post["md5"].as_str().unwrap().to_string(),
                         url: url.clone(),
                         extension: extract_ext_from_url!(url),
-                        tags: Default::default(),
+                        tags,
                         rating: Rating::from_str(post["rating"].as_str().unwrap()).unwrap(),
                     }
                 })
