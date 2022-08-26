@@ -1,3 +1,4 @@
+//! Download and save `Post`s
 use super::{common::Counters, post::Post};
 use crate::{progress_bars::ProgressArcs, ImageBoards};
 use ahash::AHashSet;
@@ -11,6 +12,8 @@ use std::{path::Path, sync::Arc};
 #[cfg(feature = "global_blacklist")]
 use super::blacklist::GlobalBlacklist;
 
+/// # Download Queue
+/// Aggregates all posts and downloads them simultaneously according supplied parameters.
 pub struct DownloadQueue {
     list: Vec<Post>,
     concurrent_downloads: usize,

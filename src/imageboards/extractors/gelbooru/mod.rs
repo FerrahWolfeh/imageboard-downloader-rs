@@ -44,9 +44,9 @@
 //! // Download
 //! dl.download().await?;
 //! ```
-use super::queue::DownloadQueue;
 use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;
+use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;

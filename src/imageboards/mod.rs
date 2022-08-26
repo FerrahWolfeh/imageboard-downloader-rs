@@ -15,19 +15,12 @@ pub mod auth;
 #[cfg(feature = "global_blacklist")]
 pub mod blacklist;
 mod common;
-#[cfg(feature = "danbooru")]
-pub mod danbooru;
-#[cfg(feature = "e621")]
-pub mod e621;
 pub mod error;
-#[cfg(feature = "gelbooru")]
-pub mod gelbooru;
 pub mod macros;
-#[cfg(feature = "moebooru")]
-pub mod moebooru;
 pub mod post;
 pub mod queue;
 pub mod rating;
+pub mod extractors;
 
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]

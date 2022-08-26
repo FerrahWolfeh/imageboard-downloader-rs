@@ -1,5 +1,5 @@
 use crate::imageboards::common::{generate_out_dir, Counters};
-use crate::imageboards::moebooru::models::KonachanPost;
+use crate::imageboards::extractors::moebooru::models::KonachanPost;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::rating::Rating;

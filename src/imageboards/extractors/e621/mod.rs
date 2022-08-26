@@ -41,7 +41,7 @@
 //! ```
 use crate::imageboards::auth::ImageboardConfig;
 use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
-use crate::imageboards::e621::models::E621TopLevel;
+use crate::imageboards::extractors::e621::models::E621TopLevel;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
 use crate::imageboards::rating::Rating;

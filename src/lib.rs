@@ -22,10 +22,10 @@ pub use imageboards::post::Post;
 pub use imageboards::blacklist::GlobalBlacklist;
 
 #[cfg(feature = "danbooru")]
-pub use imageboards::danbooru::DanbooruDownloader;
+pub use imageboards::extractors::danbooru::DanbooruDownloader;
 #[cfg(feature = "e621")]
-pub use imageboards::e621::E621Downloader;
+pub use imageboards::extractors::e621::E621Downloader;
 #[cfg(feature = "gelbooru")]
-pub use imageboards::gelbooru::GelbooruDownloader;
+pub use imageboards::extractors::gelbooru::GelbooruDownloader;
 #[cfg(feature = "moebooru")]
-pub use imageboards::moebooru::MoebooruDownloader;
+pub use imageboards::extractors::moebooru::MoebooruDownloader;
