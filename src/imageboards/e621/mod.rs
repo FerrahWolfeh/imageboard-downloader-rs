@@ -268,7 +268,6 @@ impl E621Downloader {
 
                 if let Some(auth) = &auth_res {
                     queue.blacklist_filter(&auth.user_data.blacklisted_tags);
-                    self.blacklisted_posts += queue.blacklisted_ct();
                 }
 
                 queue
@@ -280,6 +279,7 @@ impl E621Downloader {
                         self.save_as_id,
                     )
                     .await?;
+                self.blacklisted_posts += queue.blacklisted_ct();
             }
 
             if let Some(n) = self.download_limit {
