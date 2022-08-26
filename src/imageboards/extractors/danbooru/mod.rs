@@ -54,7 +54,6 @@ use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
@@ -235,7 +234,7 @@ impl DanbooruDownloader {
                     let rating = if rt == "s" {
                         Rating::Questionable
                     } else {
-                        Rating::from_str(rt).unwrap()
+                        Rating::from_str(rt)
                     };
 
                     Post {

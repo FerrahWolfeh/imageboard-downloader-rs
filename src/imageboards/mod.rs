@@ -15,7 +15,6 @@ pub mod auth;
 #[cfg(feature = "global_blacklist")]
 pub mod blacklist;
 mod common;
-pub mod error;
 pub mod post;
 pub mod queue;
 pub mod rating;

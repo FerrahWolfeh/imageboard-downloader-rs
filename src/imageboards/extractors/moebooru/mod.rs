@@ -12,7 +12,6 @@ use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 
@@ -148,7 +147,7 @@ impl MoebooruDownloader {
                             md5: c.md5.clone().unwrap(),
                             extension: extract_ext_from_url!(url),
                             tags,
-                            rating: Rating::from_str(&c.rating).unwrap(),
+                            rating: Rating::from_str(&c.rating),
                         }
                     })
                     .collect();

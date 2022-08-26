@@ -54,7 +54,6 @@ use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 
@@ -236,7 +235,7 @@ impl E621Downloader {
                         md5: c.file.md5.clone().unwrap(),
                         extension: c.file.ext.clone().unwrap(),
                         tags: tag_list,
-                        rating: Rating::from_str(&c.rating).unwrap(),
+                        rating: Rating::from_str(&c.rating),
                     }
                 })
                 .collect();

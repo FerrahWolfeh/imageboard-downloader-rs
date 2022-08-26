@@ -9,9 +9,6 @@
 //!
 use serde::{Deserialize, Serialize};
 
-use super::error::ParseErrors;
-use std::str::FromStr;
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Rating {
     Safe,
@@ -26,19 +23,6 @@ impl Default for Rating {
     }
 }
 
-impl FromStr for Rating {
-    type Err = ParseErrors;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "s" | "g" | "safe" | "sensitive" | "general" => Ok(Self::Safe),
-            "q" | "questionable" => Ok(Self::Questionable),
-            "e" | "explicit" => Ok(Self::Explicit),
-            _ => Ok(Self::Unknown),
-        }
-    }
-}
-
 impl ToString for Rating {
     fn to_string(&self) -> String {
         match self {
@@ -50,4 +34,17 @@ impl ToString for Rating {
     }
 }
 
-impl Rating {}
+#[allow(clippy::should_implement_trait)]
+impl Rating {
+    /// Guess the variant according to the rating tag present in the post
+    ///
+    /// Not to be confused with the method of `FromStr`, since this method never errors.
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "s" | "g" | "safe" | "sensitive" | "general" => Self::Safe,
+            "q" | "questionable" => Self::Questionable,
+            "e" | "explicit" => Self::Explicit,
+            _ => Self::Unknown,
+        }
+    }
+}

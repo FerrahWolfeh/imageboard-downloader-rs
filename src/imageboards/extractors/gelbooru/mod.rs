@@ -60,7 +60,6 @@ use reqwest::Client;
 use roxmltree::Document;
 use serde_json::Value;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::fs::create_dir_all;
 
@@ -213,7 +212,7 @@ impl GelbooruDownloader {
                     md5: c.attribute("md5").unwrap().to_string(),
                     extension: extract_ext_from_url!(file),
                     tags,
-                    rating: Rating::from_str(c.attribute("rating").unwrap()).unwrap(),
+                    rating: Rating::from_str(c.attribute("rating").unwrap()),
                 }
             })
             .collect();
@@ -249,7 +248,7 @@ impl GelbooruDownloader {
                         url: url.clone(),
                         extension: extract_ext_from_url!(url),
                         tags,
-                        rating: Rating::from_str(post["rating"].as_str().unwrap()).unwrap(),
+                        rating: Rating::from_str(post["rating"].as_str().unwrap()),
                     }
                 })
                 .collect();
