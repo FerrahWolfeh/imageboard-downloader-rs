@@ -30,18 +30,18 @@ pub struct Post {
     pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
-    /// Instead of calculating the downloaded file's MD5 hash on the fly, it uses the one provided by the API and serves as the name of the downloaded file.
+    /// Instead of calculating the downloaded file's MD5 hash on the fly, it uses the one provided by the API.
     pub md5: String,
     /// The original file extension provided by the imageboard.
     ///
-    /// ```https://konachan.com``` and some other imageboards don't provide this field. So, additional work is required to get the file extension from the url
+    /// ```https://konachan.com``` (Moebooru) and some other imageboards don't provide this field. So, additional work is required to get the file extension from the url
     pub extension: String,
     /// Rating of the post. Can be:
     ///
     /// * `Rating::Safe` for SFW posts
     /// * `Rating::Questionable` for a not necessarily SFW post
     /// * `Rating::Explicit` for NSFW posts
-    /// * `Rating::Unknown` in case none of the above are parsed correctly
+    /// * `Rating::Unknown` in case none of the above are correctly parsed
     pub rating: Rating,
     /// Set of tags associated with the post.
     ///
