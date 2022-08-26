@@ -35,11 +35,12 @@ features = ["serde"]
 
 [dependencies.tokio]
 version = "1"
-features = ["full"]
+features = ["time", "macros", "fs", "rt-multi-thread"]
 
 [dependencies.reqwest]
 version = "0.11.11"
-features = ["json", "stream"]
+default-features = false
+features = ["json", "stream", "rustls-tls"]
 
 [dependencies.clap]
 version = "3.2.16"
