@@ -94,7 +94,7 @@ impl GelbooruDownloader {
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tags, imageboard)?;
+        let out = generate_out_dir(out_dir, tags, imageboard)?;
 
         Ok(Self {
             active_imageboard: imageboard,
@@ -202,7 +202,7 @@ impl GelbooruDownloader {
                 let mut tags = AHashSet::new();
 
                 for i in c.attribute("tags").unwrap().split(' ') {
-                    if i != "" {
+                    if !i.is_empty() {
                         tags.insert(i.to_string());
                     }
                 }

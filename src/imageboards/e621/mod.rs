@@ -95,7 +95,7 @@ impl E621Downloader {
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tags, ImageBoards::E621)?;
+        let out = generate_out_dir(out_dir, tags, ImageBoards::E621)?;
 
         // Try to authenticate, does nothing if auth flag is not set
         try_auth(auth_state, ImageBoards::E621, &client).await?;

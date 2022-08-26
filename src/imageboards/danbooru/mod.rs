@@ -95,7 +95,7 @@ impl DanbooruDownloader {
         let tag_string = join_tags!(tags);
 
         // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, &tags, ImageBoards::Danbooru)?;
+        let out = generate_out_dir(out_dir, tags, ImageBoards::Danbooru)?;
 
         // Try to authenticate, does nothing if auth flag is not set
         try_auth(auth_state, ImageBoards::Danbooru, &client).await?;

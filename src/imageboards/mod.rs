@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use tokio::fs::{read, remove_file};
 use xdg::BaseDirectories;
 
-pub mod archive;
 pub mod auth;
 #[cfg(feature = "global_blacklist")]
 pub mod blacklist;
