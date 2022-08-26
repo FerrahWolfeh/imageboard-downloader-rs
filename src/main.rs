@@ -64,10 +64,6 @@ struct Cli {
     /// Limit max number of downloads
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     limit: Option<usize>,
-
-    /// Store all downloaded posts in cbz file after download
-    #[clap(long, value_parser, help_heading = "ARCHIVE", value_name = "PATH")]
-    archive: Option<PathBuf>,
 }
 
 #[tokio::main]
