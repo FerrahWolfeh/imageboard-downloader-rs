@@ -7,7 +7,7 @@ use tokio::io::AsyncWriteExt;
 use toml::from_str;
 use xdg::BaseDirectories;
 
-const BF_INIT_TEXT: &[u8; 92] = b"# Place in the array all the tags that will be excluded from all imageboards\n\nblacklist = []";
+const BF_INIT_TEXT: &[u8; 93] = b"# Place in this array all the tags that will be excluded from all imageboards\n\nblacklist = []";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
