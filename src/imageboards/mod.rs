@@ -16,7 +16,6 @@ pub mod auth;
 pub mod blacklist;
 mod common;
 pub mod error;
-pub mod macros;
 pub mod post;
 pub mod queue;
 pub mod rating;
