@@ -1,3 +1,4 @@
+//! Main representation of a imageboard post
 use super::{common::Counters, rating::Rating};
 use crate::{
     progress_bars::{download_progress_style, ProgressArcs},
@@ -25,6 +26,7 @@ use tokio::{
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
 #[derive(Debug, Clone)]
 pub struct Post {
+    /// ID number of the post given by the imageboard
     pub id: u64,
     /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
@@ -39,6 +41,7 @@ pub struct Post {
     /// * `Rating::Safe` for SFW posts
     /// * `Rating::Questionable` for a not necessarily SFW post
     /// * `Rating::Explicit` for NSFW posts
+    /// * `Rating::Unknown` in case none of the above are parsed correctly
     pub rating: Rating,
     /// Set of tags associated with the post.
     ///
