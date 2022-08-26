@@ -18,11 +18,14 @@ pub use imageboards::rating::Rating;
 
 pub use imageboards::post::Post;
 
-
+#[cfg(feature = "global_blacklist")]
 pub use imageboards::blacklist::GlobalBlacklist;
 
-// Export all downloader interfaces
+#[cfg(feature = "danbooru")]
 pub use imageboards::danbooru::DanbooruDownloader;
+#[cfg(feature = "e621")]
 pub use imageboards::e621::E621Downloader;
+#[cfg(feature = "gelbooru")]
 pub use imageboards::gelbooru::GelbooruDownloader;
+#[cfg(feature = "moebooru")]
 pub use imageboards::moebooru::MoebooruDownloader;

@@ -1,11 +1,15 @@
-use super::{blacklist::GlobalBlacklist, common::Counters, post::Post};
+use super::{common::Counters, post::Post};
 use crate::{progress_bars::ProgressArcs, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
+use cfg_if::cfg_if;
 use futures::StreamExt;
 use log::debug;
 use reqwest::Client;
 use std::{path::Path, sync::Arc};
+
+#[cfg(feature = "global_blacklist")]
+use super::blacklist::GlobalBlacklist;
 
 pub struct DownloadQueue {
     list: Vec<Post>,
@@ -51,11 +55,15 @@ impl DownloadQueue {
         variant: ImageBoards,
         save_as_id: bool,
     ) -> Result<(), Error> {
-        let gbl = GlobalBlacklist::get().await?;
+        cfg_if! {
+            if #[cfg(feature = "global_blacklist")] {
+                let gbl = GlobalBlacklist::get().await?;
 
-        if let Some(tags) = gbl.blacklist {
-            debug!("Removing posts with tags [{:?}]", tags);
-            Self::blacklist_filter(self, &tags);
+                if let Some(tags) = gbl.blacklist {
+                    debug!("Removing posts with tags [{:?}]", tags);
+                    Self::blacklist_filter(self, &tags);
+                }
+            }
         }
 
         debug!("Fetching {} posts", self.list.len());

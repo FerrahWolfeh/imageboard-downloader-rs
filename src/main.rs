@@ -1,4 +1,5 @@
 use anyhow::Error;
+use cfg_if::cfg_if;
 use clap::Parser;
 use imageboard_downloader::*;
 use std::path::PathBuf;
@@ -73,56 +74,72 @@ async fn main() -> Result<(), Error> {
 
     match args.imageboard {
         ImageBoards::Danbooru => {
-            let mut dl = DanbooruDownloader::new(
-                &args.tags,
-                args.output,
-                args.simultaneous_downloads,
-                args.limit,
-                args.auth,
-                args.safe_mode,
-                args.save_file_as_id,
-            )
-            .await?;
+            cfg_if! {
+                if #[cfg(feature = "danbooru")] {
+                let mut dl = DanbooruDownloader::new(
+                    &args.tags,
+                    args.output,
+                    args.simultaneous_downloads,
+                    args.limit,
+                    args.auth,
+                    args.safe_mode,
+                    args.save_file_as_id,
+                )
+                .await?;
 
-            dl.download().await?;
+                dl.download().await?;
+                }
+            }
         }
         ImageBoards::E621 => {
-            let mut dl = E621Downloader::new(
-                &args.tags,
-                args.output,
-                args.simultaneous_downloads,
-                args.limit,
-                args.auth,
-                args.safe_mode,
-                args.save_file_as_id,
-            )
-            .await?;
+            cfg_if! {
+                if #[cfg(feature = "e621")] {
+                    let mut dl = E621Downloader::new(
+                        &args.tags,
+                        args.output,
+                        args.simultaneous_downloads,
+                        args.limit,
+                        args.auth,
+                        args.safe_mode,
+                        args.save_file_as_id,
+                    )
+                    .await?;
 
-            dl.download().await?;
+                    dl.download().await?;
+                }
+            }
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let mut dl = GelbooruDownloader::new(
-                args.imageboard,
-                &args.tags,
-                args.output,
-                args.simultaneous_downloads,
-                args.limit,
-                args.save_file_as_id,
-            )?;
+            cfg_if! {
+                if #[cfg(feature = "gelbooru")] {
+                    let mut dl = GelbooruDownloader::new(
+                        args.imageboard,
+                        &args.tags,
+                        args.output,
+                        args.simultaneous_downloads,
+                        args.limit,
+                        args.save_file_as_id,
+                    )?;
 
-            dl.download().await?;
+                    dl.download().await?;
+                }
+            }
         }
         ImageBoards::Konachan => {
-            let mut dl = MoebooruDownloader::new(
-                &args.tags,
-                args.output,
-                args.simultaneous_downloads,
-                args.limit,
-                args.safe_mode,
-                args.save_file_as_id,
-            )?;
+            cfg_if! {
+                if #[cfg(feature = "moebooru")] {
+                    let mut dl = MoebooruDownloader::new(
+                        &args.tags,
+                        args.output,
+                        args.simultaneous_downloads,
+                        args.limit,
+                        args.safe_mode,
+                        args.save_file_as_id,
+                    )?;
 
-            dl.download().await?;
+                    dl.download().await?;
+                }
+            }
         }
     };
 
