@@ -5,39 +5,45 @@
     "version": "0.2.0",
     "configurations": [
         {
-          "type": "lldb",
-          "request": "launch",
-          "name": "Debug Danbooru default",
-          "cargo": {
-            "args": [
-              "build",
-              "--bin=imageboard_downloader",
-              "--package=imageboard_downloader"
-            ],
-            "filter": {
-              "name": "imageboard_downloader",
-              "kind": "bin"
-            }
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Danbooru default",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
             },
-            "args": ["kroos_(arknights)", "--safe-mode"],
+            "args": [
+                "delphox"
+            ],
             "cwd": "${workspaceFolder}"
         },
-      {
-        "type": "lldb",
-        "request": "launch",
-        "name": "Debug Gelbooru default",
-        "cargo": {
-          "args": [
-            "build",
-            "--bin=imageboard_downloader",
-            "--package=imageboard_downloader"
-          ],
-          "filter": {
-            "name": "imageboard_downloader",
-            "kind": "bin"
-          }
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Gelbooru default",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
             },
-            "args": ["-i", "gelbooru","kroos_(arknights)"],
+            "args": [
+                "-i",
+                "gelbooru",
+                "kroos_(arknights)"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -55,7 +61,11 @@
                     "kind": "bin"
                 }
             },
-            "args": ["kroos_(arknights)", "-l", "10"],
+            "args": [
+                "kroos_(arknights)",
+                "-l",
+                "10"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -73,7 +83,13 @@
                     "kind": "bin"
                 }
             },
-            "args": ["kroos_(arknights)", "-l", "50", "-i", "rule34"],
+            "args": [
+                "kroos_(arknights)",
+                "-l",
+                "50",
+                "-i",
+                "rule34"
+            ],
             "cwd": "${workspaceFolder}"
         }
     ]

@@ -82,7 +82,7 @@ impl DownloadQueue {
 
         if !blacklist.is_empty() {
             self.list
-                .retain(|c| c.tags.iter().any(|s| !blacklist.contains(s)));
+                .retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
 
             let bp = original_size - self.list.len();
             debug!("Removed {} blacklisted posts", bp);
