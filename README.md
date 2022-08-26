@@ -15,12 +15,6 @@ Features
 - [ ] Download user favorites
 - [ ] Store downloads in `cbz` file.
 
-Dependencies
-============
-
-- OpenSSL >= 1.1.1
-
-
 Installation
 ============
 
