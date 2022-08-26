@@ -88,6 +88,8 @@ async fn main() -> Result<(), Error> {
                 .await?;
 
                 dl.download().await?;
+                } else {
+                    println!("This build does not include support for this imageboard")
                 }
             }
         }
@@ -106,6 +108,8 @@ async fn main() -> Result<(), Error> {
                     .await?;
 
                     dl.download().await?;
+                } else {
+                    println!("This build does not include support for this imageboard")
                 }
             }
         }
@@ -122,6 +126,8 @@ async fn main() -> Result<(), Error> {
                     )?;
 
                     dl.download().await?;
+                } else {
+                    println!("This build does not include support for this imageboard")
                 }
             }
         }
@@ -138,6 +144,8 @@ async fn main() -> Result<(), Error> {
                     )?;
 
                     dl.download().await?;
+                } else {
+                    println!("This build does not include support for this imageboard")
                 }
             }
         }
