@@ -6,6 +6,7 @@ use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
 use crate::progress_bars::ProgressArcs;
 use crate::{client, extract_ext_from_url, finish_and_print_results, join_tags};
+use ahash::AHashSet;
 use anyhow::{bail, Error};
 use colored::Colorize;
 use log::debug;
@@ -134,12 +135,19 @@ impl MoebooruDownloader {
                     .filter(|c| c.file_url.is_some())
                     .map(|c| {
                         let url = c.file_url.clone().unwrap();
+
+                        let mut tags = AHashSet::new();
+
+                        for i in c.tags.split(' ') {
+                            tags.insert(i.to_string());
+                        }
+
                         Post {
                             id: c.id.unwrap(),
                             url: url.clone(),
                             md5: c.md5.clone().unwrap(),
                             extension: extract_ext_from_url!(url),
-                            tags: Default::default(),
+                            tags,
                             rating: Rating::from_str(&c.rating).unwrap(),
                         }
                     })
