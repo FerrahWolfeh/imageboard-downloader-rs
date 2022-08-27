@@ -13,6 +13,7 @@ use log::debug;
 use md5::compute;
 use reqwest::Client;
 use std::{
+    cmp::Ordering,
     path::Path,
     sync::{Arc, Mutex},
 };
@@ -48,6 +49,26 @@ pub struct Post {
     /// Used to exclude posts according to a blacklist
     pub tags: AHashSet<String>,
 }
+
+impl Ord for Post {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
+}
+
+impl PartialOrd for Post {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Post {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Post {}
 
 impl Post {
     /// Main routine to download a single post.
