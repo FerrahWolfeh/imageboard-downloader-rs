@@ -105,6 +105,7 @@ impl ImageBoardExtractor for DanbooruDownloader {
 
             print_found!(fvec);
         }
+        println!();
 
         let fin = PostQueue {
             tags: self.tags.to_vec(),
