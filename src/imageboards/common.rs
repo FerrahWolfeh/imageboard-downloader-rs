@@ -9,26 +9,6 @@ use std::io;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-/// Checks if ```output_dir``` is set in cli args then returns a ```PathBuf``` pointing to where the files will be downloaded.
-///
-/// In case the user does not set a value with the ```-o``` flag, the function will default to the current dir where the program is running.
-///
-/// The path chosen will always end with the imageboard name followed by the tags used.
-///
-/// ```rust
-///
-/// use std::path::PathBuf;
-/// use imageboard_downloader::imageboards::ImageBoards;
-/// use imageboard_downloader::join_tags;
-///
-/// let tags = join_tags!(["kroos_(arknights)", "weapon"]);
-/// let path = Some(PathBuf::from("./"));
-///
-/// let out_dir = generate_out_dir(path, &tags, ImageBoards::Danbooru).unwrap();
-///
-/// assert_eq!(PathBuf::from("./danbooru/kroos_(arknights) weapon"), out_dir);
-/// ```
-
 /// Struct to condense both counters that are used when downloading and checking limits
 #[derive(Clone)]
 pub struct Counters {
@@ -51,11 +31,11 @@ pub async fn auth_prompt(
             imageboard.to_string().green().bold()
         );
         print!("{}", "Username: ".bold());
-        io::stdout().flush()?;
-        stdin.read_line(&mut username)?;
+        io::stdout().flush().unwrap();
+        stdin.read_line(&mut username).unwrap();
         print!("{}", "API Key: ".bold());
-        io::stdout().flush()?;
-        stdin.read_line(&mut api_key)?;
+        io::stdout().flush().unwrap();
+        stdin.read_line(&mut api_key).unwrap();
 
         debug!("Username: {:?}", username.trim());
         debug!("API key: {:?}", api_key.trim());
