@@ -44,76 +44,103 @@
 //! // Download
 //! dl.download().await?;
 //! ```
-use crate::imageboards::common::{generate_out_dir, Counters};
 use crate::imageboards::post::Post;
-use crate::imageboards::queue::DownloadQueue;
+use crate::imageboards::queue::PostQueue;
 use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::ProgressArcs;
 use crate::{client, join_tags};
-use crate::{extract_ext_from_url, finish_and_print_results};
+use crate::{extract_ext_from_url, print_found};
 use ahash::AHashSet;
-use anyhow::{bail, Error};
+use async_trait::async_trait;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
-use roxmltree::Document;
 use serde_json::Value;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tokio::fs::create_dir_all;
+use std::io::{self, Write};
+use std::thread;
+use std::time::Duration;
+use tokio::time::Instant;
+
+use super::error::ExtractorError;
+use super::ImageBoardExtractor;
 
 pub struct GelbooruDownloader {
     active_imageboard: ImageBoards,
-    item_count: usize,
-    page_count: usize,
     client: Client,
+    tags: Vec<String>,
     tag_string: String,
-    concurrent_downloads: usize,
-    posts_endpoint: String,
-    out_dir: PathBuf,
-    save_as_id: bool,
-    download_limit: Option<usize>,
-    counters: Counters,
+}
+
+#[async_trait]
+impl ImageBoardExtractor for GelbooruDownloader {
+    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let posts = Self::get_post_list(self, page).await?;
+
+        let qw = PostQueue {
+            tags: self.tags.to_vec(),
+            posts,
+        };
+
+        Ok(qw)
+    }
+
+    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let mut fvec = Vec::new();
+        let mut page = 0;
+
+        loop {
+            let posts = Self::get_post_list(self, page).await?;
+            let size = posts.len();
+
+            if size == 0 {
+                break;
+            }
+
+            fvec.extend(posts);
+
+            if size < self.active_imageboard.max_post_limit() {
+                break;
+            }
+
+            page += 1;
+
+            print_found!(fvec);
+            // debounce
+            debug!("Debouncing API calls by 500 ms");
+            thread::sleep(Duration::from_millis(500));
+        }
+        println!();
+
+        let fin = PostQueue {
+            tags: self.tags.to_vec(),
+            posts: fvec,
+        };
+
+        Ok(fin)
+    }
 }
 
 impl GelbooruDownloader {
-    pub fn new(
-        imageboard: ImageBoards,
-        tags: &[String],
-        out_dir: Option<PathBuf>,
-        concurrent_downs: usize,
-        download_limit: Option<usize>,
-        save_as_id: bool,
-    ) -> Result<Self, Error> {
+    pub fn new(tags: &[String], active_imageboard: ImageBoards) -> Self {
         // Use common client for all connections with a set User-Agent
-        let client = client!(imageboard.user_agent());
+        let client = client!(active_imageboard.user_agent());
 
-        // Join tags to a url format in case there's more than one
+        // Merge all tags in the URL format
         let tag_string = join_tags!(tags);
 
-        // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, tags, imageboard)?;
-
-        Ok(Self {
-            active_imageboard: imageboard,
-            item_count: 0,
-            page_count: 0,
+        Self {
+            active_imageboard,
             client,
+            tags: tags.to_vec(),
             tag_string,
-            concurrent_downloads: concurrent_downs,
-            posts_endpoint: "".to_string(),
-            out_dir: out,
-            save_as_id,
-            download_limit,
-            counters: Counters {
-                total_mtx: Arc::new(Mutex::new(0)),
-                downloaded_mtx: Arc::new(Mutex::new(0)),
-            },
-        })
+        }
     }
 
-    async fn get_post_count(&mut self) -> Result<(), Error> {
+    async fn validate_tags(&mut self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}&tags={}",
             self.active_imageboard.post_url(false).unwrap(),
@@ -121,118 +148,102 @@ impl GelbooruDownloader {
         );
 
         // Get an estimate of total posts and pages to search
-        let count = &self
-            .client
-            .get(&count_endpoint)
-            .send()
-            .await?
-            .text()
-            .await?;
+        let request = self.client.get(&count_endpoint);
 
-        let num = Document::parse(count)
-            .unwrap()
-            .root_element()
-            .attribute("count")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
+        debug!("Checking tags");
+
+        let count = request.send().await?.json::<Value>().await?;
 
         // Bail out if no posts are found
-        if num == 0 {
-            bail!("No posts found for tag selection!")
-        }
-        debug!("Tag list is valid");
-        debug!("{} posts found", num);
-
-        // In case the limit is set, use a whole other cascade of stuff
-        if let Some(n) = self.download_limit {
-            debug!("Using post limiter");
-            // When it is set, we artificially set the counts to the limit in order to trick the progress bar.
-            if n < num && n != 0 {
-                self.item_count = n;
-                self.page_count =
-                    (n as f32 / self.active_imageboard.max_post_limit() as f32).ceil() as usize;
-            } else {
-                debug!("Number of posts is lower than limit");
-                self.item_count = num;
-                self.page_count = (self.item_count as f32
-                    / self.active_imageboard.max_post_limit() as f32)
-                    .ceil() as usize;
+        if let Some(res) = count.as_array() {
+            if res.is_empty() {
+                return Err(ExtractorError::ZeroPosts);
             }
-            // Or else, the usual
-        } else {
-            self.item_count = num;
-            self.page_count = (self.item_count as f32
-                / self.active_imageboard.max_post_limit() as f32)
-                .ceil() as usize;
-        }
 
-        // Gelbooru has a newer API that's a complete hell to decode in xml format, so we slightly change the url to the json endpoint.
-        if self.active_imageboard == ImageBoards::Gelbooru {
-            let count_endpoint = format!("{}&json=1", count_endpoint);
-            self.posts_endpoint = count_endpoint;
+            debug!("Tag list is valid");
             return Ok(());
         }
 
-        self.posts_endpoint = count_endpoint;
+        if let Some(res) = count["post"].as_array() {
+            if res.is_empty() {
+                return Err(ExtractorError::ZeroPosts);
+            }
 
-        Ok(())
+            debug!("Tag list is valid");
+            return Ok(());
+        }
+
+        Err(ExtractorError::InvalidServerResponse)
     }
 
     // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
-    fn generate_queue_xml(&self, xml: &str) -> Result<DownloadQueue, Error> {
-        debug!("Using gelbooru XML API");
-        let doc = Document::parse(xml)?;
-        let stuff: Vec<Post> = doc
-            .root_element()
-            .children()
-            .filter(|c| c.attribute("file_url").is_some())
-            .map(|c| {
-                let file = c.attribute("file_url").unwrap();
-                let md5 = c.attribute("md5").unwrap().to_string();
+    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+        let url_mode = format!(
+            "{}&tags={}",
+            self.active_imageboard.post_url(false).unwrap(),
+            &self.tag_string
+        );
 
-                let link = if self.active_imageboard == ImageBoards::Realbooru {
-                    let mut str: Vec<String> = file.split('/').map(|c| c.to_string()).collect();
-                    str.pop();
+        let items = &self
+            .client
+            .get(&url_mode)
+            .query(&[("pid", page), ("limit", 1000)])
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
 
-                    format!("{}/{}.{}", str.join("/"), md5, extract_ext_from_url!(file))
-                } else {
-                    file.to_string()
-                };
+        if let Some(arr) = items.as_array() {
+            let start = Instant::now();
+            let posts: Vec<Post> = arr
+                .iter()
+                .filter(|f| f["hash"].as_str().is_some())
+                .map(|f| {
+                    let mut tags = AHashSet::new();
 
-                let mut tags = AHashSet::new();
-
-                for i in c.attribute("tags").unwrap().split(' ') {
-                    if !i.is_empty() {
+                    for i in f["tags"].as_str().unwrap().split(' ') {
                         tags.insert(i.to_string());
                     }
-                }
 
-                Post {
-                    id: c.attribute("id").unwrap().parse::<u64>().unwrap(),
-                    url: link,
-                    md5: c.attribute("md5").unwrap().to_string(),
-                    extension: extract_ext_from_url!(file),
-                    tags,
-                    rating: Rating::from_str(c.attribute("rating").unwrap()),
-                }
-            })
-            .collect();
+                    let rating = Rating::from_str(f["rating"].as_str().unwrap());
 
-        debug!("Current queue size: {}", stuff.len());
-        Ok(DownloadQueue::new(
-            stuff,
-            self.concurrent_downloads,
-            self.download_limit,
-            self.counters.clone(),
-        ))
-    }
+                    let file = f["image"].as_str().unwrap();
 
-    // This is for gelbooru.com itself, since it uses a new API that, while better on the JSON side, the XML part is an absolute hell to parse
-    fn generate_queue_json(&self, json: &str) -> Result<DownloadQueue, Error> {
-        debug!("Using gelbooru JSON API");
-        let json: Value = serde_json::from_str(json)?;
-        if let Some(it) = json["post"].as_array() {
+                    let md5 = f["hash"].as_str().unwrap().to_string();
+
+                    let ext = extract_ext_from_url!(file);
+
+                    let drop_url = if self.active_imageboard == ImageBoards::Rule34 {
+                        f["file_url"].as_str().unwrap().to_string()
+                    } else {
+                        format!(
+                            "https://realbooru.com/images/{}/{}.{}",
+                            f["directory"].as_str().unwrap(),
+                            &md5,
+                            &ext
+                        )
+                    };
+
+                    Post {
+                        id: f["id"].as_u64().unwrap(),
+                        url: drop_url,
+                        md5,
+                        extension: extract_ext_from_url!(file),
+                        rating,
+                        tags,
+                    }
+                })
+                .collect();
+            let end = Instant::now();
+
+            debug!("List size: {}", posts.len());
+            debug!("Post mapping took {:?}", end - start);
+
+            return Ok(posts);
+        }
+
+        if let Some(it) = items["post"].as_array() {
+            let start = Instant::now();
             let posts: Vec<Post> = it
                 .iter()
                 .filter(|i| i["file_url"].as_str().is_some())
@@ -254,66 +265,14 @@ impl GelbooruDownloader {
                     }
                 })
                 .collect();
+            let end = Instant::now();
 
-            debug!("Current queue size: {}", posts.len());
-            return Ok(DownloadQueue::new(
-                posts,
-                self.concurrent_downloads,
-                self.download_limit,
-                self.counters.clone(),
-            ));
-        }
-        bail!("Failed to parse json")
-    }
+            debug!("List size: {}", posts.len());
+            debug!("Post mapping took {:?}", end - start);
 
-    pub async fn download(&mut self) -> Result<(), Error> {
-        // Generate post count data
-        Self::get_post_count(self).await?;
-
-        // Create output dir
-        create_dir_all(&self.out_dir).await?;
-
-        // Setup global progress bar
-        let bars = ProgressArcs::initialize(self.item_count as u64, self.active_imageboard);
-
-        // Begin downloading all posts per page
-        for i in 0..=self.page_count {
-            bars.main.set_message(format!("Page {i}"));
-
-            let items = &self
-                .client
-                .get(&self.posts_endpoint)
-                .query(&[("pid", i), ("limit", 1000)])
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let mut queue = if self.active_imageboard == ImageBoards::Gelbooru {
-                Self::generate_queue_json(self, items)?
-            } else {
-                Self::generate_queue_xml(self, items)?
-            };
-
-            queue
-                .download(
-                    &self.client,
-                    &self.out_dir,
-                    bars.clone(),
-                    self.active_imageboard,
-                    self.save_as_id,
-                )
-                .await?;
-
-            if let Some(n) = self.download_limit {
-                if n == *self.counters.total_mtx.lock().unwrap() {
-                    break;
-                }
-            }
+            return Ok(posts);
         }
 
-        finish_and_print_results!(bars, self);
-
-        Ok(())
+        Err(ExtractorError::InvalidServerResponse)
     }
 }

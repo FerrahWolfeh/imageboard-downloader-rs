@@ -106,7 +106,7 @@ impl ImageBoards {
                 }
             }
             ImageBoards::Rule34 => {
-                Some("https://api.rule34.xxx/index.php?page=dapi&s=post&q=index")
+                Some("https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1")
             }
             ImageBoards::Konachan => {
                 if safe {
@@ -116,9 +116,9 @@ impl ImageBoards {
                 }
             }
             ImageBoards::Realbooru => {
-                Some("http://realbooru.com/index.php?page=dapi&s=post&q=index")
+                Some("http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1")
             }
-            ImageBoards::Gelbooru => Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index"),
+            ImageBoards::Gelbooru => Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"),
         }
     }
 

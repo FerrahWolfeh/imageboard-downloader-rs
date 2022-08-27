@@ -127,16 +127,20 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             cfg_if! {
                 if #[cfg(feature = "gelbooru")] {
-                    let mut dl = GelbooruDownloader::new(
+                   let mut unit = GelbooruDownloader::new(&args.tags, args.imageboard);
+                    let posts = unit.full_search().await?;
+
+                    debug!("Collected {} valid posts", posts.posts.len());
+
+                    let mut qw = Queue::new(
                         args.imageboard,
-                        &args.tags,
-                        args.output,
+                        posts,
                         args.simultaneous_downloads,
                         args.limit,
-                        args.save_file_as_id,
-                    )?;
+                        Default::default(),
+                    );
 
-                    dl.download().await?;
+                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
                 } else {
                     println!("This build does not include support for this imageboard")
                 }
