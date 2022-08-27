@@ -1,7 +1,8 @@
 use anyhow::Error;
 use cfg_if::cfg_if;
 use clap::Parser;
-use imageboard_downloader::*;
+use imageboard_downloader::{imageboards::extractors::ImageBoardExtractor, *};
+use log::debug;
 use std::path::PathBuf;
 
 extern crate tokio;
@@ -76,18 +77,21 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Danbooru => {
             cfg_if! {
                 if #[cfg(feature = "danbooru")] {
-                let mut dl = DanbooruDownloader::new(
-                    &args.tags,
-                    args.output,
-                    args.simultaneous_downloads,
-                    args.limit,
-                    args.auth,
-                    args.safe_mode,
-                    args.save_file_as_id,
-                )
-                .await?;
+                    let mut unit = DanbooruDownloader::new(&args.tags, args.safe_mode)?;
+                    unit.auth(args.auth).await?;
+                    let posts = unit.full_search().await?;
 
-                dl.download().await?;
+                    debug!("Collected {} valid posts", posts.posts.len());
+
+                    let mut qw = Queue::new(
+                        args.imageboard,
+                        posts,
+                        args.simultaneous_downloads,
+                        args.limit,
+                        unit.auth.user_data.blacklisted_tags,
+                    );
+
+                    qw.download(args.output, args.save_file_as_id).await?;
                 } else {
                     println!("This build does not include support for this imageboard")
                 }

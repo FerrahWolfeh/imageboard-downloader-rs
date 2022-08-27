@@ -1,5 +1,5 @@
 //! Auth and download logic for `https://danbooru.donmai.us`
-//!
+//&!
 //! The danbooru downloader has the following features:
 //! * Multiple simultaneous downloads.
 //! * Authentication
@@ -40,90 +40,123 @@
 //! dl.download().await?;
 //! ```
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
+use crate::imageboards::common::auth_prompt;
 use crate::imageboards::post::Post;
-use crate::imageboards::queue::DownloadQueue;
+use crate::imageboards::queue::PostQueue;
 use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::ProgressArcs;
-use crate::{bail_error, client, finish_and_print_results, join_tags};
+use crate::{client, join_tags, print_found};
 use ahash::AHashSet;
-use anyhow::{bail, Error};
+use anyhow::Error;
+use async_trait::async_trait;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tokio::fs::create_dir_all;
+use std::io::{self, Write};
 use tokio::time::Instant;
 
 use super::error::ExtractorError;
+use super::ImageBoardExtractor;
 
 /// Main object to download posts
+#[derive(Debug)]
 pub struct DanbooruDownloader {
-    item_count: u64,
-    page_count: f32,
     client: Client,
-    concurrent_downloads: usize,
-    download_limit: Option<usize>,
-    tag_list: Vec<String>,
+    tags: Vec<String>,
     tag_string: String,
-    out_dir: PathBuf,
+    pub auth_state: bool,
+    pub auth: ImageboardConfig,
     safe_mode: bool,
-    save_as_id: bool,
-    counters: Counters,
-    blacklisted_posts: usize,
+}
+
+#[async_trait]
+impl ImageBoardExtractor for DanbooruDownloader {
+    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let posts = Self::get_post_list(self, page).await?;
+
+        let qw = PostQueue {
+            tags: self.tags.to_vec(),
+            posts,
+        };
+
+        Ok(qw)
+    }
+
+    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let mut fvec = Vec::new();
+        let mut page = 1;
+
+        loop {
+            let posts = Self::get_post_list(self, page).await?;
+            let size = posts.len();
+
+            if size == 0 {
+                break;
+            }
+
+            fvec.extend(posts);
+
+            page += 1;
+
+            print_found!(fvec);
+        }
+
+        let fin = PostQueue {
+            tags: self.tags.to_vec(),
+            posts: fvec,
+        };
+        Ok(fin)
+    }
 }
 
 impl DanbooruDownloader {
-    pub async fn new(
-        tags: &[String],
-        out_dir: Option<PathBuf>,
-        concurrent_downs: usize,
-        item_limit: Option<usize>,
-        auth_state: bool,
-        safe_mode: bool,
-        save_as_id: bool,
-    ) -> Result<Self, Error> {
+    pub fn new(tags: &[String], safe_mode: bool) -> Result<Self, ExtractorError> {
         if tags.len() > 2 {
-            bail_error!(ExtractorError::TooManyTagsError {
+            return Err(ExtractorError::TooManyTags {
                 current: tags.len(),
                 max: 2,
             });
         };
+
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Danbooru.user_agent());
 
-        // Join tags to a url format in case there's more than one
+        // Merge all tags in the URL format
         let tag_string = join_tags!(tags);
 
-        // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, tags, ImageBoards::Danbooru)?;
-
-        // Try to authenticate, does nothing if auth flag is not set
-        try_auth(auth_state, ImageBoards::Danbooru, &client).await?;
+        // Set Safe mode status
+        let safe_mode = safe_mode;
 
         Ok(Self {
-            item_count: 0,
-            page_count: 0.0,
-            concurrent_downloads: concurrent_downs,
-            download_limit: item_limit,
-            tag_list: Vec::from(tags),
-            tag_string,
             client,
-            out_dir: out,
+            tags: tags.to_vec(),
+            tag_string,
+            auth_state: false,
+            auth: Default::default(),
             safe_mode,
-            save_as_id,
-            blacklisted_posts: 0,
-            counters: Counters {
-                total_mtx: Arc::new(Mutex::new(0)),
-                downloaded_mtx: Arc::new(Mutex::new(0)),
-            },
         })
     }
 
-    async fn get_post_count(&mut self, auth_creds: &Option<ImageboardConfig>) -> Result<(), Error> {
+    pub async fn auth(&mut self, prompt: bool) -> Result<(), Error> {
+        // Try to authenticate, does nothing if auth flag is not set
+        auth_prompt(prompt, ImageBoards::Danbooru, &self.client).await?;
+
+        if let Some(creds) = ImageBoards::Danbooru.read_config_from_fs().await? {
+            self.auth = creds;
+            self.auth_state = true;
+            return Ok(());
+        }
+
+        self.auth_state = false;
+        Ok(())
+    }
+
+    async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::Danbooru
@@ -133,155 +166,90 @@ impl DanbooruDownloader {
         );
 
         // Get an estimate of total posts and pages to search
-        let count = if let Some(data) = auth_creds {
+        let request = if self.auth_state {
             debug!("[AUTH] Fetching post count");
             self.client
                 .get(count_endpoint)
-                .basic_auth(&data.username, Some(&data.api_key))
-                .send()
-                .await?
-                .json::<Value>()
-                .await?
+                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
         } else {
             debug!("Fetching post count");
-            self.client
-                .get(count_endpoint)
-                .send()
-                .await?
-                .json::<Value>()
-                .await?
+            self.client.get(count_endpoint)
         };
+
+        let count = request.send().await?.json::<Value>().await?;
 
         if let Some(count) = count["counts"]["posts"].as_u64() {
             // Bail out if no posts are found
             if count == 0 {
-                bail!("No posts found for tag selection!")
+                return Err(ExtractorError::ZeroPosts);
             }
 
-            if let Some(num) = self.download_limit {
-                self.item_count = num as u64;
-                self.page_count = (num as f32 / 200.0).ceil();
-            } else {
-                self.item_count = count;
-                self.page_count = (self.item_count as f32 / 200.0).ceil();
-            }
-
-            debug!(
-                "{} Posts for tag list '{:?}'",
-                &self.item_count, &self.tag_list
-            );
+            debug!("Found {} posts", count);
+            Ok(())
         } else {
-            bail!("Danbooru returned a malformed JSON response while fetching post count.")
+            Err(ExtractorError::InvalidServerResponse)
         }
-        Ok(())
     }
 
-    pub async fn download(&mut self) -> Result<(), Error> {
-        // Get auth data
-        let auth_res = ImageBoards::Danbooru.read_config_from_fs().await?;
+    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+        // Check safe mode
+        let url_mode = format!(
+            "{}?tags={}",
+            ImageBoards::Danbooru.post_url(self.safe_mode).unwrap(),
+            &self.tag_string
+        );
 
-        // Generate post count data
-        Self::get_post_count(self, &auth_res).await?;
+        // Fetch item list from page
+        let req = if self.auth_state {
+            debug!("[AUTH] Fetching posts from page {}", page);
+            self.client
+                .get(url_mode)
+                .query(&[("page", page), ("limit", 200)])
+                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+        } else {
+            debug!("Fetching posts from page {}", page);
+            self.client
+                .get(url_mode)
+                .query(&[("page", page), ("limit", 200)])
+        };
 
-        // Create output dir
-        create_dir_all(&self.out_dir).await?;
+        let post_array = req.send().await?.json::<Value>().await?;
 
-        // Setup global progress bar
-        let bars = ProgressArcs::initialize(self.item_count, ImageBoards::Danbooru);
+        let start_point = Instant::now();
+        let posts: Vec<Post> = post_array
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|c| c["file_url"].as_str().is_some())
+            .map(|c| {
+                let mut tag_list = AHashSet::new();
 
-        // Begin downloading all posts per page
-        for i in 1..=self.page_count as u64 {
-            bars.main.set_message(format!("Page {i}"));
+                for i in c["tag_string"].as_str().unwrap().split(' ') {
+                    tag_list.insert(i.to_string());
+                }
 
-            // Check safe mode
-            let url_mode = format!(
-                "{}?tags={}",
-                ImageBoards::Danbooru.post_url(self.safe_mode).unwrap(),
-                &self.tag_string
-            );
+                let rt = c["rating"].as_str().unwrap();
+                let rating = if rt == "s" {
+                    Rating::Questionable
+                } else {
+                    Rating::from_str(rt)
+                };
 
-            // Fetch item list from page
-            let jj = if let Some(data) = &auth_res {
-                debug!("[AUTH] Fetching posts from page {}", i);
-                self.client
-                    .get(url_mode)
-                    .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
-                    .basic_auth(&data.username, Some(&data.api_key))
-                    .send()
-                    .await?
-                    .json::<Value>()
-                    .await?
-            } else {
-                debug!("Fetching posts from page {}", i);
-                self.client
-                    .get(url_mode)
-                    .query(&[("page", &i.to_string()), ("limit", &200.to_string())])
-                    .send()
-                    .await?
-                    .json::<Value>()
-                    .await?
-            };
+                Post {
+                    id: c["id"].as_u64().unwrap(),
+                    md5: c["md5"].as_str().unwrap().to_string(),
+                    url: c["file_url"].as_str().unwrap().to_string(),
+                    extension: c["file_ext"].as_str().unwrap().to_string(),
+                    tags: tag_list,
+                    rating,
+                }
+            })
+            .collect();
 
-            let start_point = Instant::now();
-            let posts: Vec<Post> = jj
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter(|c| c["file_url"].as_str().is_some())
-                .map(|c| {
-                    let mut tag_list = AHashSet::new();
+        debug!("List size: {}", posts.len());
 
-                    for i in c["tag_string"].as_str().unwrap().split(' ') {
-                        tag_list.insert(i.to_string());
-                    }
-
-                    let rt = c["rating"].as_str().unwrap();
-                    let rating = if rt == "s" {
-                        Rating::Questionable
-                    } else {
-                        Rating::from_str(rt)
-                    };
-
-                    Post {
-                        id: c["id"].as_u64().unwrap(),
-                        md5: c["md5"].as_str().unwrap().to_string(),
-                        url: c["file_url"].as_str().unwrap().to_string(),
-                        extension: c["file_ext"].as_str().unwrap().to_string(),
-                        tags: tag_list,
-                        rating,
-                    }
-                })
-                .collect();
-            debug!("List size: {}", posts.len());
-
-            let end_iter = Instant::now();
-            debug!("Post mapping took {:?}", end_iter - start_point);
-
-            // Download everything got in the above function
-            let mut queue = DownloadQueue::new(
-                posts,
-                self.concurrent_downloads,
-                self.download_limit,
-                self.counters.clone(),
-            );
-
-            if let Some(auth) = &auth_res {
-                queue.blacklist_filter(&auth.user_data.blacklisted_tags);
-                self.blacklisted_posts += queue.blacklisted_ct();
-            }
-
-            queue
-                .download(
-                    &self.client,
-                    &self.out_dir,
-                    bars.clone(),
-                    ImageBoards::Danbooru,
-                    self.save_as_id,
-                )
-                .await?;
-        }
-
-        finish_and_print_results!(bars, self, auth_res);
-        Ok(())
+        let end_iter = Instant::now();
+        debug!("Post mapping took {:?}", end_iter - start_point);
+        Ok(posts)
     }
 }
