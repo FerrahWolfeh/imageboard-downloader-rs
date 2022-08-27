@@ -1,7 +1,7 @@
 use anyhow::Error;
 use cfg_if::cfg_if;
 use clap::Parser;
-use imageboard_downloader::{imageboards::extractors::ImageBoardExtractor, *};
+use imageboard_downloader::*;
 use log::debug;
 use std::path::PathBuf;
 

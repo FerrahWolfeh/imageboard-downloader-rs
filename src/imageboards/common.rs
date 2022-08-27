@@ -7,7 +7,6 @@ use log::debug;
 use reqwest::Client;
 use std::io;
 use std::io::Write;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 /// Checks if ```output_dir``` is set in cli args then returns a ```PathBuf``` pointing to where the files will be downloaded.
@@ -29,26 +28,6 @@ use std::sync::{Arc, Mutex};
 ///
 /// assert_eq!(PathBuf::from("./danbooru/kroos_(arknights) weapon"), out_dir);
 /// ```
-pub fn generate_out_dir(
-    out_dir: Option<PathBuf>,
-    tags: &[String],
-    imageboard: ImageBoards,
-) -> Result<PathBuf, Error> {
-    // If out_dir is not set via cli flags, use current dir
-    let place = match out_dir {
-        None => std::env::current_dir()?,
-        Some(dir) => dir,
-    };
-    let tags = tags.join(" ");
-
-    let out = place.join(PathBuf::from(format!(
-        "{}/{}",
-        imageboard.to_string(),
-        tags
-    )));
-    debug!("Target dir: {}", out.display());
-    Ok(out)
-}
 
 /// Struct to condense both counters that are used when downloading and checking limits
 #[derive(Clone)]

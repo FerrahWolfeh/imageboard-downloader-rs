@@ -11,15 +11,14 @@ mod progress_bars;
 // Export main representative enum
 pub use imageboards::ImageBoards;
 
-// Export main worker queue
-pub use imageboards::queue::DownloadQueue;
-
 // Export newer queue impl
 pub use imageboards::queue::Queue;
 
 pub use imageboards::rating::Rating;
 
 pub use imageboards::post::Post;
+
+pub use imageboards::extractors::ImageBoardExtractor;
 
 #[cfg(feature = "global_blacklist")]
 pub use imageboards::blacklist::GlobalBlacklist;
