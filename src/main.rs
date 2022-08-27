@@ -149,16 +149,20 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Konachan => {
             cfg_if! {
                 if #[cfg(feature = "moebooru")] {
-                    let mut dl = MoebooruDownloader::new(
-                        &args.tags,
-                        args.output,
+                    let mut unit = MoebooruDownloader::new(&args.tags, args.safe_mode);
+                    let posts = unit.full_search().await?;
+
+                    debug!("Collected {} valid posts", posts.posts.len());
+
+                    let mut qw = Queue::new(
+                        args.imageboard,
+                        posts,
                         args.simultaneous_downloads,
                         args.limit,
-                        args.safe_mode,
-                        args.save_file_as_id,
-                    )?;
+                        Default::default()
+                    );
 
-                    dl.download().await?;
+                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
                 } else {
                     println!("This build does not include support for this imageboard")
                 }

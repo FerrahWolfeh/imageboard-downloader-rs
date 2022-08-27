@@ -1,73 +1,98 @@
-use crate::imageboards::common::{generate_out_dir, Counters};
+use crate::imageboards::extractors::error::ExtractorError;
 use crate::imageboards::extractors::moebooru::models::KonachanPost;
 use crate::imageboards::post::Post;
-use crate::imageboards::queue::DownloadQueue;
+use crate::imageboards::queue::PostQueue;
 use crate::imageboards::rating::Rating;
 use crate::imageboards::ImageBoards;
-use crate::progress_bars::ProgressArcs;
-use crate::{client, extract_ext_from_url, finish_and_print_results, join_tags};
+use crate::{client, extract_ext_from_url, join_tags, print_found};
 use ahash::AHashSet;
-use anyhow::{bail, Error};
+use async_trait::async_trait;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tokio::fs::create_dir_all;
+use std::io::{self, Write};
+
+use super::ImageBoardExtractor;
 
 mod models;
 
 pub struct MoebooruDownloader {
-    item_count: usize,
     client: Client,
+    tags: Vec<String>,
     tag_string: String,
-    tag_list: Vec<String>,
-    concurrent_downloads: usize,
-    posts_endpoint: String,
-    out_dir: PathBuf,
-    save_as_id: bool,
     safe_mode: bool,
-    _download_limit: Option<usize>,
-    counters: Counters,
+}
+
+#[async_trait]
+impl ImageBoardExtractor for MoebooruDownloader {
+    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let posts = Self::get_post_list(self, page).await?;
+
+        let qw = PostQueue {
+            tags: self.tags.to_vec(),
+            posts,
+        };
+
+        Ok(qw)
+    }
+
+    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError> {
+        Self::validate_tags(self).await?;
+
+        let mut fvec = Vec::new();
+        let mut page = 1;
+
+        loop {
+            let posts = Self::get_post_list(self, page).await?;
+            let size = posts.len();
+
+            if size == 0 {
+                break;
+            }
+
+            fvec.extend(posts);
+
+            if size < 320 {
+                break;
+            }
+
+            page += 1;
+
+            print_found!(fvec);
+        }
+        println!();
+
+        let fin = PostQueue {
+            tags: self.tags.to_vec(),
+            posts: fvec,
+        };
+
+        Ok(fin)
+    }
 }
 
 impl MoebooruDownloader {
-    pub fn new(
-        tags: &[String],
-        out_dir: Option<PathBuf>,
-        concurrent_downs: usize,
-        download_limit: Option<usize>,
-        safe_mode: bool,
-        save_as_id: bool,
-    ) -> Result<Self, Error> {
+    pub fn new(tags: &[String], safe_mode: bool) -> Self {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Konachan.user_agent());
+        let client = client!(ImageBoards::E621.user_agent());
 
-        // Join tags to a url format in case there's more than one
+        // Merge all tags in the URL format
         let tag_string = join_tags!(tags);
 
-        // Place downloaded items in current dir or in /tmp
-        let out = generate_out_dir(out_dir, tags, ImageBoards::Konachan)?;
+        // Set Safe mode status
+        let safe_mode = safe_mode;
 
-        Ok(Self {
-            item_count: 0,
+        Self {
             client,
+            tags: tags.to_vec(),
             tag_string,
-            tag_list: Vec::from(tags),
-            concurrent_downloads: concurrent_downs,
-            posts_endpoint: "".to_string(),
-            out_dir: out,
-            save_as_id,
             safe_mode,
-            _download_limit: download_limit,
-            counters: Counters {
-                total_mtx: Arc::new(Mutex::new(0)),
-                downloaded_mtx: Arc::new(Mutex::new(0)),
-            },
-        })
+        }
     }
 
-    async fn check_tag_list(&mut self) -> Result<(), Error> {
+    async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::Konachan.post_url(self.safe_mode).unwrap(),
@@ -85,94 +110,53 @@ impl MoebooruDownloader {
 
         // Bail out if no posts are found
         if count.is_empty() {
-            bail!("No posts found for tag selection!")
+            return Err(ExtractorError::ZeroPosts);
         }
-        debug!("Tag list: {:?} is valid", &self.tag_list);
-
-        // Fill memory with standard post count just to initialize the progress bar
-        self.item_count = count.len();
-
-        self.posts_endpoint = count_endpoint;
+        debug!("Tag list is valid");
 
         Ok(())
     }
 
-    pub async fn download(&mut self) -> Result<(), Error> {
-        // Generate post count data
-        Self::check_tag_list(self).await?;
+    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+        // Get URL
+        let count_endpoint = format!(
+            "{}?tags={}",
+            ImageBoards::Konachan.post_url(self.safe_mode).unwrap(),
+            &self.tag_string
+        );
 
-        // Create output dir
-        create_dir_all(&self.out_dir).await?;
+        let items = &self
+            .client
+            .get(&count_endpoint)
+            .query(&[("page", page), ("limit", 100)])
+            .send()
+            .await?
+            .json::<Vec<KonachanPost>>()
+            .await?;
 
-        // Setup global progress bar
-        let bars = ProgressArcs::initialize(0, ImageBoards::Konachan);
+        let post_list: Vec<Post> = items
+            .iter()
+            .filter(|c| c.file_url.is_some())
+            .map(|c| {
+                let url = c.file_url.clone().unwrap();
 
-        // Keep track of pages already downloaded
-        let mut page = 1;
+                let mut tags = AHashSet::new();
 
-        // Begin downloading all posts per page
-        // Since konachan doesn't give a precise number of posts, we'll need to go through the pages until there's no more posts left to show
-        while self.item_count != 0 {
-            let items = &self
-                .client
-                .get(&self.posts_endpoint)
-                .query(&[("page", page), ("limit", 100)])
-                .send()
-                .await?
-                .json::<Vec<KonachanPost>>()
-                .await?;
+                for i in c.tags.split(' ') {
+                    tags.insert(i.to_string());
+                }
 
-            let posts = items.len();
+                Post {
+                    id: c.id.unwrap(),
+                    url: url.clone(),
+                    md5: c.md5.clone().unwrap(),
+                    extension: extract_ext_from_url!(url),
+                    tags,
+                    rating: Rating::from_str(&c.rating),
+                }
+            })
+            .collect();
 
-            self.item_count = posts;
-
-            bars.main.inc_length(posts as u64);
-
-            if self.item_count != 0 {
-                let post_list: Vec<Post> = items
-                    .iter()
-                    .filter(|c| c.file_url.is_some())
-                    .map(|c| {
-                        let url = c.file_url.clone().unwrap();
-
-                        let mut tags = AHashSet::new();
-
-                        for i in c.tags.split(' ') {
-                            tags.insert(i.to_string());
-                        }
-
-                        Post {
-                            id: c.id.unwrap(),
-                            url: url.clone(),
-                            md5: c.md5.clone().unwrap(),
-                            extension: extract_ext_from_url!(url),
-                            tags,
-                            rating: Rating::from_str(&c.rating),
-                        }
-                    })
-                    .collect();
-                let mut queue = DownloadQueue::new(
-                    post_list,
-                    self.concurrent_downloads,
-                    self._download_limit,
-                    self.counters.clone(),
-                );
-
-                queue
-                    .download(
-                        &self.client,
-                        &self.out_dir,
-                        bars.clone(),
-                        ImageBoards::E621,
-                        self.save_as_id,
-                    )
-                    .await?;
-            }
-            page += 1;
-        }
-
-        finish_and_print_results!(bars, self);
-
-        Ok(())
+        Ok(post_list)
     }
 }
