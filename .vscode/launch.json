@@ -126,6 +126,29 @@
                 "rule34"
             ],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test Realbooru",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "japanese",
+                "long_fingernails",
+                "-i",
+                "realbooru"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
