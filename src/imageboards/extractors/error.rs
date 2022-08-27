@@ -3,8 +3,14 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ExtractorError {
     #[error("Too many tags, got: {current} while this imageboard supports a max of {max}")]
-    TooManyTagsError { current: usize, max: u64 },
+    TooManyTags { current: usize, max: u64 },
 
-    #[error("Invalid global blacklist file")]
-    BlacklistParseError,
+    #[error("No posts found for tag selection")]
+    ZeroPosts,
+
+    #[error("Imageboard returned an invalid response")]
+    InvalidServerResponse,
+
+    #[error("Connection Error")]
+    ConnectionError(#[from] reqwest::Error),
 }
