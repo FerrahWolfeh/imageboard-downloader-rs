@@ -36,7 +36,7 @@ pub use imageboards::extractors::moebooru::MoebooruDownloader;
 #[macro_export]
 macro_rules! client {
     ($x:expr) => {{
-        Client::builder().user_agent($x).build()?
+        Client::builder().user_agent($x).build().unwrap()
     }};
 }
 
