@@ -107,11 +107,6 @@ impl ImageBoardExtractor for DanbooruDownloader {
         }
         println!();
 
-        let start = Instant::now();
-        fvec.sort();
-        let end = Instant::now();
-        debug!("Sorting took {:?}", end - start);
-
         let fin = PostQueue {
             tags: self.tags.to_vec(),
             posts: fvec,
