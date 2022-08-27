@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use anyhow::Error;
+use anyhow::{Context, Error};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio::fs::{read_to_string, File};
@@ -7,7 +7,34 @@ use tokio::io::AsyncWriteExt;
 use toml::from_str;
 use xdg::BaseDirectories;
 
-const BF_INIT_TEXT: &[u8; 93] = b"# Place in this array all the tags that will be excluded from all imageboards\n\nblacklist = []";
+const BF_INIT_TEXT: &[u8; 275] = br#"[blacklist]
+global = [] # Place in this array all the tags that will be excluded from all imageboards
+
+# Place in the following all the tags that will be excluded from specific imageboards 
+
+danbooru = []
+
+e621 = []
+
+realbooru = []
+
+rule34 = []
+
+gelbooru = []
+
+konachan = []
+"#;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BlacklistCategories {
+    pub global: AHashSet<String>,
+    pub danbooru: AHashSet<String>,
+    pub e621: AHashSet<String>,
+    pub realbooru: AHashSet<String>,
+    pub rule34: AHashSet<String>,
+    pub gelbooru: AHashSet<String>,
+    pub konachan: AHashSet<String>,
+}
 
 /// # The Global Blacklist
 /// Imageboard websites tag their posts in order to facilitate searching.
@@ -16,10 +43,23 @@ const BF_INIT_TEXT: &[u8; 93] = b"# Place in this array all the tags that will b
 /// The global blacklist is created in `$XDG_CONFIG_HOME/imageboard-downloader/blacklist.toml`
 ///
 /// The user can define the tags as follows
-/// ```
-/// // Place in this array all the tags that will be excluded from all imageboards
+/// ```toml
+/// [blacklist]
+/// global = ["tag_1", "tag_2"] # Place in this array all the tags that will be excluded from all imageboards
 ///
-/// blacklist = ["tag1", "tag2"]
+/// # Place in the following all the tags that will be excluded from specific imageboards
+///
+/// danbooru = ["tag_3", "tag_4"] # Will exclude these tags only when downloading from Danbooru
+///
+/// e621 = []
+///
+/// rule34 = []
+///
+/// realbooru = []
+///
+/// gelbooru = []
+///
+/// konachan = []
 /// ```
 ///
 /// With this, the user can input all tags that they do not want to download. In case a post has
@@ -27,7 +67,7 @@ const BF_INIT_TEXT: &[u8; 93] = b"# Place in this array all the tags that will b
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
-    pub blacklist: Option<AHashSet<String>>,
+    pub blacklist: Option<BlacklistCategories>,
 }
 
 impl GlobalBlacklist {
@@ -44,7 +84,8 @@ impl GlobalBlacklist {
         }
 
         let gbl_string = read_to_string(&dir).await?;
-        let deserialized = from_str::<Self>(&gbl_string)?;
+        let deserialized =
+            from_str::<Self>(&gbl_string).with_context(|| "Failed parsing the blacklist file.")?;
         debug!("Global blacklist decoded");
         Ok(deserialized)
     }

@@ -88,16 +88,35 @@ impl Queue {
                 let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
-                    if !tags.is_empty() {
+                    if !tags.global.is_empty() {
                         let fsize = self.list.len();
                         debug!("Removing posts with tags [{:?}]", tags);
-                        self.list.retain(|c| !c.tags.iter().any(|s| tags.contains(s)));
+                        self.list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
 
                         let bp = fsize - self.list.len();
                         debug!("Global blacklist removed {} posts", bp);
                         removed += bp as u64;
                     } else {
                         debug!("Global blacklist is empty")
+                    }
+
+                    let special_tags = match self.imageboard {
+                        ImageBoards::Danbooru => tags.danbooru,
+                        ImageBoards::E621 => tags.e621,
+                        ImageBoards::Rule34 => tags.rule34,
+                        ImageBoards::Realbooru => tags.realbooru,
+                        ImageBoards::Konachan => tags.konachan,
+                        ImageBoards::Gelbooru => tags.gelbooru,
+                    };
+
+                    if !special_tags.is_empty() {
+                        let fsize = self.list.len();
+                        debug!("Removing posts with tags [{:?}]", special_tags);
+                        self.list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
+
+                        let bp = fsize - self.list.len();
+                        debug!("Danbooru blacklist removed {} posts", bp);
+                        removed += bp as u64;
                     }
                 }
             }
@@ -237,7 +256,7 @@ impl DownloadQueue {
 
                 if let Some(tags) = gbl.blacklist {
                     debug!("Removing posts with tags [{:?}]", tags);
-                    Self::blacklist_filter(self, &tags);
+                    Self::blacklist_filter(self, &tags.global);
                 }
             }
         }
