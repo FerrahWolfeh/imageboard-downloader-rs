@@ -88,14 +88,16 @@ impl Queue {
                 let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
-                    let fsize = self.list.len();
-                    debug!("Removing posts with tags [{:?}]", tags);
                     if !tags.is_empty() {
+                        let fsize = self.list.len();
+                        debug!("Removing posts with tags [{:?}]", tags);
                         self.list.retain(|c| !c.tags.iter().any(|s| tags.contains(s)));
 
                         let bp = fsize - self.list.len();
                         debug!("Global blacklist removed {} posts", bp);
                         removed += bp as u64;
+                    } else {
+                        debug!("Global blacklist is empty")
                     }
                 }
             }
