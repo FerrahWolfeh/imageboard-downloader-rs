@@ -245,10 +245,9 @@ impl DanbooruDownloader {
                 }
             })
             .collect();
+        let end_iter = Instant::now();
 
         debug!("List size: {}", posts.len());
-
-        let end_iter = Instant::now();
         debug!("Post mapping took {:?}", end_iter - start_point);
         Ok(posts)
     }
