@@ -30,7 +30,7 @@ thiserror-impl = "1.0.32"
 xdg = "2.4.1"
 zstd = "0.11.2"
 bincode = "1.3.3"
-num-traits = "0.2.15"
+async-trait = "0.1.57"
 
 [features]
 default = ["full"]
@@ -71,7 +71,7 @@ version = "1.0.143"
 features = ["derive"]
 
 [profile.release]
-lto = true
+lto = false
 opt-level = 3
 strip = true
 debug = false
