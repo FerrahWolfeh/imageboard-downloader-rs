@@ -151,18 +151,20 @@ impl GelbooruDownloader {
             if n < num && n != 0 {
                 self.item_count = n;
                 self.page_count =
-                    (n as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+                    (n as f32 / self.active_imageboard.max_post_limit() as f32).ceil() as usize;
             } else {
                 debug!("Number of posts is lower than limit");
                 self.item_count = num;
-                self.page_count = (self.item_count as f32 / self.active_imageboard.max_post_limit())
+                self.page_count = (self.item_count as f32
+                    / self.active_imageboard.max_post_limit() as f32)
                     .ceil() as usize;
             }
             // Or else, the usual
         } else {
             self.item_count = num;
-            self.page_count =
-                (self.item_count as f32 / self.active_imageboard.max_post_limit()).ceil() as usize;
+            self.page_count = (self.item_count as f32
+                / self.active_imageboard.max_post_limit() as f32)
+                .ceil() as usize;
         }
 
         // Gelbooru has a newer API that's a complete hell to decode in xml format, so we slightly change the url to the json endpoint.

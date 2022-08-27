@@ -10,7 +10,7 @@ use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
 /// Struct that defines all user configuration for a specific imageboard.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ImageboardConfig {
     /// Used as a identification tag for handling the cache outside of a imageboard downloader
     /// struct.
@@ -24,7 +24,7 @@ pub struct ImageboardConfig {
 ///
 /// It's principally used to filter which posts to download according to the user's blacklist
 /// configured in the imageboard profile settings.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UserData {
     pub id: u64,
     pub name: String,

@@ -57,7 +57,7 @@ pub struct Counters {
     pub downloaded_mtx: Arc<Mutex<u64>>,
 }
 
-pub async fn try_auth(
+pub async fn auth_prompt(
     auth_state: bool,
     imageboard: ImageBoards,
     client: &Client,

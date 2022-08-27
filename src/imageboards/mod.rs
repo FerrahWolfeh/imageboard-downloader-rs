@@ -123,14 +123,14 @@ impl ImageBoards {
     }
 
     /// Returns max number of posts per page a imageboard can have
-    pub fn max_post_limit(self) -> f32 {
+    pub fn max_post_limit(self) -> usize {
         match self {
-            ImageBoards::Danbooru => 200.0,
-            ImageBoards::E621 => 320.0,
-            ImageBoards::Rule34 => 1000.0,
-            ImageBoards::Realbooru => 1000.0,
-            ImageBoards::Konachan => 100.0,
-            ImageBoards::Gelbooru => 100.0,
+            ImageBoards::Danbooru => 200,
+            ImageBoards::E621 => 320,
+            ImageBoards::Rule34 => 1000,
+            ImageBoards::Realbooru => 1000,
+            ImageBoards::Konachan => 100,
+            ImageBoards::Gelbooru => 100,
         }
     }
 

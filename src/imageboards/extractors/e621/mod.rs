@@ -40,7 +40,7 @@
 //! dl.download().await?;
 //! ```
 use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::{generate_out_dir, try_auth, Counters};
+use crate::imageboards::common::{auth_prompt, generate_out_dir, Counters};
 use crate::imageboards::extractors::e621::models::E621TopLevel;
 use crate::imageboards::post::Post;
 use crate::imageboards::queue::DownloadQueue;
@@ -97,7 +97,7 @@ impl E621Downloader {
         let out = generate_out_dir(out_dir, tags, ImageBoards::E621)?;
 
         // Try to authenticate, does nothing if auth flag is not set
-        try_auth(auth_state, ImageBoards::E621, &client).await?;
+        auth_prompt(auth_state, ImageBoards::E621, &client).await?;
 
         Ok(Self {
             item_count: 0,
