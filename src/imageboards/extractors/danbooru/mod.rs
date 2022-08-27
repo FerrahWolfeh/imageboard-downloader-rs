@@ -167,12 +167,12 @@ impl DanbooruDownloader {
 
         // Get an estimate of total posts and pages to search
         let request = if self.auth_state {
-            debug!("[AUTH] Fetching post count");
+            debug!("[AUTH] Validating tags");
             self.client
                 .get(count_endpoint)
                 .basic_auth(&self.auth.username, Some(&self.auth.api_key))
         } else {
-            debug!("Fetching post count");
+            debug!("Validating tags");
             self.client.get(count_endpoint)
         };
 
