@@ -71,6 +71,41 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Test e621 ignore BL",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-i",
+                "e621",
+                "-d",
+                "1",
+                "--disable-blacklist",
+                "female",
+                "--",
+                "-sonic_the_hedgehog_(series)",
+                "-zootopia",
+                "-pokemon_(species)",
+                "feet",
+                "pawpads",
+                "claws",
+                "white_fur",
+                "fur",
+                "fox"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Test R34 post limit",
             "cargo": {
                 "args": [

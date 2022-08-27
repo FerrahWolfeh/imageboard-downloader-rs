@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::{path::Path, sync::Arc};
 use tokio::fs::create_dir_all;
+use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
 use super::blacklist::GlobalBlacklist;
@@ -62,11 +63,17 @@ impl Queue {
         }
     }
 
-    async fn blacklist_filter(&mut self) -> Result<u64, Error> {
+    async fn blacklist_filter(&mut self, disable: bool) -> Result<u64, Error> {
+        if disable {
+            debug!("Blacklist filtering disabled");
+            return Ok(0);
+        }
+
         let original_size = self.list.len();
         let blacklist = &self.user_blacklist;
         let mut removed = 0;
 
+        let start = Instant::now();
         if !blacklist.is_empty() {
             self.list
                 .retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
@@ -81,17 +88,21 @@ impl Queue {
                 let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
+                    let fsize = self.list.len();
                     debug!("Removing posts with tags [{:?}]", tags);
                     if !tags.is_empty() {
-                        self.list.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
+                        self.list.retain(|c| !c.tags.iter().any(|s| tags.contains(s)));
 
-                        let bp = original_size - self.list.len();
+                        let bp = fsize - self.list.len();
                         debug!("Global blacklist removed {} posts", bp);
                         removed += bp as u64;
                     }
                 }
             }
         }
+        let end = Instant::now();
+        debug!("Blacklist filtering took {:?}", end - start);
+        debug!("Removed {} blacklisted posts", removed);
 
         Ok(removed)
     }
@@ -99,9 +110,10 @@ impl Queue {
     pub async fn download(
         &mut self,
         output: Option<PathBuf>,
+        disable_blacklist: bool,
         save_as_id: bool,
     ) -> Result<(), Error> {
-        let removed = Self::blacklist_filter(self).await?;
+        let removed = Self::blacklist_filter(self, disable_blacklist).await?;
 
         // If out_dir is not set via cli flags, use current dir
         let place = match output {

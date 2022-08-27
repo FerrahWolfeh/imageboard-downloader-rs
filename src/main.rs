@@ -66,6 +66,10 @@ struct Cli {
     /// Limit max number of downloads
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     limit: Option<usize>,
+
+    /// Ignore both user and global blacklists
+    #[clap(long, value_parser, default_value_t = false, help_heading = "DOWNLOAD")]
+    disable_blacklist: bool,
 }
 
 #[tokio::main]
@@ -91,7 +95,7 @@ async fn main() -> Result<(), Error> {
                         unit.auth.user_data.blacklisted_tags,
                     );
 
-                    qw.download(args.output, args.save_file_as_id).await?;
+                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
                 } else {
                     println!("This build does not include support for this imageboard")
                 }
@@ -114,7 +118,7 @@ async fn main() -> Result<(), Error> {
                         unit.auth.user_data.blacklisted_tags,
                     );
 
-                    qw.download(args.output, args.save_file_as_id).await?;
+                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
                 } else {
                     println!("This build does not include support for this imageboard")
                 }
