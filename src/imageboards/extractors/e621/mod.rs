@@ -113,6 +113,9 @@ impl ImageBoardExtractor for E621Downloader {
             page += 1;
 
             print_found!(fvec);
+            // debounce
+            debug!("Debouncing API calls by 500 ms");
+            thread::sleep(Duration::from_millis(500));
         }
         println!();
 
