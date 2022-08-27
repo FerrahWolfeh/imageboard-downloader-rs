@@ -14,6 +14,9 @@ pub use imageboards::ImageBoards;
 // Export main worker queue
 pub use imageboards::queue::DownloadQueue;
 
+// Export newer queue impl
+pub use imageboards::queue::Queue;
+
 pub use imageboards::rating::Rating;
 
 pub use imageboards::post::Post;
@@ -58,6 +61,19 @@ macro_rules! extract_ext_from_url {
 macro_rules! bail_error {
     ($err:expr) => {{
         return Err($err.into());
+    }};
+}
+
+#[macro_export]
+macro_rules! print_found {
+    ($vec:expr) => {{
+        print!(
+            "\r{} {} {}",
+            "Found".bold(),
+            $vec.len().to_string().bold().blue(),
+            "posts".bold()
+        );
+        io::stdout().flush().unwrap();
     }};
 }
 
