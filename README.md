@@ -12,13 +12,13 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 - [x] Multiple simultaneous downloads.
 - [x] Authentication and user blacklist.
 - [x] Download limit.
-- [x] Global blacklist. [See more](docs/Global%20Blacklist.md)
+- [x] Global blacklist. [See more](docs/Global_Blacklist.md)
 - [x] Store downloads in `cbz` file. [See more](docs/CBZ.md)
 - [ ] Download user favorites
 
 ## Installation
 
-Currently, you can install the latest version using `cargo` or download from the Releases
+Currently, you can install the latest version using `cargo` or download from **Releases**
 
 ```bash
 cargo install imageboard_downloader
@@ -38,7 +38,7 @@ cargo run --release -- "your_tag" "your_another_tag_(cool)" -o ~/
 
 The final binary will be located at `target/release/imageboard_downloader`
 
-**Windows releases will come in the near future**
+***Windows releases coming soon...***
 
 ## Usage
 
