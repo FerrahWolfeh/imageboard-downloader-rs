@@ -58,7 +58,7 @@ struct Cli {
         long = "id",
         value_parser,
         default_value_t = false,
-        help_heading = "DOWNLOAD"
+        help_heading = "SAVE"
     )]
     save_file_as_id: bool,
 
@@ -67,7 +67,7 @@ struct Cli {
     limit: Option<usize>,
 
     /// Ignore both user and global blacklists
-    #[clap(long, value_parser, default_value_t = false, help_heading = "DOWNLOAD")]
+    #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
     disable_blacklist: bool,
 
     /// Save posts inside a cbz file
