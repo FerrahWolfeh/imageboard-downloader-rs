@@ -18,7 +18,7 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 
 ## Installation
 
-Currently, you can install the latest version using `cargo`
+Currently, you can install the latest version using `cargo` or download from the Releases
 
 ```bash
 cargo install imageboard_downloader
@@ -37,6 +37,8 @@ cargo run --release -- "your_tag" "your_another_tag_(cool)" -o ~/
 ```
 
 The final binary will be located at `target/release/imageboard_downloader`
+
+**Windows releases will come in the near future**
 
 ## Usage
 
