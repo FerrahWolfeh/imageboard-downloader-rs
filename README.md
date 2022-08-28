@@ -5,6 +5,8 @@ extensible API.
 
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
+![Running example](assets/mini-ex.gif)
+
 ## Features
 
 - [x] Multiple simultaneous downloads.
