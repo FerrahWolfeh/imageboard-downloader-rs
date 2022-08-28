@@ -25,6 +25,24 @@ pub struct MoebooruDownloader {
 
 #[async_trait]
 impl ImageBoardExtractor for MoebooruDownloader {
+    fn new(tags: &[String], safe_mode: bool) -> Self {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::Konachan.user_agent());
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(tags);
+
+        // Set Safe mode status
+        let safe_mode = safe_mode;
+
+        Self {
+            client,
+            tags: tags.to_vec(),
+            tag_string,
+            safe_mode,
+        }
+    }
+
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -76,24 +94,6 @@ impl ImageBoardExtractor for MoebooruDownloader {
 }
 
 impl MoebooruDownloader {
-    pub fn new(tags: &[String], safe_mode: bool) -> Self {
-        // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621.user_agent());
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
-
-        // Set Safe mode status
-        let safe_mode = safe_mode;
-
-        Self {
-            client,
-            tags: tags.to_vec(),
-            tag_string,
-            safe_mode,
-        }
-    }
-
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",

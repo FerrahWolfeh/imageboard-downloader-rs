@@ -82,7 +82,7 @@ async fn main() -> Result<(), Error> {
 
     let post_queue = match args.imageboard {
         ImageBoards::Danbooru => {
-            let mut unit = DanbooruDownloader::new(&args.tags, args.safe_mode)?;
+            let mut unit = DanbooruDownloader::new(&args.tags, args.safe_mode);
             unit.auth(args.auth).await?;
             let posts = unit.full_search().await?;
 
@@ -100,7 +100,8 @@ async fn main() -> Result<(), Error> {
             posts
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let mut unit = GelbooruDownloader::new(&args.tags, args.imageboard);
+            let mut unit =
+                GelbooruDownloader::new(&args.tags, false).set_imageboard(args.imageboard);
             let posts = unit.full_search().await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

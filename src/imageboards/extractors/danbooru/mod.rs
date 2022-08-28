@@ -72,6 +72,26 @@ pub struct DanbooruDownloader {
 
 #[async_trait]
 impl ImageBoardExtractor for DanbooruDownloader {
+    fn new(tags: &[String], safe_mode: bool) -> Self {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::Danbooru.user_agent());
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(tags);
+
+        // Set Safe mode status
+        let safe_mode = safe_mode;
+
+        Self {
+            client,
+            tags: tags.to_vec(),
+            tag_string,
+            auth_state: false,
+            auth: Default::default(),
+            safe_mode,
+        }
+    }
+
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -118,33 +138,6 @@ impl ImageBoardExtractor for DanbooruDownloader {
 }
 
 impl DanbooruDownloader {
-    pub fn new(tags: &[String], safe_mode: bool) -> Result<Self, ExtractorError> {
-        if tags.len() > 2 {
-            return Err(ExtractorError::TooManyTags {
-                current: tags.len(),
-                max: 2,
-            });
-        };
-
-        // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Danbooru.user_agent());
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
-
-        // Set Safe mode status
-        let safe_mode = safe_mode;
-
-        Ok(Self {
-            client,
-            tags: tags.to_vec(),
-            tag_string,
-            auth_state: false,
-            auth: Default::default(),
-            safe_mode,
-        })
-    }
-
     pub async fn auth(&mut self, prompt: bool) -> Result<(), Error> {
         // Try to authenticate, does nothing if auth flag is not set
         auth_prompt(prompt, ImageBoards::Danbooru, &self.client).await?;
@@ -160,6 +153,13 @@ impl DanbooruDownloader {
     }
 
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
+        if self.tags.len() > 2 {
+            return Err(ExtractorError::TooManyTags {
+                current: self.tags.len(),
+                max: 2,
+            });
+        };
+
         let count_endpoint = format!(
             "{}?tags={}",
             ImageBoards::Danbooru

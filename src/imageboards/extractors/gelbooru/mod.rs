@@ -73,6 +73,25 @@ pub struct GelbooruDownloader {
 
 #[async_trait]
 impl ImageBoardExtractor for GelbooruDownloader {
+    #[allow(unused_variables)]
+    fn new(tags: &[String], safe_mode: bool) -> Self {
+        // Use common client for all connections with a set User-Agent
+        let client = Client::builder()
+            .user_agent(ImageBoards::Rule34.user_agent())
+            .build()
+            .unwrap();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(tags);
+
+        Self {
+            active_imageboard: ImageBoards::Rule34,
+            client,
+            tags: tags.to_vec(),
+            tag_string,
+        }
+    }
+
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -127,18 +146,14 @@ impl ImageBoardExtractor for GelbooruDownloader {
 }
 
 impl GelbooruDownloader {
-    pub fn new(tags: &[String], active_imageboard: ImageBoards) -> Self {
-        // Use common client for all connections with a set User-Agent
-        let client = client!(active_imageboard.user_agent());
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
+    pub fn set_imageboard(self, imageboard: ImageBoards) -> Self {
+        let client = client!(imageboard.user_agent());
 
         Self {
-            active_imageboard,
+            active_imageboard: imageboard,
             client,
-            tags: tags.to_vec(),
-            tag_string,
+            tags: self.tags,
+            tag_string: self.tag_string,
         }
     }
 

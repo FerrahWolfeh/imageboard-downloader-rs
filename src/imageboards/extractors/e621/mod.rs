@@ -77,6 +77,26 @@ pub struct E621Downloader {
 
 #[async_trait]
 impl ImageBoardExtractor for E621Downloader {
+    fn new(tags: &[String], safe_mode: bool) -> Self {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::E621.user_agent());
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(tags);
+
+        // Set Safe mode status
+        let safe_mode = safe_mode;
+
+        Self {
+            client,
+            tags: tags.to_vec(),
+            tag_string,
+            auth_state: false,
+            auth: Default::default(),
+            safe_mode,
+        }
+    }
+
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -131,26 +151,6 @@ impl ImageBoardExtractor for E621Downloader {
 }
 
 impl E621Downloader {
-    pub fn new(tags: &[String], safe_mode: bool) -> Self {
-        // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621.user_agent());
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
-
-        // Set Safe mode status
-        let safe_mode = safe_mode;
-
-        Self {
-            client,
-            tags: tags.to_vec(),
-            tag_string,
-            auth_state: false,
-            auth: Default::default(),
-            safe_mode,
-        }
-    }
-
     pub async fn auth(&mut self, prompt: bool) -> Result<(), Error> {
         // Try to authenticate, does nothing if auth flag is not set
         auth_prompt(prompt, ImageBoards::E621, &self.client).await?;
