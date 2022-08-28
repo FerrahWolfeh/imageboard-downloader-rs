@@ -19,8 +19,9 @@ use super::blacklist::GlobalBlacklist;
 
 #[derive(Debug)]
 pub struct PostQueue {
-    pub tags: Vec<String>,
     pub posts: Vec<Post>,
+    pub tags: Vec<String>,
+    pub user_blacklist: AHashSet<String>,
 }
 
 #[derive(Debug)]
@@ -38,7 +39,6 @@ impl Queue {
         posts: PostQueue,
         sim_downloads: usize,
         limit: Option<usize>,
-        user_blacklist: AHashSet<String>,
     ) -> Self {
         let st = posts.tags.join(" ");
 
@@ -59,7 +59,7 @@ impl Queue {
             tag_s: st,
             imageboard,
             sim_downloads,
-            user_blacklist,
+            user_blacklist: posts.user_blacklist,
         }
     }
 

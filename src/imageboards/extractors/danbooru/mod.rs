@@ -78,8 +78,9 @@ impl ImageBoardExtractor for DanbooruDownloader {
         let posts = Self::get_post_list(self, page).await?;
 
         let qw = PostQueue {
-            tags: self.tags.to_vec(),
             posts,
+            tags: self.tags.to_vec(),
+            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
 
         Ok(qw)
@@ -108,8 +109,9 @@ impl ImageBoardExtractor for DanbooruDownloader {
         println!();
 
         let fin = PostQueue {
-            tags: self.tags.to_vec(),
             posts: fvec,
+            tags: self.tags.to_vec(),
+            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
         Ok(fin)
     }

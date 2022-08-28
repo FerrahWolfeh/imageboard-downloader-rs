@@ -23,13 +23,9 @@ pub use imageboards::extractors::ImageBoardExtractor;
 #[cfg(feature = "global_blacklist")]
 pub use imageboards::blacklist::GlobalBlacklist;
 
-#[cfg(feature = "danbooru")]
 pub use imageboards::extractors::danbooru::DanbooruDownloader;
-#[cfg(feature = "e621")]
 pub use imageboards::extractors::e621::E621Downloader;
-#[cfg(feature = "gelbooru")]
 pub use imageboards::extractors::gelbooru::GelbooruDownloader;
-#[cfg(feature = "moebooru")]
 pub use imageboards::extractors::moebooru::MoebooruDownloader;
 
 #[macro_export]

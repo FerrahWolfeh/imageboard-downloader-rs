@@ -1,5 +1,4 @@
 use anyhow::Error;
-use cfg_if::cfg_if;
 use clap::Parser;
 use imageboard_downloader::*;
 use log::debug;
@@ -77,98 +76,52 @@ async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-    match args.imageboard {
+    let post_queue = match args.imageboard {
         ImageBoards::Danbooru => {
-            cfg_if! {
-                if #[cfg(feature = "danbooru")] {
-                    let mut unit = DanbooruDownloader::new(&args.tags, args.safe_mode)?;
-                    unit.auth(args.auth).await?;
-                    let posts = unit.full_search().await?;
+            let mut unit = DanbooruDownloader::new(&args.tags, args.safe_mode)?;
+            unit.auth(args.auth).await?;
+            let posts = unit.full_search().await?;
 
-                    debug!("Collected {} valid posts", posts.posts.len());
+            debug!("Collected {} valid posts", posts.posts.len());
 
-                    let mut qw = Queue::new(
-                        args.imageboard,
-                        posts,
-                        args.simultaneous_downloads,
-                        args.limit,
-                        unit.auth.user_data.blacklisted_tags,
-                    );
-
-                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
-                } else {
-                    println!("This build does not include support for this imageboard")
-                }
-            }
+            posts
         }
         ImageBoards::E621 => {
-            cfg_if! {
-                if #[cfg(feature = "e621")] {
-                   let mut unit = E621Downloader::new(&args.tags, args.safe_mode);
-                    unit.auth(args.auth).await?;
-                    let posts = unit.full_search().await?;
+            let mut unit = E621Downloader::new(&args.tags, args.safe_mode);
+            unit.auth(args.auth).await?;
+            let posts = unit.full_search().await?;
 
-                    debug!("Collected {} valid posts", posts.posts.len());
+            debug!("Collected {} valid posts", posts.posts.len());
 
-                    let mut qw = Queue::new(
-                        args.imageboard,
-                        posts,
-                        args.simultaneous_downloads,
-                        args.limit,
-                        unit.auth.user_data.blacklisted_tags,
-                    );
-
-                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
-                } else {
-                    println!("This build does not include support for this imageboard")
-                }
-            }
+            posts
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            cfg_if! {
-                if #[cfg(feature = "gelbooru")] {
-                   let mut unit = GelbooruDownloader::new(&args.tags, args.imageboard);
-                    let posts = unit.full_search().await?;
+            let mut unit = GelbooruDownloader::new(&args.tags, args.imageboard);
+            let posts = unit.full_search().await?;
 
-                    debug!("Collected {} valid posts", posts.posts.len());
+            debug!("Collected {} valid posts", posts.posts.len());
 
-                    let mut qw = Queue::new(
-                        args.imageboard,
-                        posts,
-                        args.simultaneous_downloads,
-                        args.limit,
-                        Default::default(),
-                    );
-
-                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
-                } else {
-                    println!("This build does not include support for this imageboard")
-                }
-            }
+            posts
         }
         ImageBoards::Konachan => {
-            cfg_if! {
-                if #[cfg(feature = "moebooru")] {
-                    let mut unit = MoebooruDownloader::new(&args.tags, args.safe_mode);
-                    let posts = unit.full_search().await?;
+            let mut unit = MoebooruDownloader::new(&args.tags, args.safe_mode);
+            let posts = unit.full_search().await?;
 
-                    debug!("Collected {} valid posts", posts.posts.len());
+            debug!("Collected {} valid posts", posts.posts.len());
 
-                    let mut qw = Queue::new(
-                        args.imageboard,
-                        posts,
-                        args.simultaneous_downloads,
-                        args.limit,
-                        Default::default()
-                    );
-
-                    qw.download(args.output, args.disable_blacklist, args.save_file_as_id).await?;
-                } else {
-                    println!("This build does not include support for this imageboard")
-                }
-            }
+            posts
         }
     };
+
+    let mut qw = Queue::new(
+        args.imageboard,
+        post_queue,
+        args.simultaneous_downloads,
+        args.limit,
+    );
+
+    qw.download(args.output, args.disable_blacklist, args.save_file_as_id)
+        .await?;
 
     Ok(())
 }

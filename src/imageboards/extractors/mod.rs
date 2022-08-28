@@ -6,17 +6,13 @@ use self::error::ExtractorError;
 use super::queue::PostQueue;
 use async_trait::async_trait;
 
-#[cfg(feature = "danbooru")]
 pub mod danbooru;
 
-#[cfg(feature = "e621")]
 pub mod e621;
 
-#[cfg(feature = "gelbooru")]
 pub mod gelbooru;
 
 mod error;
-#[cfg(feature = "moebooru")]
 pub mod moebooru;
 
 /// This trait is the only public interface all the extractors should expose aside from some other website-specific configuration.

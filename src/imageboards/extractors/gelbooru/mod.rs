@@ -79,8 +79,9 @@ impl ImageBoardExtractor for GelbooruDownloader {
         let posts = Self::get_post_list(self, page).await?;
 
         let qw = PostQueue {
-            tags: self.tags.to_vec(),
             posts,
+            tags: self.tags.to_vec(),
+            user_blacklist: Default::default(),
         };
 
         Ok(qw)
@@ -116,8 +117,9 @@ impl ImageBoardExtractor for GelbooruDownloader {
         println!();
 
         let fin = PostQueue {
-            tags: self.tags.to_vec(),
             posts: fvec,
+            tags: self.tags.to_vec(),
+            user_blacklist: Default::default(),
         };
 
         Ok(fin)
