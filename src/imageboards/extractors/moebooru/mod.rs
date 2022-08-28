@@ -79,14 +79,24 @@ impl Extractor for MoebooruExtractor {
         Ok(qw)
     }
 
-    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError> {
+    async fn full_search(
+        &mut self,
+        start_page: Option<usize>,
+    ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
         let mut fvec = Vec::new();
+
         let mut page = 1;
 
         loop {
-            let posts = Self::get_post_list(self, page).await?;
+            let position = if let Some(n) = start_page {
+                page + n
+            } else {
+                page
+            };
+
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -95,7 +105,7 @@ impl Extractor for MoebooruExtractor {
 
             fvec.extend(posts);
 
-            if size < 320 {
+            if size < 320 || page == 100 {
                 break;
             }
 

@@ -5,6 +5,10 @@ extensible API.
 
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
+*imageboard_downloader_rs* currently has a hardcoded limit of **100** pages per download session to prevent API rate-limiting and put less strain on the imageboard servers.
+
+⚠ ***Recommendation:*** **Avoid downloading single tag selections that span ~100k posts alone or without using the download limiter. Be reasonate!**
+
 ![Running example](assets/mini-ex.gif)
 
 ## Features
@@ -60,7 +64,7 @@ See more details with `imageboard_downloader --help`.
 
 ## Examples
 
-Download images from danbooru with specified tags:
+### Download images from danbooru with specified tags
 
 ```bash
 imageboard_downloader "skyfire_(arknights)"
@@ -70,7 +74,15 @@ In case you want to authenticate with danbooru, use the `--auth` flag only once.
 
 ***
 
-Download only images with "safe" rating from e621 (also works with danbooru/konachan):
+### Download images starting from page 10
+
+```bash
+imageboard_downloader "skyfire_(arknights)" -s 10
+```
+
+***
+
+### Download only images with "safe" rating from e621 (also works with danbooru/konachan)
 
 ```bash
 imageboard_downloader -i e621 "ash_(pokemon)" "pikachu" --safe-mode
@@ -78,10 +90,18 @@ imageboard_downloader -i e621 "ash_(pokemon)" "pikachu" --safe-mode
 
 ***
 
-Download images from rule34 with 100 simultaneous downloads:
+### Download images from rule34 with 100 simultaneous downloads
 
 ```bash
 imageboard_downloader -i rule34 -d 100 "moe"
+```
+
+***
+
+### Save downloaded images with their id instead of md5 as filename
+
+```bash
+imageboard_downloader -i e621 "wolf" "anthro" --id
 ```
 
 ***
@@ -96,12 +116,6 @@ This will save files in `/any/other/dir/danbooru/kroos_(arknights)/<file_md5>.pn
 If the specified directory does not exist, it will be created.
 
 ***
-
-Save downloaded images with their id instead of md5 as filename:
-
-```bash
-imageboard_downloader -i e621 "wolf" "anthro" --id
-```
 
 ## Inspiration and References
 

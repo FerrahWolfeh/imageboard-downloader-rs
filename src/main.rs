@@ -73,6 +73,16 @@ struct Cli {
     /// Save posts inside a cbz file
     #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
     cbz: bool,
+
+    /// Which page to start
+    #[clap(
+        short,
+        long,
+        value_parser,
+        help_heading = "DOWNLOAD",
+        value_name = "PAGE"
+    )]
+    start_page: Option<usize>,
 }
 
 #[tokio::main]
@@ -84,7 +94,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, args.safe_mode);
             unit.auth(args.auth).await?;
-            let posts = unit.full_search().await?;
+            let posts = unit.full_search(args.start_page).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -93,7 +103,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::E621 => {
             let mut unit = E621Extractor::new(&args.tags, args.safe_mode);
             unit.auth(args.auth).await?;
-            let posts = unit.full_search().await?;
+            let posts = unit.full_search(args.start_page).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -102,7 +112,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit =
                 GelbooruExtractor::new(&args.tags, false).set_imageboard(args.imageboard);
-            let posts = unit.full_search().await?;
+            let posts = unit.full_search(args.start_page).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -110,7 +120,7 @@ async fn main() -> Result<(), Error> {
         }
         ImageBoards::Konachan => {
             let mut unit = MoebooruExtractor::new(&args.tags, args.safe_mode);
-            let posts = unit.full_search().await?;
+            let posts = unit.full_search(args.start_page).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 

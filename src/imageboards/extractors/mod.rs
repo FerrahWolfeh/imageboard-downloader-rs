@@ -28,7 +28,8 @@ pub trait Extractor {
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError>;
 
     /// Searches all posts from all pages with given tags, it's the most pratical one, but slower on startup since it will search all pages by itself until it finds no more posts.
-    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError>;
+    async fn full_search(&mut self, start_page: Option<usize>)
+        -> Result<PostQueue, ExtractorError>;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

@@ -85,14 +85,24 @@ impl Extractor for GelbooruExtractor {
         Ok(qw)
     }
 
-    async fn full_search(&mut self) -> Result<PostQueue, ExtractorError> {
+    async fn full_search(
+        &mut self,
+        start_page: Option<usize>,
+    ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
         let mut fvec = Vec::new();
-        let mut page = 0;
+
+        let mut page = 1;
 
         loop {
-            let posts = Self::get_post_list(self, page).await?;
+            let position = if let Some(n) = start_page {
+                page + n - 1
+            } else {
+                page - 1
+            };
+
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -101,14 +111,14 @@ impl Extractor for GelbooruExtractor {
 
             fvec.extend(posts);
 
-            if size < self.active_imageboard.max_post_limit() {
+            if size < self.active_imageboard.max_post_limit() || page == 100 {
                 break;
             }
 
             page += 1;
 
             print_found!(fvec);
-            // debounce
+            //debounce
             debug!("Debouncing API calls by 500 ms");
             thread::sleep(Duration::from_millis(500));
         }
