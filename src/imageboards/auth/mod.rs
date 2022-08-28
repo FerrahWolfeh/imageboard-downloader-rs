@@ -1,13 +1,38 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
+use std::io::{self, Write};
+
 use crate::ImageBoards;
 use ahash::AHashSet;
-use anyhow::{bail, Error};
 use bincode::serialize;
+use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
+
+#[derive(Error, Debug)]
+pub enum AuthError {
+    /// Indicates that login credentials are incorrect.
+    #[error("Invalid username or API key")]
+    InvalidLogin,
+
+    /// Indicates errors while connecting or parsing the response from the imageboard.
+    #[error("Connection to auth url failed")]
+    ConnectionError(#[from] reqwest::Error),
+
+    /// Indicates any unrecoverable IO error when trying to read the auth config file.
+    #[error("Failed to read config file. error: {source}")]
+    ConfigIOError {
+        #[from]
+        source: io::Error,
+    },
+
+    /// Indicates a failed attempt to serialize the config file to `bincode`.
+    #[error("Failed to encode config file")]
+    ConfigEncodeError,
+}
 
 /// Struct that defines all user configuration for a specific imageboard.
 #[derive(Serialize, Deserialize, Debug)]
@@ -60,7 +85,7 @@ impl ImageboardConfig {
         }
     }
 
-    pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
+    pub async fn authenticate(&mut self, client: &Client) -> Result<(), AuthError> {
         #[derive(Debug, Serialize, Deserialize)]
         struct AuthTest {
             pub success: Option<bool>,
@@ -88,7 +113,7 @@ impl ImageboardConfig {
         debug!("{:?}", req);
 
         if req.success.is_some() {
-            bail!("Invalid username or api key!")
+            return Err(AuthError::InvalidLogin);
         }
 
         if req.id.is_some() {
@@ -114,7 +139,7 @@ impl ImageboardConfig {
 
     /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::Variant.auth_cache_dir()` method.
-    async fn write_cache(&self) -> Result<(), Error> {
+    async fn write_cache(&self) -> Result<(), AuthError> {
         let config_path = self.imageboard.auth_cache_dir()?;
         let mut cfg_cache = OpenOptions::new()
             .create(true)
@@ -123,10 +148,55 @@ impl ImageboardConfig {
             .write(true)
             .open(&config_path)
             .await?;
-        let cfg = serialize(&self)?;
+
+        let cfg = match serialize(&self) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(AuthError::ConfigEncodeError),
+        };
+
         let compressed_data = zstd::encode_all(cfg.as_slice(), 7)?;
         cfg_cache.write_all(&compressed_data).await?;
         debug!("Wrote auth cache to {}", &config_path.display());
         Ok(())
     }
+}
+
+pub async fn auth_prompt(
+    auth_state: bool,
+    imageboard: ImageBoards,
+    client: &Client,
+) -> Result<(), AuthError> {
+    if auth_state {
+        let mut username = String::new();
+        let mut api_key = String::new();
+        let stdin = io::stdin();
+        println!(
+            "{} {}",
+            "Logging into:".bold(),
+            imageboard.to_string().green().bold()
+        );
+        print!("{}", "Username: ".bold());
+        io::stdout().flush().unwrap();
+        stdin.read_line(&mut username).unwrap();
+        print!("{}", "API Key: ".bold());
+        io::stdout().flush().unwrap();
+        stdin.read_line(&mut api_key).unwrap();
+
+        debug!("Username: {:?}", username.trim());
+        debug!("API key: {:?}", api_key.trim());
+
+        let mut at = ImageboardConfig::new(
+            imageboard,
+            username.trim().to_string(),
+            api_key.trim().to_string(),
+        );
+
+        match at.authenticate(client).await {
+            Ok(_) => (),
+            Err(e) => return Err(e),
+        }
+
+        return Ok(());
+    }
+    Ok(())
 }

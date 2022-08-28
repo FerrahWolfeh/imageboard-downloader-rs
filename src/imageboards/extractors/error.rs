@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::imageboards::auth::AuthError;
+
 #[derive(Error, Debug)]
 pub enum ExtractorError {
     #[error("Too many tags, got: {current} while this imageboard supports a max of {max}")]
@@ -13,4 +15,10 @@ pub enum ExtractorError {
 
     #[error("Connection Error")]
     ConnectionError(#[from] reqwest::Error),
+
+    #[error("Authentication failed. error: {source}")]
+    AuthenticationFailure {
+        #[from]
+        source: AuthError,
+    },
 }

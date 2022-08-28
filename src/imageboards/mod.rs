@@ -1,24 +1,21 @@
 //! All internal logic for interacting with and downloading from imageboard websites.
 use crate::imageboards::auth::ImageboardConfig;
 use crate::progress_bars::BarTemplates;
-use anyhow::Error;
 use bincode::deserialize;
 use clap::ValueEnum;
 use colored::Colorize;
 use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{path::PathBuf, io};
 use tokio::fs::{read, remove_file};
 use xdg::BaseDirectories;
 
+use self::auth::AuthError;
+
 pub mod auth;
-#[cfg(feature = "global_blacklist")]
-pub mod blacklist;
-mod common;
-pub mod post;
 pub mod queue;
-pub mod rating;
 pub mod extractors;
+pub mod post;
 
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
@@ -162,7 +159,7 @@ impl ImageBoards {
     ///
     /// This is XDG-compliant and saves cache files to
     /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>`
-    pub fn auth_cache_dir(self) -> Result<PathBuf, Error> {
+    pub fn auth_cache_dir(self) -> Result<PathBuf, io::Error> {
         let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
 
         let dir = xdg_dir.place_config_file(self.to_string())?;
@@ -172,7 +169,7 @@ impl ImageBoards {
     /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
     ///
     /// Returns `None` if the file is corrupted or does not exist.
-    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, Error> {
+    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, AuthError> {
         if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
             debug!("Authentication cache found");
 

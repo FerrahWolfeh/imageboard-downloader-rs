@@ -14,19 +14,15 @@ pub use imageboards::ImageBoards;
 // Export newer queue impl
 pub use imageboards::queue::Queue;
 
-pub use imageboards::rating::Rating;
-
 pub use imageboards::post::Post;
 
-pub use imageboards::extractors::ImageBoardExtractor;
+pub use imageboards::extractors::Auth;
+pub use imageboards::extractors::Extractor;
 
-#[cfg(feature = "global_blacklist")]
-pub use imageboards::blacklist::GlobalBlacklist;
-
-pub use imageboards::extractors::danbooru::DanbooruDownloader;
-pub use imageboards::extractors::e621::E621Downloader;
-pub use imageboards::extractors::gelbooru::GelbooruDownloader;
-pub use imageboards::extractors::moebooru::MoebooruDownloader;
+pub use imageboards::extractors::danbooru::DanbooruExtractor;
+pub use imageboards::extractors::e621::E621Extractor;
+pub use imageboards::extractors::gelbooru::GelbooruExtractor;
+pub use imageboards::extractors::moebooru::MoebooruExtractor;
 
 #[macro_export]
 macro_rules! client {

@@ -1,6 +1,48 @@
-//! Download and save `Post`s
-use super::post::Post;
-use crate::Rating;
+//! Queue used specifically to download, filter and save posts found by an [Extractor](crate::imageboards::extractors).
+//!
+//! # Example usage
+//!
+//! ```rust
+//! use imageboard_downloader::*;
+//! use std::path::PathBuf;
+//!
+//! async fn download_posts() {
+//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
+//!     
+//!     let safe_mode = true; // Set to true to download posts from safebooru
+//!
+//!     let mut ext = DanbooruExtractor::new(&tags, safe_mode); // Initialize the extractor
+//!
+//!     ext.auth(false);
+//!
+//!     // Will iterate through all pages until it finds no more posts, then returns the list
+//!     let posts = ext.full_search().await.unwrap();
+//!
+//!     let sd = 10; // Number of simultaneous downloads.
+//!
+//!     let limit = Some(1000); // Max number of posts to download
+//!
+//!     let cbz = false; // Set to true to download everything into a .cbz file
+//!
+//!     let mut qw = Queue::new( // Initialize the queue
+//!         ImageBoards::Danbooru,
+//!         posts,
+//!         sd,
+//!         limit,
+//!         cbz,
+//!     );
+//!
+//!     let output = Some(PathBuf::from("./")); // Where to save the downloaded files or .cbz file
+//!
+//!     let db = false; // Disable blacklist filtering
+//!
+//!     let id = true; // Save file with their ID as the filename instead of MD5
+//!
+//!     qw.download(output, db, id).await.unwrap(); // Start downloading
+//! }
+//! ```
+use crate::imageboards::post::rating::Rating;
+use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
@@ -21,15 +63,14 @@ use zip::CompressionMethod;
 use zip::ZipWriter;
 
 #[cfg(feature = "global_blacklist")]
-use super::blacklist::GlobalBlacklist;
+mod blacklist;
 
-#[derive(Debug)]
-pub struct PostQueue {
-    pub posts: Vec<Post>,
-    pub tags: Vec<String>,
-    pub user_blacklist: AHashSet<String>,
-}
+#[cfg(feature = "global_blacklist")]
+use self::blacklist::GlobalBlacklist;
 
+use super::post::PostQueue;
+
+/// Struct where all the downloading and filtering will take place
 #[derive(Debug)]
 pub struct Queue {
     list: Vec<Post>,
@@ -37,11 +78,13 @@ pub struct Queue {
     imageboard: ImageBoards,
     sim_downloads: usize,
     client: Client,
+    limit: Option<usize>,
     cbz: bool,
     user_blacklist: AHashSet<String>,
 }
 
 impl Queue {
+    /// Set up the queue for download
     pub fn new(
         imageboard: ImageBoards,
         posts: PostQueue,
@@ -51,26 +94,15 @@ impl Queue {
     ) -> Self {
         let st = posts.tags.join(" ");
 
-        let list = if let Some(max) = limit {
-            let l_len = posts.posts.len();
-
-            if max >= l_len {
-                posts.posts
-            } else {
-                posts.posts[0..max].to_vec()
-            }
-        } else {
-            posts.posts
-        };
-
         let client = client!(imageboard.user_agent());
 
         Self {
-            list,
+            list: posts.posts,
             tag_s: st,
             cbz: save_as_cbz,
             imageboard,
             sim_downloads,
+            limit,
             client,
             user_blacklist: posts.user_blacklist,
         }
@@ -141,6 +173,7 @@ impl Queue {
         Ok(removed)
     }
 
+    /// Starts the download of all posts collected inside a [PostQueue]
     pub async fn download(
         &mut self,
         output: Option<PathBuf>,
@@ -148,6 +181,14 @@ impl Queue {
         save_as_id: bool,
     ) -> Result<(), Error> {
         let removed = Self::blacklist_filter(self, disable_blacklist).await?;
+
+        if let Some(max) = self.limit {
+            let l_len = self.list.len();
+
+            if max < l_len {
+                self.list = self.list[0..max].to_vec();
+            }
+        }
 
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
@@ -252,7 +293,7 @@ impl Queue {
             "downloaded".bold()
         );
 
-        if removed > 0 {
+        if removed > 0 && self.limit.is_none() {
             println!(
                 "{} {}",
                 removed.to_string().bold().red(),

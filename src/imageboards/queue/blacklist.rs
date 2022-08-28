@@ -1,3 +1,34 @@
+//! Global post filter
+//!
+//! # The Global Blacklist
+//! Imageboard websites tag their posts in order to facilitate searching,
+//! the global blacklist implements a filter to exclude from the download queue all posts with unwanted tags.
+//!
+//! ## Config file
+//! The global blacklist is created in `$XDG_CONFIG_HOME/imageboard-downloader/blacklist.toml`
+//!
+//! The user can define the tags as follows
+//! ```toml
+//! [blacklist]
+//! global = ["tag_1", "tag_2"] # Place in this array all the tags that will be excluded from all imageboards
+//!
+//! # Place in the following all the tags that will be excluded from specific imageboards
+//!
+//! danbooru = ["tag_3", "tag_4"] # Will exclude these tags only when downloading from Danbooru
+//!
+//! e621 = []
+//!
+//! rule34 = []
+//!
+//! realbooru = []
+//!
+//! gelbooru = []
+//!
+//! konachan = []
+//! ```
+//!
+//! With this, the user can input all tags that they do not want to download. In case a post has
+//! any of the tags set in the blacklist, it will be removed from the download queue.
 use ahash::AHashSet;
 use anyhow::{Context, Error};
 use log::debug;
@@ -36,34 +67,6 @@ pub struct BlacklistCategories {
     pub konachan: AHashSet<String>,
 }
 
-/// # The Global Blacklist
-/// Imageboard websites tag their posts in order to facilitate searching.
-///
-/// ## Config file
-/// The global blacklist is created in `$XDG_CONFIG_HOME/imageboard-downloader/blacklist.toml`
-///
-/// The user can define the tags as follows
-/// ```toml
-/// [blacklist]
-/// global = ["tag_1", "tag_2"] # Place in this array all the tags that will be excluded from all imageboards
-///
-/// # Place in the following all the tags that will be excluded from specific imageboards
-///
-/// danbooru = ["tag_3", "tag_4"] # Will exclude these tags only when downloading from Danbooru
-///
-/// e621 = []
-///
-/// rule34 = []
-///
-/// realbooru = []
-///
-/// gelbooru = []
-///
-/// konachan = []
-/// ```
-///
-/// With this, the user can input all tags that they do not want to download. In case a post has
-/// any of the tags set in the blacklist, it will be removed from the download queue.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards

@@ -1,54 +1,37 @@
-//! Auth and download logic for `https://e621.net`
+//! Post extractor for `https://e621.net`
 //!
-//! The e621 downloader has the following features:
-//! * Multiple simultaneous downloads.
-//! * Authentication
-//! * Tag blacklist (defined in user profile page)
-//! * Safe mode (don't download NSFW posts)
+//! The e621 extractor has the following features:
+//! - Authentication
+//! - Tag blacklist (defined in user profile page)
+//! - Safe mode (don't download NSFW posts)
 //!
-//! # Example usage
+//! # Example basic usage
 //!
 //! ```rust
-//! use std::path::PathBuf;
-//! use imageboard_downloader::E621Downloader;
+//! use imageboard_downloader::*;
 //!
-//! // Input tags
-//! let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+//! async fn fetch_posts() {
+//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
+//!     
+//!     let safe_mode = true; // Set to true to download posts from safebooru
 //!
-//! // Dir where all will be saved
-//! let output = Some(PathBuf::from("./"));
+//!     let mut ext = E621Extractor::new(&tags, safe_mode); // Initialize the extractor
 //!
-//! // Number of simultaneous downloads
-//! let sd = 3;
+//!     ext.auth(true);
 //!
-//! // Disable download of NSFW posts
-//! let safe_mode = true;
+//!     // Will iterate through all pages until it finds no more posts, then returns the list.
+//!     let posts = ext.full_search().await.unwrap();
 //!
-//! // Login to the imageboard (only needs to be true once)
-//! let auth = true;
-//!
-//! // Save files with as <post_id>.png rather than <image_md5>.png
-//! let save_as_id = false;
-//!
-//! // Limit number of downloaded files
-//! let limit = Some(100);
-//!
-//! // Initialize the downloader
-//! let mut dl = E621Downloader::new(&tags, output, sd, limit, auth, safe_mode, save_as_id).await?;
-//!
-//! // Download
-//! dl.download().await?;
+//!     // Print all information collected
+//!     println!("{:?}", posts);
+//! }
 //! ```
-use crate::imageboards::auth::ImageboardConfig;
-use crate::imageboards::common::auth_prompt;
+use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
 use crate::imageboards::extractors::e621::models::E621TopLevel;
-use crate::imageboards::post::Post;
-use crate::imageboards::queue::PostQueue;
-use crate::imageboards::rating::Rating;
+use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags, print_found};
 use ahash::AHashSet;
-use anyhow::Error;
 use async_trait::async_trait;
 use colored::Colorize;
 use log::debug;
@@ -59,14 +42,14 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 use super::error::ExtractorError;
-use super::ImageBoardExtractor;
+use super::{Auth, Extractor};
 
 pub mod models;
 
 //const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
 /// Main object to download posts
-pub struct E621Downloader {
+pub struct E621Extractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
@@ -76,7 +59,7 @@ pub struct E621Downloader {
 }
 
 #[async_trait]
-impl ImageBoardExtractor for E621Downloader {
+impl Extractor for E621Extractor {
     fn new(tags: &[String], safe_mode: bool) -> Self {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::E621.user_agent());
@@ -150,8 +133,9 @@ impl ImageBoardExtractor for E621Downloader {
     }
 }
 
-impl E621Downloader {
-    pub async fn auth(&mut self, prompt: bool) -> Result<(), Error> {
+#[async_trait]
+impl Auth for E621Extractor {
+    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
         // Try to authenticate, does nothing if auth flag is not set
         auth_prompt(prompt, ImageBoards::E621, &self.client).await?;
 
@@ -164,7 +148,9 @@ impl E621Downloader {
         self.auth_state = false;
         Ok(())
     }
+}
 
+impl E621Extractor {
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",

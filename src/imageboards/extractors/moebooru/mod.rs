@@ -1,8 +1,30 @@
+//! Post extractor for `https://konachan.com` and other Moebooru imageboards
+//!
+//! The moebooru extractor has the following features:
+//! - Safe mode (don't download NSFW posts)
+//!
+//! # Example basic usage
+//!
+//! ```rust
+//! use imageboard_downloader::*;
+//!
+//! async fn fetch_posts() {
+//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
+//!     
+//!     let safe_mode = true; // Set to true to download posts from safebooru
+//!
+//!     let mut ext = MoebooruExtractor::new(&tags, safe_mode); // Initialize the extractor
+//!
+//!     // Will iterate through all pages until it finds no more posts, then returns the list.
+//!     let posts = ext.full_search().await.unwrap();
+//!
+//!     // Print all information collected
+//!     println!("{:?}", posts);
+//! }
+//! ```
 use crate::imageboards::extractors::error::ExtractorError;
 use crate::imageboards::extractors::moebooru::models::KonachanPost;
-use crate::imageboards::post::Post;
-use crate::imageboards::queue::PostQueue;
-use crate::imageboards::rating::Rating;
+use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, extract_ext_from_url, join_tags, print_found};
 use ahash::AHashSet;
@@ -12,11 +34,11 @@ use log::debug;
 use reqwest::Client;
 use std::io::{self, Write};
 
-use super::ImageBoardExtractor;
+use super::Extractor;
 
 mod models;
 
-pub struct MoebooruDownloader {
+pub struct MoebooruExtractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
@@ -24,7 +46,7 @@ pub struct MoebooruDownloader {
 }
 
 #[async_trait]
-impl ImageBoardExtractor for MoebooruDownloader {
+impl Extractor for MoebooruExtractor {
     fn new(tags: &[String], safe_mode: bool) -> Self {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Konachan.user_agent());
@@ -93,7 +115,7 @@ impl ImageBoardExtractor for MoebooruDownloader {
     }
 }
 
-impl MoebooruDownloader {
+impl MoebooruExtractor {
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",

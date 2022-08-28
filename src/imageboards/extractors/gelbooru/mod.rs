@@ -1,11 +1,6 @@
-//! Download logic for Gelbooru-based imageboards
+//! Post extractor for Gelbooru-based imageboards
 //!
-//! The gelbooru downloader has the following features:
-//! * Multiple simultaneous downloads.
-//!
-//! ***
-//!
-//! This downloader is compatible with these imageboards:
+//! This extractor is compatible with these imageboards:
 //! * `Imageboards::Rule34`
 //! * `Imageboards::Realbooru`
 //! * `Imageboards::Gelbooru`
@@ -13,40 +8,24 @@
 //! # Example usage
 //!
 //! ```rust
-//! use std::path::PathBuf;
-//! use imageboard_downloader::{ImageBoards, GelbooruDownloader};
+//! use imageboard_downloader::*;
 //!
-//! // Input tags
-//! let tags = vec!["umbreon".to_string(), "espeon".to_string()];
+//! async fn fetch_posts() {
+//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
 //!
-//! // Dir where all will be saved
-//! let output = Some(PathBuf::from("./"));
+//!     // Note: Safe mode with this extractor is ignored
+//!     let mut ext = GelbooruExtractor::new(&tags, false) // Initialize the extractor
+//!         .set_imageboard(ImageBoards::Rule34); // Set to extract from Rule34
 //!
-//! // Number of simultaneous downloads
-//! let sd = 3;
 //!
-//! // Disable download of NSFW posts
-//! let safe_mode = true;
+//!     // Will iterate through all pages until it finds no more posts, then returns the list.
+//!     let posts = ext.full_search().await.unwrap();
 //!
-//! // Login to the imageboard (only needs to be true once)
-//! let auth = true;
-//!
-//! // Save files with as <post_id>.png rather than <image_md5>.png
-//! let save_as_id = false;
-//!
-//! // Limit number of downloaded files
-//! let limit = Some(100);
-//!
-//! // Initialize the downloader
-//! // In this case, download from Rule34
-//! let mut dl = GelbooruDownloader::new(ImageBoards::Rule34, &tags, output, sd, limit, save_as_id)?;
-//!
-//! // Download
-//! dl.download().await?;
+//!     // Print all information collected
+//!     println!("{:?}", posts);
+//! }
 //! ```
-use crate::imageboards::post::Post;
-use crate::imageboards::queue::PostQueue;
-use crate::imageboards::rating::Rating;
+use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags};
 use crate::{extract_ext_from_url, print_found};
@@ -62,9 +41,9 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 use super::error::ExtractorError;
-use super::ImageBoardExtractor;
+use super::Extractor;
 
-pub struct GelbooruDownloader {
+pub struct GelbooruExtractor {
     active_imageboard: ImageBoards,
     client: Client,
     tags: Vec<String>,
@@ -72,7 +51,7 @@ pub struct GelbooruDownloader {
 }
 
 #[async_trait]
-impl ImageBoardExtractor for GelbooruDownloader {
+impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
     fn new(tags: &[String], safe_mode: bool) -> Self {
         // Use common client for all connections with a set User-Agent
@@ -145,7 +124,10 @@ impl ImageBoardExtractor for GelbooruDownloader {
     }
 }
 
-impl GelbooruDownloader {
+impl GelbooruExtractor {
+    /// Sets the imageboard to extract posts from
+    ///
+    /// If not set, defaults to `ImageBoards::Rule34`
     pub fn set_imageboard(self, imageboard: ImageBoards) -> Self {
         let client = client!(imageboard.user_agent());
 

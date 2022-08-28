@@ -1,5 +1,9 @@
 //! Main representation of a imageboard post
-use super::rating::Rating;
+//!
+//! # Post
+//! A [Post](Post) struct is a generic representation of an imageboard post.
+//!
+//! Most imageboard APIs have a common set of info from the files we want to download.
 use crate::{
     progress_bars::{download_progress_style, ProgressCounter},
     ImageBoards,
@@ -27,9 +31,22 @@ use tokio::{
 };
 use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
-/// Generic representation of a imageboard post
-/// Most imageboard APIs have a common set of info from the files we want to download.
-/// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
+use self::rating::Rating;
+
+pub mod rating;
+
+/// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
+#[derive(Debug)]
+pub struct PostQueue {
+    /// A list containing all `Post`s collected.
+    pub posts: Vec<Post>,
+    /// The tags used to search the collected posts.
+    pub tags: Vec<String>,
+    /// The user-defined blacklist in case the Extractor supports it. Will be empty if not
+    pub user_blacklist: AHashSet<String>,
+}
+
+/// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
 #[derive(Debug, Clone, Serialize)]
 pub struct Post {
     /// ID number of the post given by the imageboard
