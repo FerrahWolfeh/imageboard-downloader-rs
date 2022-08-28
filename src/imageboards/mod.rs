@@ -4,11 +4,11 @@ use crate::progress_bars::BarTemplates;
 use bincode::deserialize;
 use clap::ValueEnum;
 use colored::Colorize;
+use directories::ProjectDirs;
 use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, io};
+use std::{path::PathBuf, io, fs::create_dir_all};
 use tokio::fs::{read, remove_file};
-use xdg::BaseDirectories;
 
 use self::auth::AuthError;
 
@@ -158,19 +158,26 @@ impl ImageBoards {
     /// Returns a `PathBuf` pointing to the imageboard`s authentication cache.
     ///
     /// This is XDG-compliant and saves cache files to
-    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>`
+    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux and
+    /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
     pub fn auth_cache_dir(self) -> Result<PathBuf, io::Error> {
-        let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
+        let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+            
+        let cfold = cdir.config_dir();
 
-        let dir = xdg_dir.place_config_file(self.to_string())?;
-        Ok(dir)
+        if !cfold.exists() {
+            create_dir_all(cfold)?;
+        }
+
+        Ok(cfold.to_path_buf())
     }
 
     /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
     ///
     /// Returns `None` if the file is corrupted or does not exist.
     pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, AuthError> {
-        if let Ok(config_auth) = read(self.auth_cache_dir()?).await {
+        let cfg_path = self.auth_cache_dir()?.join(PathBuf::from(self.to_string()));
+        if let Ok(config_auth) = read(&cfg_path).await {
             debug!("Authentication cache found");
 
             if let Ok(decompressed) = zstd::decode_all(config_auth.as_slice()) {
@@ -191,7 +198,7 @@ impl ImageBoards {
             } else {
                 debug!("Failed to decompress authentication cache.");
                 debug!("Removing corrupted file");
-                remove_file(self.auth_cache_dir()?).await?;
+                remove_file(cfg_path).await?;
                 error!(
                     "{}",
                     "Auth cache is corrupted. Please authenticate again."

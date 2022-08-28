@@ -1,5 +1,6 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use std::io::{self, Write};
+use std::path::Path;
 
 use crate::ImageBoards;
 use ahash::AHashSet;
@@ -140,7 +141,10 @@ impl ImageboardConfig {
     /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::Variant.auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), AuthError> {
-        let config_path = self.imageboard.auth_cache_dir()?;
+        let config_path = self
+            .imageboard
+            .auth_cache_dir()?
+            .join(Path::new(&self.imageboard.to_string()));
         let mut cfg_cache = OpenOptions::new()
             .create(true)
             .truncate(true)

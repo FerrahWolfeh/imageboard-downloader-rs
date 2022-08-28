@@ -29,14 +29,16 @@
 //!
 //! With this, the user can input all tags that they do not want to download. In case a post has
 //! any of the tags set in the blacklist, it will be removed from the download queue.
+use std::path::Path;
+
 use ahash::AHashSet;
 use anyhow::{Context, Error};
+use directories::ProjectDirs;
 use log::debug;
 use serde::{Deserialize, Serialize};
-use tokio::fs::{read_to_string, File};
+use tokio::fs::{create_dir_all, read_to_string, File};
 use tokio::io::AsyncWriteExt;
 use toml::from_str;
-use xdg::BaseDirectories;
 
 const BF_INIT_TEXT: &[u8; 275] = br#"[blacklist]
 global = [] # Place in this array all the tags that will be excluded from all imageboards
@@ -77,9 +79,15 @@ impl GlobalBlacklist {
     /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
     /// or first run), it will be created.
     pub async fn get() -> Result<Self, Error> {
-        let xdg_dir = BaseDirectories::with_prefix("imageboard-downloader")?;
+        let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
 
-        let dir = xdg_dir.place_config_file("blacklist.toml")?;
+        let cfold = cdir.config_dir();
+
+        if !cfold.exists() {
+            create_dir_all(cfold).await?;
+        }
+
+        let dir = cfold.join(Path::new("blacklist.toml"));
 
         if !dir.exists() {
             debug!("Creating blacklist file");
