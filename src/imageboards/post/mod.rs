@@ -1,7 +1,7 @@
 //! Main representation of a imageboard post
 //!
 //! # Post
-//! A [Post](Post) struct is a generic representation of an imageboard post.
+//! A [Post struct](Post) is a generic representation of an imageboard post.
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
 use crate::{
@@ -94,10 +94,6 @@ impl Eq for Post {}
 
 impl Post {
     /// Main routine to download a single post.
-    ///
-    /// This function is normally part of a `DownloadQueue::download_post_list()` method.
-    ///
-    /// It can be used alone, but it's not advised.
     pub async fn get(
         &self,
         client: &Client,
@@ -217,13 +213,6 @@ impl Post {
 
                 // Write to file.
                 buf.write_all_buf(&mut chunk).await?;
-
-                // match file.write_all_buf(&mut chunk).await {
-                //     Ok(_res) => (),
-                //     Err(e) => {
-                //         bail!(e);
-                //     }
-                // };
             }
 
             let mut un_mut = zf.lock().unwrap();

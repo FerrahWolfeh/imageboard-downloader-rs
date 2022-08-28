@@ -46,7 +46,7 @@ pub struct ImageboardConfig {
     pub user_data: UserData,
 }
 
-/// Aggregates common user info and it's blacklisted tags in a `HashSet`.
+/// Aggregates common user info and it's blacklisted tags in a `AHashSet`.
 ///
 /// It's principally used to filter which posts to download according to the user's blacklist
 /// configured in the imageboard profile settings.

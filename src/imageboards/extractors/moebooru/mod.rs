@@ -1,7 +1,7 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
 //!
 //! The moebooru extractor has the following features:
-//! - Safe mode (don't download NSFW posts)
+//! - Native safe mode (don't download NSFW posts)
 //!
 //! # Example basic usage
 //!

@@ -3,7 +3,7 @@
 //! The e621 extractor has the following features:
 //! - Authentication
 //! - Tag blacklist (defined in user profile page)
-//! - Safe mode (don't download NSFW posts)
+//! - Native safe mode (don't download NSFW posts)
 //!
 //! # Example basic usage
 //!

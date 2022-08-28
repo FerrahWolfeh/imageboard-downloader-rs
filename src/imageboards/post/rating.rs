@@ -11,9 +11,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rating {
+    /// Represents posts that are don't involve nothing suggestive or sensitive.
     Safe,
+    /// Represents posts that have some degree of nudity or sexually suggestive elements.
     Questionable,
+    /// Represents posts that have explicit elements of pornography, gore, death, etc.
     Explicit,
+    /// Represents a failure to parse the `rating` tag into one of the above.
     Unknown,
 }
 

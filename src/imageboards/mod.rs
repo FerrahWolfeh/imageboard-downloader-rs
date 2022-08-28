@@ -158,7 +158,7 @@ impl ImageBoards {
     /// Returns a `PathBuf` pointing to the imageboard`s authentication cache.
     ///
     /// This is XDG-compliant and saves cache files to
-    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux and
+    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux or
     /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
     pub fn auth_cache_dir(self) -> Result<PathBuf, io::Error> {
         let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();

@@ -63,7 +63,7 @@ use zip::CompressionMethod;
 use zip::ZipWriter;
 
 #[cfg(feature = "global_blacklist")]
-mod blacklist;
+pub mod blacklist;
 
 #[cfg(feature = "global_blacklist")]
 use self::blacklist::GlobalBlacklist;

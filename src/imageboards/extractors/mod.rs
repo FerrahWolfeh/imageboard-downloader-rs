@@ -1,7 +1,7 @@
 //! Modules that work by parsing post info from a imageboard API into a list of [Posts](crate::imageboards::post).
 //! # Extractors
 //!
-//! All modules inside work by connecting to a imageboard website, search for posts with the tags supplied and parse all of them into a [PostQueue](crate::imageboards::post::PostQueue).
+//! All modules implementing [Extractor] work by connecting to a imageboard website, searching for posts with the tags supplied and parsing all of them into a [PostQueue](crate::imageboards::post::PostQueue).
 use self::error::ExtractorError;
 use super::post::PostQueue;
 use async_trait::async_trait;
@@ -16,7 +16,7 @@ pub mod moebooru;
 
 mod error;
 
-/// This trait is the only public interface all the extractors should expose aside from some other website-specific configuration.
+/// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
 pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
@@ -31,11 +31,11 @@ pub trait Extractor {
     async fn full_search(&mut self) -> Result<PostQueue, ExtractorError>;
 }
 
-/// Authentication capability for imageboard websites. Implies extractor being able to use a user-defined blacklist
+/// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist
 #[async_trait]
 pub trait Auth {
     /// Setting to `true` will prompt the user for username and API key, while setting to `false` will silently try to authenticate.
     ///
-    /// If auth was never configured, does nothing.
+    /// Does nothing if auth was never configured.
     async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError>;
 }
