@@ -1,6 +1,6 @@
 //! Download and save `Post`s
-use super::{common::Counters, post::Post};
-use crate::{client, progress_bars::ProgressArcs, ImageBoards};
+use super::post::Post;
+use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
 use cfg_if::cfg_if;
@@ -8,11 +8,16 @@ use colored::Colorize;
 use futures::StreamExt;
 use log::debug;
 use reqwest::Client;
+use std::fs::File;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
 use tokio::time::Instant;
+use zip::write::FileOptions;
+use zip::CompressionMethod;
+use zip::ZipWriter;
 
 #[cfg(feature = "global_blacklist")]
 use super::blacklist::GlobalBlacklist;
@@ -30,6 +35,8 @@ pub struct Queue {
     tag_s: String,
     imageboard: ImageBoards,
     sim_downloads: usize,
+    client: Client,
+    cbz: bool,
     user_blacklist: AHashSet<String>,
 }
 
@@ -39,6 +46,7 @@ impl Queue {
         posts: PostQueue,
         sim_downloads: usize,
         limit: Option<usize>,
+        save_as_cbz: bool,
     ) -> Self {
         let st = posts.tags.join(" ");
 
@@ -54,11 +62,15 @@ impl Queue {
             posts.posts
         };
 
+        let client = client!(imageboard.user_agent());
+
         Self {
             list,
             tag_s: st,
+            cbz: save_as_cbz,
             imageboard,
             sim_downloads,
+            client,
             user_blacklist: posts.user_blacklist,
         }
     }
@@ -142,41 +154,86 @@ impl Queue {
             Some(dir) => dir,
         };
 
-        let output_dir = place.join(PathBuf::from(format!(
-            "{}/{}",
-            self.imageboard.to_string(),
-            self.tag_s
-        )));
+        let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
-        debug!("Target dir: {}", output_dir.display());
-        create_dir_all(&output_dir).await?;
+        if self.cbz {
+            let output_dir = place.join(PathBuf::from(self.imageboard.to_string()));
 
-        let bars = ProgressArcs::initialize(self.list.len() as u64, self.imageboard);
+            debug!("Target file: {}/{}.cbz", output_dir.display(), self.tag_s);
+            create_dir_all(&output_dir).await?;
 
-        let counters = Arc::new(Counters {
-            total_mtx: Arc::new(Mutex::new(0)),
-            downloaded_mtx: Arc::new(Mutex::new(0)),
-        });
+            let output_file = output_dir.join(PathBuf::from(format!("{}.cbz", self.tag_s)));
 
-        let client = client!(self.imageboard.user_agent());
+            let zf = File::create(&output_file)?;
+            let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
+            let z_mtx = zip.as_ref().unwrap();
 
-        debug!("Fetching {} posts", self.list.len());
-        futures::stream::iter(&self.list)
-            .map(|d| {
-                d.get(
-                    &client,
-                    &output_dir,
-                    bars.clone(),
-                    self.imageboard,
-                    counters.clone(),
-                    save_as_id,
-                )
-            })
-            .buffer_unordered(self.sim_downloads)
-            .collect::<Vec<_>>()
-            .await;
+            {
+                let ap = serde_json::to_string_pretty(&self.list)?;
 
-        bars.main.finish_and_clear();
+                let mut z_1 = z_mtx.lock().unwrap();
+
+                z_1.start_file(
+                    "00_summary.json",
+                    FileOptions::default().compression_method(CompressionMethod::Deflated),
+                )?;
+
+                z_1.write_all(ap.as_bytes())?;
+            }
+
+            debug!("Fetching {} posts", self.list.len());
+            futures::stream::iter(&self.list)
+                .map(|d| {
+                    d.get(
+                        &self.client,
+                        &output_file,
+                        counters.clone(),
+                        self.imageboard,
+                        save_as_id,
+                        zip.clone(),
+                    )
+                })
+                .buffer_unordered(self.sim_downloads)
+                .collect::<Vec<_>>()
+                .await;
+
+            let mut zl = z_mtx.lock().unwrap();
+
+            zl.set_comment(format!(
+                "ImageBoard Downloader\n\nWebsite: {}\n\nTags: {}\n\nPosts: {}",
+                self.imageboard.to_string(),
+                self.tag_s,
+                self.list.len()
+            ));
+            zl.finish()?;
+        } else {
+            let output_dir = place.join(PathBuf::from(format!(
+                "{}/{}",
+                self.imageboard.to_string(),
+                self.tag_s
+            )));
+
+            debug!("Target dir: {}", output_dir.display());
+            create_dir_all(&output_dir).await?;
+
+            debug!("Fetching {} posts", self.list.len());
+            futures::stream::iter(&self.list)
+                .map(|d| {
+                    d.get(
+                        &self.client,
+                        &output_dir,
+                        counters.clone(),
+                        self.imageboard,
+                        save_as_id,
+                        None,
+                    )
+                })
+                .buffer_unordered(self.sim_downloads)
+                .collect::<Vec<_>>()
+                .await;
+        }
+
+        counters.main.finish_and_clear();
         println!(
             "{} {} {}",
             counters

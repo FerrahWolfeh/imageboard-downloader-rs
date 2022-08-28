@@ -1,7 +1,11 @@
 use indicatif::{
     HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
 };
-use std::{fmt::Write, sync::Arc, time::Duration};
+use std::{
+    fmt::Write,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use crate::ImageBoards;
 
@@ -21,15 +25,18 @@ impl Default for BarTemplates {
     }
 }
 
-/// Struct to condense a commonly used duo of progress bar instances.
+/// Struct to condense a commonly used duo of progress bar instances and counters for downloaded posts.
 ///
-/// The main usage for this is to pass references of the progress bars across multiple threads while downloading.
-pub struct ProgressArcs {
+/// The main usage for this is to pass references of the counters across multiple threads while downloading.
+#[derive(Clone)]
+pub struct ProgressCounter {
+    pub total_mtx: Arc<Mutex<usize>>,
+    pub downloaded_mtx: Arc<Mutex<u64>>,
     pub main: Arc<ProgressBar>,
     pub multi: Arc<MultiProgress>,
 }
 
-impl ProgressArcs {
+impl ProgressCounter {
     pub fn initialize(len: u64, imageboard: ImageBoards) -> Arc<Self> {
         let bar = ProgressBar::new(len)
             .with_style(master_progress_style(&imageboard.progress_template()));
@@ -40,7 +47,12 @@ impl ProgressArcs {
         let multi = Arc::new(MultiProgress::new());
         let main = Arc::new(multi.add(bar));
 
-        Arc::new(Self { main, multi })
+        Arc::new(Self {
+            main,
+            multi,
+            total_mtx: Arc::new(Mutex::new(0)),
+            downloaded_mtx: Arc::new(Mutex::new(0)),
+        })
     }
 }
 

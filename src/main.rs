@@ -23,7 +23,7 @@ struct Cli {
         long,
         parse(from_os_str),
         value_name = "PATH",
-        help_heading = "DOWNLOAD"
+        help_heading = "SAVE"
     )]
     output: Option<PathBuf>,
 
@@ -69,6 +69,10 @@ struct Cli {
     /// Ignore both user and global blacklists
     #[clap(long, value_parser, default_value_t = false, help_heading = "DOWNLOAD")]
     disable_blacklist: bool,
+
+    /// Save posts inside a cbz file
+    #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
+    cbz: bool,
 }
 
 #[tokio::main]
@@ -118,6 +122,7 @@ async fn main() -> Result<(), Error> {
         post_queue,
         args.simultaneous_downloads,
         args.limit,
+        args.cbz,
     );
 
     qw.download(args.output, args.disable_blacklist, args.save_file_as_id)

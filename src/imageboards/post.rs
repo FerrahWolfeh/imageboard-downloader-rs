@@ -1,7 +1,7 @@
 //! Main representation of a imageboard post
-use super::{common::Counters, rating::Rating};
+use super::rating::Rating;
 use crate::{
-    progress_bars::{download_progress_style, ProgressArcs},
+    progress_bars::{download_progress_style, ProgressCounter},
     ImageBoards,
 };
 use ahash::AHashSet;
@@ -12,20 +12,25 @@ use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
+use serde::Serialize;
 use std::{
     cmp::Ordering,
+    fs::File,
+    io::Write,
     path::Path,
     sync::{Arc, Mutex},
 };
 use tokio::{
     fs::{self, read, OpenOptions},
     io::AsyncWriteExt,
+    io::BufWriter,
 };
+use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
 /// Generic representation of a imageboard post
 /// Most imageboard APIs have a common set of info from the files we want to download.
 /// This struct is just a catchall model for the necessary parts of the post the program needs to properly download and save the files.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Post {
     /// ID number of the post given by the imageboard
     pub id: u64,
@@ -80,10 +85,10 @@ impl Post {
         &self,
         client: &Client,
         output: &Path,
-        bars: Arc<ProgressArcs>,
+        counters: Arc<ProgressCounter>,
         variant: ImageBoards,
-        counters: Arc<Counters>,
         name_id: bool,
+        zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), Error> {
         let name = if name_id {
             self.id.to_string()
@@ -92,17 +97,11 @@ impl Post {
         };
         let output = output.join(format!("{}.{}", name, &self.extension));
 
-        if Self::check_file_exists(
-            self,
-            &output,
-            bars.clone(),
-            name_id,
-            counters.total_mtx.clone(),
-        )
-        .await
-        .is_ok()
+        if Self::check_file_exists(self, &output, counters.clone(), name_id)
+            .await
+            .is_ok()
         {
-            Self::fetch(self, client, bars, &output, variant, counters.clone()).await?;
+            Self::fetch(self, client, counters, &output, variant, zip).await?;
         }
         Ok(())
     }
@@ -110,9 +109,8 @@ impl Post {
     async fn check_file_exists(
         &self,
         output: &Path,
-        bars: Arc<ProgressArcs>,
+        counters: Arc<ProgressCounter>,
         name_id: bool,
-        total_ct_mtx: Arc<Mutex<usize>>,
     ) -> Result<(), Error> {
         if output.exists() {
             let name = if name_id {
@@ -123,19 +121,19 @@ impl Post {
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
-                bars.multi.println(format!(
+                counters.multi.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
                     format!("{}.{}", &name, &self.extension).bold().green(),
                     "already exists. Skipping.".bold().green()
                 ))?;
-                bars.main.inc(1);
-                *total_ct_mtx.lock().unwrap() += 1;
+                counters.main.inc(1);
+                *counters.total_mtx.lock().unwrap() += 1;
                 bail!("")
             }
 
             fs::remove_file(&output).await?;
-            bars.multi.println(format!(
+            counters.multi.println(format!(
                 "{} {} {}",
                 "File".bold().red(),
                 format!("{}.{}", &name, &self.extension).bold().red(),
@@ -151,22 +149,22 @@ impl Post {
     async fn fetch(
         &self,
         client: &Client,
-        bars: Arc<ProgressArcs>,
+        counters: Arc<ProgressCounter>,
         output: &Path,
         variant: ImageBoards,
-        counters: Arc<Counters>,
+        zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), Error> {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
 
         if res.status().is_client_error() {
-            bars.multi.println(format!(
+            counters.multi.println(format!(
                 "{} {}{}",
                 "Image source returned status".bold().red(),
                 res.status().as_str().bold().red(),
                 ". Skipping download.".bold().red()
             ))?;
-            bars.main.inc(1);
+            counters.main.inc(1);
             bail!("Post is valid but original file doesn't exist")
         }
 
@@ -175,39 +173,76 @@ impl Post {
             .with_style(download_progress_style(&variant.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
-        let pb = bars.multi.add(bar);
+        let pb = counters.multi.add(bar);
 
         debug!("Creating destination file {:?}", &output);
-        let mut file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(output)
-            .await?;
 
         // Download the file chunk by chunk.
         debug!("Retrieving chunks...");
         let mut stream = res.bytes_stream();
-        while let Some(item) = stream.next().await {
-            // Retrieve chunk.
-            let mut chunk = match item {
-                Ok(chunk) => chunk,
-                Err(e) => {
-                    bail!(e)
-                }
-            };
-            pb.inc(chunk.len() as u64);
 
-            // Write to file.
-            match file.write_all_buf(&mut chunk).await {
-                Ok(_res) => (),
-                Err(e) => {
-                    bail!(e);
-                }
-            };
+        if let Some(zf) = zip {
+            let fvec: Vec<u8> = Vec::with_capacity(size as usize);
+
+            let mut buf = BufWriter::with_capacity(size as usize, fvec);
+
+            let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+
+            while let Some(item) = stream.next().await {
+                // Retrieve chunk.
+                let mut chunk = match item {
+                    Ok(chunk) => chunk,
+                    Err(e) => {
+                        bail!(e)
+                    }
+                };
+                pb.inc(chunk.len() as u64);
+
+                // Write to file.
+                buf.write_all_buf(&mut chunk).await?;
+
+                // match file.write_all_buf(&mut chunk).await {
+                //     Ok(_res) => (),
+                //     Err(e) => {
+                //         bail!(e);
+                //     }
+                // };
+            }
+
+            let mut un_mut = zf.lock().unwrap();
+            un_mut.start_file(format!("{}.{}", self.md5, self.extension), options)?;
+
+            un_mut.write_all(buf.buffer())?;
+        } else {
+            let mut file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(output)
+                .await?;
+
+            while let Some(item) = stream.next().await {
+                // Retrieve chunk.
+                let mut chunk = match item {
+                    Ok(chunk) => chunk,
+                    Err(e) => {
+                        bail!(e)
+                    }
+                };
+                pb.inc(chunk.len() as u64);
+
+                // Write to file.
+                match file.write_all_buf(&mut chunk).await {
+                    Ok(_res) => (),
+                    Err(e) => {
+                        bail!(e);
+                    }
+                };
+            }
         }
+
         pb.finish_and_clear();
 
-        bars.main.inc(1);
+        counters.main.inc(1);
         let mut down_count = counters.downloaded_mtx.lock().unwrap();
         let mut total_count = counters.total_mtx.lock().unwrap();
         *total_count += 1;

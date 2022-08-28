@@ -146,7 +146,8 @@
                 "japanese",
                 "long_fingernails",
                 "-i",
-                "realbooru"
+                "realbooru",
+                "--cbz"
             ],
             "cwd": "${workspaceFolder}"
         }
