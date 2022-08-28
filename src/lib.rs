@@ -5,6 +5,7 @@
 //!
 //! This utility aims to be fast, portable and lightweigth while offering simultaneous downloads
 //! and more.
+//mod config;
 pub mod imageboards;
 mod progress_bars;
 
