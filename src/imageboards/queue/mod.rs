@@ -221,7 +221,9 @@ impl Queue {
 
                 z_1.start_file(
                     "00_summary.json",
-                    FileOptions::default().compression_method(CompressionMethod::Deflated),
+                    FileOptions::default()
+                        .compression_method(CompressionMethod::Deflated)
+                        .compression_level(Some(9)),
                 )?;
 
                 z_1.write_all(ap.as_bytes())?;
