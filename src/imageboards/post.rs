@@ -210,7 +210,15 @@ impl Post {
             }
 
             let mut un_mut = zf.lock().unwrap();
-            un_mut.start_file(format!("{}.{}", self.md5, self.extension), options)?;
+            un_mut.start_file(
+                format!(
+                    "{}/{}.{}",
+                    self.rating.to_string(),
+                    self.md5,
+                    self.extension
+                ),
+                options,
+            )?;
 
             un_mut.write_all(buf.buffer())?;
         } else {

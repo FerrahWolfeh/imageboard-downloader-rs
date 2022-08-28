@@ -1,5 +1,6 @@
 //! Download and save `Post`s
 use super::post::Post;
+use crate::Rating;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
@@ -172,6 +173,10 @@ impl Queue {
                 let ap = serde_json::to_string_pretty(&self.list)?;
 
                 let mut z_1 = z_mtx.lock().unwrap();
+                z_1.add_directory(Rating::Safe.to_string(), Default::default())?;
+                z_1.add_directory(Rating::Questionable.to_string(), Default::default())?;
+                z_1.add_directory(Rating::Explicit.to_string(), Default::default())?;
+                z_1.add_directory(Rating::Unknown.to_string(), Default::default())?;
 
                 z_1.start_file(
                     "00_summary.json",
