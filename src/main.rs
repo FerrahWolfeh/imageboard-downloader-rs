@@ -74,7 +74,7 @@ struct Cli {
     #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
     cbz: bool,
 
-    /// Which page to start
+    /// Select from which page to start scanning posts
     #[clap(
         short,
         long,
