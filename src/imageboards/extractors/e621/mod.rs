@@ -170,6 +170,10 @@ impl Extractor for E621Extractor {
 
         Ok(fin)
     }
+
+    fn client(&mut self, client: Client) {
+        self.client = client;
+    }
 }
 
 #[async_trait]

@@ -7,6 +7,7 @@ use std::fmt::Display;
 use self::error::ExtractorError;
 use super::post::PostQueue;
 use async_trait::async_trait;
+use reqwest::Client;
 
 pub mod danbooru;
 
@@ -41,6 +42,8 @@ pub trait Extractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError>;
+
+    fn client(&mut self, client: Client);
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

@@ -9,11 +9,11 @@
 //! use imageboard_downloader::*;
 //!
 //! async fn fetch_posts() {
-//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
+//!     let tags = ["umbreon", "espeon"];
 //!     
 //!     let safe_mode = true; // Set to true to download posts from safebooru
 //!
-//!     let mut ext = MoebooruExtractor::new(&tags, safe_mode); // Initialize the extractor
+//!     let mut ext = MoebooruExtractor::new(&tags, safe_mode, false); // Initialize the extractor
 //!
 //!     // Will iterate through all pages until it finds no more posts, then returns the list.
 //!     let posts = ext.full_search().await.unwrap();
@@ -152,6 +152,10 @@ impl Extractor for MoebooruExtractor {
         };
 
         Ok(fin)
+    }
+
+    fn client(&mut self, client: Client) {
+        self.client = client;
     }
 }
 

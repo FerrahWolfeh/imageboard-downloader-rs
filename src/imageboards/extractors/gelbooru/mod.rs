@@ -161,6 +161,10 @@ impl Extractor for GelbooruExtractor {
 
         Ok(fin)
     }
+
+    fn client(&mut self, client: Client) {
+        self.client = client;
+    }
 }
 
 impl GelbooruExtractor {

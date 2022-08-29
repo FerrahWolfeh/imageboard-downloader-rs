@@ -162,6 +162,10 @@ impl Extractor for DanbooruExtractor {
         };
         Ok(fin)
     }
+
+    fn client(&mut self, client: Client) {
+        self.client = client;
+    }
 }
 
 #[async_trait]
