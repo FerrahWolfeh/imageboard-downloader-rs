@@ -167,17 +167,25 @@ impl GelbooruExtractor {
     /// Sets the imageboard to extract posts from
     ///
     /// If not set, defaults to `ImageBoards::Rule34`
-    pub fn set_imageboard(self, imageboard: ImageBoards) -> Self {
+    pub fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError> {
+        let imageboard = match imageboard {
+            ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
+            _ => {
+                return Err(ExtractorError::InvalidImageboard {
+                    imgboard: imageboard.to_string(),
+                })
+            }
+        };
         let client = client!(imageboard.user_agent());
 
-        Self {
+        Ok(Self {
             active_imageboard: imageboard,
             client,
             tags: self.tags,
             tag_string: self.tag_string,
             disable_blacklist: self.disable_blacklist,
             total_removed: self.total_removed,
-        }
+        })
     }
 
     async fn validate_tags(&mut self) -> Result<(), ExtractorError> {
@@ -237,13 +245,26 @@ impl GelbooruExtractor {
                         debug!("Global blacklist is empty")
                     }
 
-                    if !tags.danbooru.is_empty() {
+                    let special_tags = match self.active_imageboard {
+                        ImageBoards::Rule34 => {
+                            tags.rule34
+                        }
+                        ImageBoards::Gelbooru => {
+                            tags.gelbooru
+                        }
+                        ImageBoards::Realbooru => {
+                            tags.realbooru
+                        }
+                        _ => return Err(ExtractorError::ImpossibleBehavior)
+                    };
+
+                    if !special_tags.is_empty() {
                         let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags.danbooru);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.danbooru.contains(s)));
+                        debug!("Removing posts with tags [{:?}]", special_tags);
+                        list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
 
                         let bp = fsize - list.len();
-                        debug!("Danbooru blacklist removed {} posts", bp);
+                        debug!("Blacklist removed {} posts", bp);
                         removed += bp as u64;
                     }
                 }

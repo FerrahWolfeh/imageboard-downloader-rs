@@ -112,7 +112,7 @@ async fn main() -> Result<(), Error> {
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit = GelbooruExtractor::new(&args.tags, false, args.disable_blacklist)
-                .set_imageboard(args.imageboard);
+                .set_imageboard(args.imageboard)?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

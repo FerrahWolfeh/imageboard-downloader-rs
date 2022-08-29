@@ -30,4 +30,10 @@ pub enum ExtractorError {
 
     #[error("Failed to decode blacklist.toml in {path}")]
     BlacklistDecodeError { path: String },
+
+    #[error("Invalid imageboard selected for this extractor: {imgboard}")]
+    InvalidImageboard { imgboard: String },
+
+    #[error("Impossible execution path")]
+    ImpossibleBehavior,
 }
