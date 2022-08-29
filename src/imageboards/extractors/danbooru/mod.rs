@@ -91,6 +91,7 @@ impl Extractor for DanbooruExtractor {
     async fn full_search(
         &mut self,
         start_page: Option<usize>,
+        limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -108,11 +109,17 @@ impl Extractor for DanbooruExtractor {
             let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
-            if size == 0 || fvec.len() >= ImageBoards::Danbooru.max_post_limit() * 100 {
+            if size == 0 {
                 break;
             }
 
             fvec.extend(posts);
+
+            if let Some(num) = limit {
+                if fvec.len() >= num {
+                    break;
+                }
+            }
 
             if page == 100 {
                 break;

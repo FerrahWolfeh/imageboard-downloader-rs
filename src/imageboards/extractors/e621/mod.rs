@@ -97,6 +97,7 @@ impl Extractor for E621Extractor {
     async fn full_search(
         &mut self,
         start_page: Option<usize>,
+        limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -119,6 +120,12 @@ impl Extractor for E621Extractor {
             }
 
             fvec.extend(posts);
+
+            if let Some(num) = limit {
+                if fvec.len() >= num {
+                    break;
+                }
+            }
 
             if size < 320 || page == 100 {
                 break;

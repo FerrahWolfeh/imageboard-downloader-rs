@@ -7,15 +7,15 @@ use colored::Colorize;
 use directories::ProjectDirs;
 use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, io, fs::create_dir_all};
+use std::{fs::create_dir_all, io, path::PathBuf};
 use tokio::fs::{read, remove_file};
 
 use self::auth::AuthError;
 
 pub mod auth;
-pub mod queue;
 pub mod extractors;
 pub mod post;
+pub mod queue;
 
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
@@ -115,7 +115,9 @@ impl ImageBoards {
             ImageBoards::Realbooru => {
                 Some("http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1")
             }
-            ImageBoards::Gelbooru => Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"),
+            ImageBoards::Gelbooru => {
+                Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1")
+            }
         }
     }
 
@@ -162,7 +164,7 @@ impl ImageBoards {
     /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
     pub fn auth_cache_dir(self) -> Result<PathBuf, io::Error> {
         let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
-            
+
         let cfold = cdir.config_dir();
 
         if !cfold.exists() {

@@ -88,6 +88,7 @@ impl Extractor for GelbooruExtractor {
     async fn full_search(
         &mut self,
         start_page: Option<usize>,
+        limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
@@ -110,6 +111,12 @@ impl Extractor for GelbooruExtractor {
             }
 
             fvec.extend(posts);
+
+            if let Some(num) = limit {
+                if fvec.len() >= num {
+                    break;
+                }
+            }
 
             if size < self.active_imageboard.max_post_limit() || page == 100 {
                 break;

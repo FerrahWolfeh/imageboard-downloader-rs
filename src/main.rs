@@ -94,7 +94,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, args.safe_mode);
             unit.auth(args.auth).await?;
-            let posts = unit.full_search(args.start_page).await?;
+            let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -103,7 +103,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::E621 => {
             let mut unit = E621Extractor::new(&args.tags, args.safe_mode);
             unit.auth(args.auth).await?;
-            let posts = unit.full_search(args.start_page).await?;
+            let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -112,7 +112,7 @@ async fn main() -> Result<(), Error> {
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit =
                 GelbooruExtractor::new(&args.tags, false).set_imageboard(args.imageboard);
-            let posts = unit.full_search(args.start_page).await?;
+            let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
@@ -120,7 +120,7 @@ async fn main() -> Result<(), Error> {
         }
         ImageBoards::Konachan => {
             let mut unit = MoebooruExtractor::new(&args.tags, args.safe_mode);
-            let posts = unit.full_search(args.start_page).await?;
+            let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
 
