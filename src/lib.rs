@@ -50,13 +50,6 @@ macro_rules! extract_ext_from_url {
 }
 
 #[macro_export]
-macro_rules! bail_error {
-    ($err:expr) => {{
-        return Err($err.into());
-    }};
-}
-
-#[macro_export]
 macro_rules! print_found {
     ($vec:expr) => {{
         print!(
@@ -66,51 +59,5 @@ macro_rules! print_found {
             "posts".bold()
         );
         io::stdout().flush().unwrap();
-    }};
-}
-
-#[macro_export]
-macro_rules! finish_and_print_results {
-    ($bars:expr, $self:expr, $auth_res:expr) => {{
-        $bars.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            $self
-                .counters
-                .downloaded_mtx
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .blue(),
-            "files".bold().blue(),
-            "downloaded".bold()
-        );
-
-        if $auth_res.is_some() && $self.blacklisted_posts > 0 {
-            println!(
-                "{} {}",
-                $self.blacklisted_posts.to_string().bold().red(),
-                "posts with blacklisted tags were not downloaded."
-                    .bold()
-                    .red()
-            )
-        }
-    }};
-    ($bars:expr, $self:expr) => {{
-        $bars.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            $self
-                .counters
-                .downloaded_mtx
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .blue(),
-            "files".bold().blue(),
-            "downloaded".bold()
-        );
     }};
 }
