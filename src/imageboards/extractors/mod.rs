@@ -2,6 +2,8 @@
 //! # Extractors
 //!
 //! All modules implementing [Extractor] work by connecting to a imageboard website, searching for posts with the tags supplied and parsing all of them into a [PostQueue](crate::imageboards::post::PostQueue).
+use std::fmt::Display;
+
 use self::error::ExtractorError;
 use super::post::PostQueue;
 use async_trait::async_trait;
@@ -25,7 +27,9 @@ pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new(tags: &[String], safe_mode: bool, disable_blacklist: bool) -> Self;
+    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    where
+        S: ToString + Display;
 
     /// Searches the tags list on a per-page way. It's relatively the fastest way, but subject to slowdowns since it needs
     /// to iter through all pages manually in order to fetch all posts.

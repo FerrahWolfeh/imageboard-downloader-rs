@@ -33,6 +33,7 @@ use cfg_if::cfg_if;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
+use std::fmt::Display;
 use std::io::{self, Write};
 use tokio::time::Instant;
 
@@ -54,19 +55,30 @@ pub struct MoebooruExtractor {
 
 #[async_trait]
 impl Extractor for MoebooruExtractor {
-    fn new(tags: &[String], safe_mode: bool, disable_blacklist: bool) -> Self {
+    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    where
+        S: ToString + Display,
+    {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Konachan.user_agent());
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
 
         // Set Safe mode status
         let safe_mode = safe_mode;
 
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+
         Self {
             client,
-            tags: tags.to_vec(),
+            tags: strvec,
             tag_string,
             safe_mode,
             disable_blacklist,

@@ -36,6 +36,7 @@ use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
+use std::fmt::Display;
 use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
@@ -59,20 +60,31 @@ pub struct GelbooruExtractor {
 #[async_trait]
 impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
-    fn new(tags: &[String], safe_mode: bool, disable_blacklist: bool) -> Self {
+    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    where
+        S: ToString + Display,
+    {
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()
             .user_agent(ImageBoards::Rule34.user_agent())
             .build()
             .unwrap();
 
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
         // Merge all tags in the URL format
-        let tag_string = join_tags!(tags);
+        let tag_string = join_tags!(strvec);
 
         Self {
             active_imageboard: ImageBoards::Rule34,
             client,
-            tags: tags.to_vec(),
+            tags: strvec,
             tag_string,
             disable_blacklist,
             total_removed: 0,
