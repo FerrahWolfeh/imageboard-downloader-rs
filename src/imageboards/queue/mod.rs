@@ -44,7 +44,6 @@
 use crate::imageboards::post::rating::Rating;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
-use ahash::AHashSet;
 use anyhow::Error;
 use colored::Colorize;
 use futures::StreamExt;
@@ -72,7 +71,6 @@ pub struct Queue {
     client: Client,
     limit: Option<usize>,
     cbz: bool,
-    user_blacklist: AHashSet<String>,
 }
 
 impl Queue {
@@ -96,7 +94,6 @@ impl Queue {
             sim_downloads,
             limit,
             client,
-            user_blacklist: posts.user_blacklist,
         }
     }
 
@@ -104,7 +101,6 @@ impl Queue {
     pub async fn download(
         &mut self,
         output: Option<PathBuf>,
-        disable_blacklist: bool,
         save_as_id: bool,
     ) -> Result<(), Error> {
         if let Some(max) = self.limit {

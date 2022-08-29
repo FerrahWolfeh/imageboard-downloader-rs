@@ -16,6 +16,9 @@ pub mod moebooru;
 
 mod error;
 
+#[cfg(feature = "global_blacklist")]
+pub mod blacklist;
+
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
 pub trait Extractor {

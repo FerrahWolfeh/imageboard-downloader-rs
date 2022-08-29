@@ -37,7 +37,7 @@ use std::io::{self, Write};
 use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
-use crate::imageboards::blacklist::GlobalBlacklist;
+use super::blacklist::GlobalBlacklist;
 
 use super::Extractor;
 
@@ -82,7 +82,6 @@ impl Extractor for MoebooruExtractor {
         let qw = PostQueue {
             posts,
             tags: self.tags.to_vec(),
-            user_blacklist: Default::default(),
         };
 
         Ok(qw)
@@ -138,7 +137,6 @@ impl Extractor for MoebooruExtractor {
         let fin = PostQueue {
             posts: fvec,
             tags: self.tags.to_vec(),
-            user_blacklist: Default::default(),
         };
 
         Ok(fin)
@@ -177,7 +175,7 @@ impl MoebooruExtractor {
             if #[cfg(feature = "global_blacklist")] {
                 let mut removed = 0;
                 let start = Instant::now();
-                let gbl = GlobalBlacklist::get().await.unwrap();
+                let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
                     if !tags.global.is_empty() {

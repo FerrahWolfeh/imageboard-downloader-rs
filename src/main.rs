@@ -138,8 +138,7 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    qw.download(args.output, args.disable_blacklist, args.save_file_as_id)
-        .await?;
+    qw.download(args.output, args.save_file_as_id).await?;
 
     Ok(())
 }

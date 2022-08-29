@@ -46,7 +46,7 @@ use super::error::ExtractorError;
 use super::{Auth, Extractor};
 
 #[cfg(feature = "global_blacklist")]
-use crate::imageboards::blacklist::GlobalBlacklist;
+use super::blacklist::GlobalBlacklist;
 
 pub mod models;
 
@@ -96,7 +96,6 @@ impl Extractor for E621Extractor {
         let qw = PostQueue {
             posts,
             tags: self.tags.to_vec(),
-            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
 
         Ok(qw)
@@ -155,7 +154,6 @@ impl Extractor for E621Extractor {
         let fin = PostQueue {
             posts: fvec,
             tags: self.tags.to_vec(),
-            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
 
         Ok(fin)
@@ -226,7 +224,7 @@ impl E621Extractor {
 
         cfg_if! {
             if #[cfg(feature = "global_blacklist")] {
-                let gbl = GlobalBlacklist::get().await.unwrap();
+                let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
                     if !tags.global.is_empty() {

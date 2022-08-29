@@ -43,7 +43,7 @@ use std::io::{self, Write};
 use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
-use crate::imageboards::blacklist::GlobalBlacklist;
+use super::blacklist::GlobalBlacklist;
 
 /// Main object to download posts
 #[derive(Debug)]
@@ -90,7 +90,6 @@ impl Extractor for DanbooruExtractor {
         let qw = PostQueue {
             posts,
             tags: self.tags.to_vec(),
-            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
 
         Ok(qw)
@@ -148,7 +147,6 @@ impl Extractor for DanbooruExtractor {
         let fin = PostQueue {
             posts: fvec,
             tags: self.tags.to_vec(),
-            user_blacklist: self.auth.user_data.blacklisted_tags.clone(),
         };
         Ok(fin)
     }
@@ -230,7 +228,7 @@ impl DanbooruExtractor {
 
         cfg_if! {
             if #[cfg(feature = "global_blacklist")] {
-                let gbl = GlobalBlacklist::get().await.unwrap();
+                let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
                     if !tags.global.is_empty() {

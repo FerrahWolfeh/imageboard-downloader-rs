@@ -42,7 +42,7 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
-use crate::imageboards::blacklist::GlobalBlacklist;
+use super::blacklist::GlobalBlacklist;
 
 use super::error::ExtractorError;
 use super::Extractor;
@@ -87,7 +87,6 @@ impl Extractor for GelbooruExtractor {
         let qw = PostQueue {
             posts,
             tags: self.tags.to_vec(),
-            user_blacklist: Default::default(),
         };
 
         Ok(qw)
@@ -146,7 +145,6 @@ impl Extractor for GelbooruExtractor {
         let fin = PostQueue {
             posts: fvec,
             tags: self.tags.to_vec(),
-            user_blacklist: Default::default(),
         };
 
         Ok(fin)
@@ -212,7 +210,7 @@ impl GelbooruExtractor {
             if #[cfg(feature = "global_blacklist")] {
                 let mut removed = 0;
                 let start = Instant::now();
-                let gbl = GlobalBlacklist::get().await.unwrap();
+                let gbl = GlobalBlacklist::get().await?;
 
                 if let Some(tags) = gbl.blacklist {
                     if !tags.global.is_empty() {

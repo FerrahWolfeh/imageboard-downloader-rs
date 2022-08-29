@@ -32,13 +32,15 @@
 use std::path::Path;
 
 use ahash::AHashSet;
-use anyhow::{Context, Error};
+use anyhow::Context;
 use directories::ProjectDirs;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio::fs::{create_dir_all, read_to_string, File};
 use tokio::io::AsyncWriteExt;
 use toml::from_str;
+
+use super::error::ExtractorError;
 
 const BF_INIT_TEXT: &[u8; 275] = br#"[blacklist]
 global = [] # Place in this array all the tags that will be excluded from all imageboards
@@ -78,7 +80,7 @@ pub struct GlobalBlacklist {
 impl GlobalBlacklist {
     /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
     /// or first run), it will be created.
-    pub async fn get() -> Result<Self, Error> {
+    pub async fn get() -> Result<Self, ExtractorError> {
         let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
 
         let cfold = cdir.config_dir();
@@ -95,8 +97,16 @@ impl GlobalBlacklist {
         }
 
         let gbl_string = read_to_string(&dir).await?;
-        let deserialized =
-            from_str::<Self>(&gbl_string).with_context(|| "Failed parsing the blacklist file.")?;
+        let deserialized = match from_str::<Self>(&gbl_string)
+            .with_context(|| "Failed parsing the blacklist file.")
+        {
+            Ok(data) => data,
+            Err(_) => {
+                return Err(ExtractorError::BlacklistDecodeError {
+                    path: dir.display().to_string(),
+                })
+            }
+        };
         debug!("Global blacklist decoded");
         Ok(deserialized)
     }

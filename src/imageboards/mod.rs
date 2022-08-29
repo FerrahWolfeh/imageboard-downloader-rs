@@ -17,9 +17,6 @@ pub mod extractors;
 pub mod post;
 pub mod queue;
 
-#[cfg(feature = "global_blacklist")]
-pub mod blacklist;
-
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 pub enum ImageBoards {

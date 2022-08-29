@@ -21,4 +21,13 @@ pub enum ExtractorError {
         #[from]
         source: AuthError,
     },
+
+    #[error("Error while reading Global blacklist file. error: {source}")]
+    BlacklistIOError {
+        #[from]
+        source: tokio::io::Error,
+    },
+
+    #[error("Failed to decode blacklist.toml in {path}")]
+    BlacklistDecodeError { path: String },
 }

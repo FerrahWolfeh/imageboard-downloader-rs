@@ -42,8 +42,6 @@ pub struct PostQueue {
     pub posts: Vec<Post>,
     /// The tags used to search the collected posts.
     pub tags: Vec<String>,
-    /// The user-defined blacklist in case the Extractor supports it. Will be empty if not
-    pub user_blacklist: AHashSet<String>,
 }
 
 /// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
