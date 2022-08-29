@@ -51,6 +51,7 @@ impl ImageBoards {
     /// Each variant can generate a specific user-agent to connect to the imageboard site.
     ///
     /// It will always follow the version declared inside ```Cargo.toml```
+    #[inline]
     pub fn user_agent(self) -> String {
         let app_name = "Rust Imageboard Downloader";
         let variant = match self {
@@ -68,6 +69,7 @@ impl ImageBoards {
     /// Will return ```Some``` with the endpoint for the total post count with given tags. In case it's used with another variant, it returns ```None```.
     ///
     /// The ```safe``` bool will determine if the endpoint directs to ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
+    #[inline]
     pub fn post_count_url(self, safe: bool) -> Option<&'static str> {
         match self {
             ImageBoards::Danbooru => {
@@ -86,6 +88,7 @@ impl ImageBoards {
     /// Will return ```None``` for still unimplemented imageboards.
     ///
     /// ```safe``` works only with ```Imageboards::Danbooru```, ```Imageboards::E621``` and ```Imageboards::Konachan``` since they are the only ones that have a safe variant for now.
+    #[inline]
     pub fn post_url(&self, safe: bool) -> Option<&str> {
         match self {
             ImageBoards::Danbooru => {
@@ -122,6 +125,7 @@ impl ImageBoards {
     }
 
     /// Returns max number of posts per page a imageboard can have
+    #[inline]
     pub fn max_post_limit(self) -> usize {
         match self {
             ImageBoards::Danbooru => 200,
@@ -134,6 +138,7 @@ impl ImageBoards {
     }
 
     /// Returns special-themed progress bar templates for each variant
+    #[inline]
     pub fn progress_template(self) -> BarTemplates {
         match self {
             ImageBoards::E621 => BarTemplates {
@@ -148,7 +153,8 @@ impl ImageBoards {
         }
     }
 
-    /// Returns the url used for validating the login input and parsing the user's profile.
+    /// Returns the url used for validating the login input and parsing the user`s profile.
+    #[inline]
     pub fn auth_url(self) -> &'static str {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
@@ -162,6 +168,7 @@ impl ImageBoards {
     /// This is XDG-compliant and saves cache files to
     /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux or
     /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
+    #[inline]
     pub fn auth_cache_dir() -> Result<PathBuf, io::Error> {
         let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
 
