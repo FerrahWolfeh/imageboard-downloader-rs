@@ -16,7 +16,7 @@
 //!     let mut ext = MoebooruExtractor::new(&tags, safe_mode, false); // Initialize the extractor
 //!
 //!     // Will iterate through all pages until it finds no more posts, then returns the list.
-//!     let posts = ext.full_search().await.unwrap();
+//!     let posts = ext.full_search(None, None).await.unwrap();
 //!
 //!     // Print all information collected
 //!     println!("{:?}", posts);
