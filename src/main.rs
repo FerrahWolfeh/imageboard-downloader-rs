@@ -92,7 +92,8 @@ async fn main() -> Result<(), Error> {
 
     let post_queue = match args.imageboard {
         ImageBoards::Danbooru => {
-            let mut unit = DanbooruExtractor::new(&args.tags, args.safe_mode);
+            let mut unit =
+                DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
             unit.auth(args.auth).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -101,7 +102,7 @@ async fn main() -> Result<(), Error> {
             posts
         }
         ImageBoards::E621 => {
-            let mut unit = E621Extractor::new(&args.tags, args.safe_mode);
+            let mut unit = E621Extractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
             unit.auth(args.auth).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -110,8 +111,8 @@ async fn main() -> Result<(), Error> {
             posts
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let mut unit =
-                GelbooruExtractor::new(&args.tags, false).set_imageboard(args.imageboard);
+            let mut unit = GelbooruExtractor::new(&args.tags, false, args.disable_blacklist)
+                .set_imageboard(args.imageboard);
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -119,7 +120,8 @@ async fn main() -> Result<(), Error> {
             posts
         }
         ImageBoards::Konachan => {
-            let mut unit = MoebooruExtractor::new(&args.tags, args.safe_mode);
+            let mut unit =
+                MoebooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

@@ -22,7 +22,8 @@ pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new(tags: &[String], safe_mode: bool) -> Self;
+    fn new(tags: &[String], safe_mode: bool, disable_blacklist: bool) -> Self;
+
     /// Searches the tags list on a per-page way. It's relatively the fastest way, but subject to slowdowns since it needs
     /// to iter through all pages manually in order to fetch all posts.
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError>;

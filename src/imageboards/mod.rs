@@ -17,6 +17,9 @@ pub mod extractors;
 pub mod post;
 pub mod queue;
 
+#[cfg(feature = "global_blacklist")]
+pub mod blacklist;
+
 /// All currently supported imageboards and their underlying attributes
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 pub enum ImageBoards {
@@ -140,7 +143,7 @@ impl ImageBoards {
                 main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} (eta. {eta})",
                 download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:.blue})",
             },
-            ImageBoards::Realbooru => BarTemplates { 
+            ImageBoards::Realbooru => BarTemplates {
                 main: "{spinner:.red.bold} {elapsed_precise:.bold} {wide_bar:.red/white.dim} {percent:.bold}  {pos:.bold} (eta. {eta})", 
                 download: "{spinner:.red.bold} {bar:40.red/white.dim} {percent:.bold} | {byte_progress:.bold.green} @ {bytes_per_sec:>13.red} (eta. {eta})",
             },

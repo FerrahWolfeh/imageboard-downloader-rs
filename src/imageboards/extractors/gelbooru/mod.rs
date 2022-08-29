@@ -31,6 +31,7 @@ use crate::{client, join_tags};
 use crate::{extract_ext_from_url, print_found};
 use ahash::AHashSet;
 use async_trait::async_trait;
+use cfg_if::cfg_if;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
@@ -40,6 +41,9 @@ use std::thread;
 use std::time::Duration;
 use tokio::time::Instant;
 
+#[cfg(feature = "global_blacklist")]
+use crate::imageboards::blacklist::GlobalBlacklist;
+
 use super::error::ExtractorError;
 use super::Extractor;
 
@@ -48,12 +52,14 @@ pub struct GelbooruExtractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
+    disable_blacklist: bool,
+    total_removed: u64,
 }
 
 #[async_trait]
 impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
-    fn new(tags: &[String], safe_mode: bool) -> Self {
+    fn new(tags: &[String], safe_mode: bool, disable_blacklist: bool) -> Self {
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()
             .user_agent(ImageBoards::Rule34.user_agent())
@@ -68,6 +74,8 @@ impl Extractor for GelbooruExtractor {
             client,
             tags: tags.to_vec(),
             tag_string,
+            disable_blacklist,
+            total_removed: 0,
         }
     }
 
@@ -103,11 +111,15 @@ impl Extractor for GelbooruExtractor {
                 page - 1
             };
 
-            let posts = Self::get_post_list(self, position).await?;
+            let mut posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
                 break;
+            }
+
+            if !self.disable_blacklist {
+                self.blacklist_filter(&mut posts).await?;
             }
 
             fvec.extend(posts);
@@ -153,6 +165,8 @@ impl GelbooruExtractor {
             client,
             tags: self.tags,
             tag_string: self.tag_string,
+            disable_blacklist: self.disable_blacklist,
+            total_removed: self.total_removed,
         }
     }
 
@@ -190,6 +204,47 @@ impl GelbooruExtractor {
         }
 
         Err(ExtractorError::InvalidServerResponse)
+    }
+
+    #[inline]
+    async fn blacklist_filter(&mut self, list: &mut Vec<Post>) -> Result<(), ExtractorError> {
+        cfg_if! {
+            if #[cfg(feature = "global_blacklist")] {
+                let mut removed = 0;
+                let start = Instant::now();
+                let gbl = GlobalBlacklist::get().await.unwrap();
+
+                if let Some(tags) = gbl.blacklist {
+                    if !tags.global.is_empty() {
+                        let fsize = list.len();
+                        debug!("Removing posts with tags [{:?}]", tags);
+                        list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
+
+                        let bp = fsize - list.len();
+                        debug!("Global blacklist removed {} posts", bp);
+                        removed += bp as u64;
+                    } else {
+                        debug!("Global blacklist is empty")
+                    }
+
+                    if !tags.danbooru.is_empty() {
+                        let fsize = list.len();
+                        debug!("Removing posts with tags [{:?}]", tags.danbooru);
+                        list.retain(|c| !c.tags.iter().any(|s| tags.danbooru.contains(s)));
+
+                        let bp = fsize - list.len();
+                        debug!("Danbooru blacklist removed {} posts", bp);
+                        removed += bp as u64;
+                    }
+                }
+
+                let end = Instant::now();
+                debug!("Blacklist filtering took {:?}", end - start);
+                debug!("Removed {} blacklisted posts", removed);
+                self.total_removed += removed;
+            }
+        }
+        Ok(())
     }
 
     // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one

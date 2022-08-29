@@ -46,7 +46,6 @@ use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use anyhow::Error;
-use cfg_if::cfg_if;
 use colored::Colorize;
 use futures::StreamExt;
 use log::debug;
@@ -57,16 +56,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
-use tokio::time::Instant;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
-
-#[cfg(feature = "global_blacklist")]
-pub mod blacklist;
-
-#[cfg(feature = "global_blacklist")]
-use self::blacklist::GlobalBlacklist;
 
 use super::post::PostQueue;
 
@@ -108,71 +100,6 @@ impl Queue {
         }
     }
 
-    async fn blacklist_filter(&mut self, disable: bool) -> Result<u64, Error> {
-        if disable {
-            debug!("Blacklist filtering disabled");
-            return Ok(0);
-        }
-
-        let original_size = self.list.len();
-        let blacklist = &self.user_blacklist;
-        let mut removed = 0;
-
-        let start = Instant::now();
-        if !blacklist.is_empty() {
-            self.list
-                .retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
-
-            let bp = original_size - self.list.len();
-            debug!("User blacklist removed {} posts", bp);
-            removed += bp as u64;
-        }
-
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                let gbl = GlobalBlacklist::get().await?;
-
-                if let Some(tags) = gbl.blacklist {
-                    if !tags.global.is_empty() {
-                        let fsize = self.list.len();
-                        debug!("Removing posts with tags [{:?}]", tags);
-                        self.list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
-
-                        let bp = fsize - self.list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    } else {
-                        debug!("Global blacklist is empty")
-                    }
-
-                    let special_tags = match self.imageboard {
-                        ImageBoards::Danbooru => tags.danbooru,
-                        ImageBoards::E621 => tags.e621,
-                        ImageBoards::Rule34 => tags.rule34,
-                        ImageBoards::Realbooru => tags.realbooru,
-                        ImageBoards::Konachan => tags.konachan,
-                        ImageBoards::Gelbooru => tags.gelbooru,
-                    };
-
-                    if !special_tags.is_empty() {
-                        let fsize = self.list.len();
-                        debug!("Removing posts with tags [{:?}]", special_tags);
-                        self.list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
-
-                        let bp = fsize - self.list.len();
-                        debug!("Danbooru blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
-                }
-            }
-        }
-        let end = Instant::now();
-        debug!("Blacklist filtering took {:?}", end - start);
-        debug!("Removed {} blacklisted posts", removed);
-
-        Ok(removed)
-    }
-
     /// Starts the download of all posts collected inside a [PostQueue]
     pub async fn download(
         &mut self,
@@ -180,8 +107,6 @@ impl Queue {
         disable_blacklist: bool,
         save_as_id: bool,
     ) -> Result<(), Error> {
-        let removed = Self::blacklist_filter(self, disable_blacklist).await?;
-
         if let Some(max) = self.limit {
             let l_len = self.list.len();
 
@@ -295,15 +220,15 @@ impl Queue {
             "downloaded".bold()
         );
 
-        if removed > 0 && self.limit.is_none() {
-            println!(
-                "{} {}",
-                removed.to_string().bold().red(),
-                "posts with blacklisted tags were not downloaded."
-                    .bold()
-                    .red()
-            )
-        }
+        // if removed > 0 && self.limit.is_none() {
+        //     println!(
+        //         "{} {}",
+        //         removed.to_string().bold().red(),
+        //         "posts with blacklisted tags were not downloaded."
+        //             .bold()
+        //             .red()
+        //     )
+        // }
 
         Ok(())
     }
