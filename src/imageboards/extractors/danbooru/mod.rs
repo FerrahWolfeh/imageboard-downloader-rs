@@ -131,6 +131,7 @@ impl Extractor for DanbooruExtractor {
             let size = posts.len();
 
             if size == 0 {
+                println!();
                 break;
             }
 
@@ -154,7 +155,6 @@ impl Extractor for DanbooruExtractor {
 
             print_found!(fvec);
         }
-        println!();
 
         let fin = PostQueue {
             posts: fvec,

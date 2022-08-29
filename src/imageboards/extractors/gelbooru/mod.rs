@@ -126,6 +126,7 @@ impl Extractor for GelbooruExtractor {
             let size = posts.len();
 
             if size == 0 {
+                println!();
                 break;
             }
 

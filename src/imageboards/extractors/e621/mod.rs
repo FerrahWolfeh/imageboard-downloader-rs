@@ -135,6 +135,7 @@ impl Extractor for E621Extractor {
             let size = posts.len();
 
             if size == 0 {
+                println!();
                 break;
             }
 

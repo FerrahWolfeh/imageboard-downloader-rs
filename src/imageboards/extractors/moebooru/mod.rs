@@ -121,6 +121,7 @@ impl Extractor for MoebooruExtractor {
             let size = posts.len();
 
             if size == 0 {
+                println!();
                 break;
             }
 
