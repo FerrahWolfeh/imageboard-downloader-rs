@@ -63,7 +63,6 @@ use zip::ZipWriter;
 use super::post::PostQueue;
 
 /// Struct where all the downloading and filtering will take place
-#[derive(Debug)]
 pub struct Queue {
     list: Vec<Post>,
     tag_s: String,
@@ -72,6 +71,7 @@ pub struct Queue {
     client: Client,
     limit: Option<usize>,
     cbz: bool,
+    zip_file: Option<Arc<Mutex<ZipWriter<File>>>>,
 }
 
 impl Queue {
@@ -95,6 +95,7 @@ impl Queue {
             sim_downloads,
             limit,
             client,
+            zip_file: None,
         }
     }
 
@@ -143,12 +144,21 @@ impl Queue {
 
             let zf = File::create(&output_file)?;
             let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
-            let z_mtx = zip.as_ref().unwrap();
+            self.zip_file = Some(zip.unwrap());
+
+            let zf = self.zip_file.clone().unwrap();
 
             {
                 let ap = serde_json::to_string_pretty(&self.list)?;
 
-                let mut z_1 = z_mtx.lock().unwrap();
+                let mut z_1 = zf.lock().unwrap();
+                z_1.set_comment(format!(
+                    "ImageBoard Downloader\n\nWebsite: {}\n\nTags: {}\n\nPosts: {}",
+                    self.imageboard.to_string(),
+                    self.tag_s,
+                    self.list.len()
+                ));
+
                 z_1.add_directory(Rating::Safe.to_string(), Default::default())?;
                 z_1.add_directory(Rating::Questionable.to_string(), Default::default())?;
                 z_1.add_directory(Rating::Explicit.to_string(), Default::default())?;
@@ -164,38 +174,20 @@ impl Queue {
                 z_1.write_all(ap.as_bytes())?;
             }
 
-            debug!("Fetching {} posts", self.list.len());
-
             for i in &self.list {
                 let post = i.clone();
                 let cli = self.client.clone();
                 let output = oc.clone();
-                let file = zip.clone();
+                let file = zf.clone();
                 let imgbrd = self.imageboard;
                 let counter = counters.clone();
 
                 let task = tokio::task::spawn(async move {
-                    post.get(&cli, &output, counter, imgbrd, save_as_id, file)
+                    post.get(&cli, &output, counter, imgbrd, save_as_id, Some(file))
                         .await
                 });
                 task_pool.push(task);
             }
-
-            futures::stream::iter(task_pool)
-                .map(|d| d)
-                .buffer_unordered(self.sim_downloads)
-                .collect::<Vec<_>>()
-                .await;
-
-            let mut zl = z_mtx.lock().unwrap();
-
-            zl.set_comment(format!(
-                "ImageBoard Downloader\n\nWebsite: {}\n\nTags: {}\n\nPosts: {}",
-                self.imageboard.to_string(),
-                self.tag_s,
-                self.list.len()
-            ));
-            zl.finish()?;
         } else {
             let output_dir = place.join(PathBuf::from(format!(
                 "{}/{}",
@@ -219,28 +211,21 @@ impl Queue {
                 });
                 task_pool.push(task);
             }
+        }
 
-            futures::stream::iter(task_pool)
-                .map(|d| d)
-                .buffer_unordered(self.sim_downloads)
-                .collect::<Vec<_>>()
-                .await;
+        debug!("Fetching {} posts", self.list.len());
 
-            // debug!("Fetching {} posts", self.list.len());
-            // futures::stream::iter(&self.list)
-            //     .map(|d| {
-            //         d.get(
-            //             &self.client,
-            //             &output_dir,
-            //             counters.clone(),
-            //             self.imageboard,
-            //             save_as_id,
-            //             None,
-            //         )
-            //     })
-            //     .buffer_unordered(self.sim_downloads)
-            //     .collect::<Vec<_>>()
-            //     .await;
+        futures::stream::iter(task_pool)
+            .map(|d| d)
+            .buffer_unordered(self.sim_downloads)
+            .collect::<Vec<_>>()
+            .await;
+
+        if self.cbz {
+            let file = self.zip_file.as_ref().unwrap();
+            let mut mtx = file.lock().unwrap();
+
+            mtx.finish()?;
         }
 
         counters.main.finish_and_clear();
