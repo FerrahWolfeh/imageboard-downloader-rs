@@ -97,11 +97,7 @@ impl ImageboardConfig {
 
         let url = match self.imageboard {
             ImageBoards::Danbooru => self.imageboard.auth_url().to_string(),
-            ImageBoards::E621 => format!(
-                "{}{}.json",
-                self.imageboard.auth_url(),
-                self.username
-            ),
+            ImageBoards::E621 => format!("{}{}.json", self.imageboard.auth_url(), self.username),
             _ => String::new(),
         };
 
@@ -143,7 +139,7 @@ impl ImageboardConfig {
     }
 
     /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
-    /// it in the directory provided by a `ImageBoards::Variant.auth_cache_dir()` method.
+    /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), AuthError> {
         let config_path =
             ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.to_string()));
