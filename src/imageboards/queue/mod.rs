@@ -55,6 +55,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
+use tokio::time::Instant;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
@@ -103,6 +104,8 @@ impl Queue {
         output: Option<PathBuf>,
         save_as_id: bool,
     ) -> Result<(), Error> {
+        let fstart = Instant::now();
+
         if let Some(max) = self.limit {
             let l_len = self.list.len();
 
@@ -110,6 +113,14 @@ impl Queue {
                 self.list = self.list[0..max].to_vec();
             }
         }
+
+        self.list.sort();
+
+        self.list.reverse();
+
+        let fend = Instant::now();
+
+        debug!("List final sorting took {:?}", fend - fstart);
 
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
