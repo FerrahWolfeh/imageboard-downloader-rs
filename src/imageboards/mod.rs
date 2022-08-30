@@ -148,21 +148,21 @@ impl ImageBoards {
         }
     }
 
-    /// Returns the url used for validating the login input and parsing the user`s profile.
+    /// Returns the url used for validating the login input and parsing the user's profile.
     pub fn auth_url(self) -> &'static str {
         match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
             ImageBoards::E621 => "https://e621.net/users/",
-            _ => todo!(),
+            _ => "",
         }
     }
 
-    /// Returns a `PathBuf` pointing to the imageboard`s authentication cache.
+    /// Returns a `PathBuf` pointing to the imageboard's authentication cache.
     ///
     /// This is XDG-compliant and saves cache files to
     /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux or
     /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
-    pub fn auth_cache_dir(self) -> Result<PathBuf, io::Error> {
+    pub fn auth_cache_dir() -> Result<PathBuf, io::Error> {
         let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
 
         let cfold = cdir.config_dir();
@@ -178,7 +178,7 @@ impl ImageBoards {
     ///
     /// Returns `None` if the file is corrupted or does not exist.
     pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, AuthError> {
-        let cfg_path = self.auth_cache_dir()?.join(PathBuf::from(self.to_string()));
+        let cfg_path = Self::auth_cache_dir()?.join(PathBuf::from(self.to_string()));
         if let Ok(config_auth) = read(&cfg_path).await {
             debug!("Authentication cache found");
 
@@ -197,17 +197,16 @@ impl ImageBoards {
                     );
                     Ok(None)
                 };
-            } else {
-                debug!("Failed to decompress authentication cache.");
-                debug!("Removing corrupted file");
-                remove_file(cfg_path).await?;
-                error!(
-                    "{}",
-                    "Auth cache is corrupted. Please authenticate again."
-                        .bold()
-                        .red()
-                );
             }
+            debug!("Failed to decompress authentication cache.");
+            debug!("Removing corrupted file");
+            remove_file(cfg_path).await?;
+            error!(
+                "{}",
+                "Auth cache is corrupted. Please authenticate again."
+                    .bold()
+                    .red()
+            );
         };
         debug!("Running without authentication");
         Ok(None)

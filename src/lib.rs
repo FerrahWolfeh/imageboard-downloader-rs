@@ -1,6 +1,6 @@
 //! # Imageboard Downloader
 //!
-//! imageboard_downloader is a CLI utility to bulk download images from popular imageboard (booru)
+//! A library and CLI utility to bulk download images from popular imageboard (booru)
 //! websites.
 //!
 //! This utility aims to be fast, portable and lightweigth while offering simultaneous downloads
