@@ -1,4 +1,4 @@
-//! Queue used specifically to download, filter and save posts found by an [Extractor](crate::imageboards::extractors).
+//! Queue used specifically to download, filter and save posts found by an [`Extractor`](crate::imageboards::extractors).
 //!
 //! # Example usage
 //!
@@ -104,7 +104,7 @@ impl Queue {
         }
     }
 
-    /// Starts the download of all posts collected inside a [PostQueue]
+    /// Starts the download of all posts collected inside a [`PostQueue`]
     pub async fn download(
         &mut self,
         output: Option<PathBuf>,
