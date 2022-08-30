@@ -119,6 +119,8 @@ impl Queue {
 
         let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
+        let mut task_pool = vec![];
+
         if self.cbz {
             let output_dir = place.join(PathBuf::from(self.imageboard.to_string()));
 
@@ -126,6 +128,7 @@ impl Queue {
             create_dir_all(&output_dir).await?;
 
             let output_file = output_dir.join(PathBuf::from(format!("{}.cbz", self.tag_s)));
+            let oc = output_file.clone();
 
             let zf = File::create(&output_file)?;
             let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
@@ -151,17 +154,24 @@ impl Queue {
             }
 
             debug!("Fetching {} posts", self.list.len());
-            futures::stream::iter(&self.list)
-                .map(|d| {
-                    d.get(
-                        &self.client,
-                        &output_file,
-                        counters.clone(),
-                        self.imageboard,
-                        save_as_id,
-                        zip.clone(),
-                    )
-                })
+
+            for i in &self.list {
+                let post = i.clone();
+                let cli = self.client.clone();
+                let output = oc.clone();
+                let file = zip.clone();
+                let imgbrd = self.imageboard;
+                let counter = counters.clone();
+
+                let task = tokio::task::spawn(async move {
+                    post.get(&cli, &output, counter, imgbrd, save_as_id, file)
+                        .await
+                });
+                task_pool.push(task);
+            }
+
+            futures::stream::iter(task_pool)
+                .map(|d| d)
                 .buffer_unordered(self.sim_downloads)
                 .collect::<Vec<_>>()
                 .await;
@@ -185,21 +195,41 @@ impl Queue {
             debug!("Target dir: {}", output_dir.display());
             create_dir_all(&output_dir).await?;
 
-            debug!("Fetching {} posts", self.list.len());
-            futures::stream::iter(&self.list)
-                .map(|d| {
-                    d.get(
-                        &self.client,
-                        &output_dir,
-                        counters.clone(),
-                        self.imageboard,
-                        save_as_id,
-                        None,
-                    )
-                })
+            for i in &self.list {
+                let post = i.clone();
+                let cli = self.client.clone();
+                let output = output_dir.clone();
+                let imgbrd = self.imageboard;
+                let counter = counters.clone();
+
+                let task = tokio::task::spawn(async move {
+                    post.get(&cli, &output, counter, imgbrd, save_as_id, None)
+                        .await
+                });
+                task_pool.push(task);
+            }
+
+            futures::stream::iter(task_pool)
+                .map(|d| d)
                 .buffer_unordered(self.sim_downloads)
                 .collect::<Vec<_>>()
                 .await;
+
+            // debug!("Fetching {} posts", self.list.len());
+            // futures::stream::iter(&self.list)
+            //     .map(|d| {
+            //         d.get(
+            //             &self.client,
+            //             &output_dir,
+            //             counters.clone(),
+            //             self.imageboard,
+            //             save_as_id,
+            //             None,
+            //         )
+            //     })
+            //     .buffer_unordered(self.sim_downloads)
+            //     .collect::<Vec<_>>()
+            //     .await;
         }
 
         counters.main.finish_and_clear();
