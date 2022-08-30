@@ -43,7 +43,11 @@ pub trait Extractor {
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError>;
 
-    fn client(&mut self, client: Client);
+    /// Consumes `self` and returns the used client for external use.
+    fn client(self) -> Client;
+
+    /// Get the total number of removed files by the internal blacklist.
+    fn total_removed(&self) -> u64;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

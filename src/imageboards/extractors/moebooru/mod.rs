@@ -26,15 +26,13 @@ use crate::imageboards::extractors::error::ExtractorError;
 use crate::imageboards::extractors::moebooru::models::KonachanPost;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
-use crate::{client, extract_ext_from_url, join_tags, print_found};
+use crate::{client, extract_ext_from_url, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
 use cfg_if::cfg_if;
-use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use std::fmt::Display;
-use std::io::{self, Write};
 use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
@@ -142,10 +140,7 @@ impl Extractor for MoebooruExtractor {
             }
 
             page += 1;
-
-            print_found!(fvec);
         }
-        println!();
 
         let fin = PostQueue {
             posts: fvec,
@@ -155,8 +150,12 @@ impl Extractor for MoebooruExtractor {
         Ok(fin)
     }
 
-    fn client(&mut self, client: Client) {
-        self.client = client;
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
     }
 }
 

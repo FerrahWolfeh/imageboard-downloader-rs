@@ -31,16 +31,14 @@ use super::{Auth, Extractor};
 use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
-use crate::{client, join_tags, print_found};
+use crate::{client, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
 use cfg_if::cfg_if;
-use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::fmt::Display;
-use std::io::{self, Write};
 use tokio::time::Instant;
 
 #[cfg(feature = "global_blacklist")]
@@ -152,8 +150,6 @@ impl Extractor for DanbooruExtractor {
             }
 
             page += 1;
-
-            print_found!(fvec);
         }
 
         let fin = PostQueue {
@@ -163,8 +159,12 @@ impl Extractor for DanbooruExtractor {
         Ok(fin)
     }
 
-    fn client(&mut self, client: Client) {
-        self.client = client;
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
     }
 }
 

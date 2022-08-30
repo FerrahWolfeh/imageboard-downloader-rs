@@ -30,18 +30,15 @@ use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
 use crate::imageboards::extractors::e621::models::E621TopLevel;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
-use crate::{client, join_tags, print_found};
+use crate::{client, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
 use cfg_if::cfg_if;
-use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use std::fmt::Display;
-use std::io::{self, Write};
-use std::thread;
 use std::time::Duration;
-use tokio::time::Instant;
+use tokio::time::{sleep, Instant};
 
 use super::error::ExtractorError;
 use super::{Auth, Extractor};
@@ -157,12 +154,10 @@ impl Extractor for E621Extractor {
 
             page += 1;
 
-            print_found!(fvec);
             // debounce
             debug!("Debouncing API calls by 500 ms");
-            thread::sleep(Duration::from_millis(500));
+            sleep(Duration::from_millis(500)).await;
         }
-        println!();
 
         let fin = PostQueue {
             posts: fvec,
@@ -172,8 +167,12 @@ impl Extractor for E621Extractor {
         Ok(fin)
     }
 
-    fn client(&mut self, client: Client) {
-        self.client = client;
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
     }
 }
 
