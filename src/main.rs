@@ -90,7 +90,7 @@ async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-    let post_queue = match args.imageboard {
+    let (post_queue, client) = match args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit =
                 DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            posts
+            (posts, unit.client())
         }
         ImageBoards::E621 => {
             let mut unit = E621Extractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            posts
+            (posts, unit.client())
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit = GelbooruExtractor::new(&args.tags, false, args.disable_blacklist)
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            posts
+            (posts, unit.client())
         }
         ImageBoards::Konachan => {
             let mut unit =
@@ -126,7 +126,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            posts
+            (posts, unit.client())
         }
     };
 
@@ -134,6 +134,7 @@ async fn main() -> Result<(), Error> {
         args.imageboard,
         post_queue,
         args.simultaneous_downloads,
+        Some(client),
         args.limit,
         args.cbz,
     );

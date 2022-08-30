@@ -80,12 +80,17 @@ impl Queue {
         imageboard: ImageBoards,
         posts: PostQueue,
         sim_downloads: usize,
+        custom_client: Option<Client>,
         limit: Option<usize>,
         save_as_cbz: bool,
     ) -> Self {
         let st = posts.tags.join(" ");
 
-        let client = client!(imageboard.user_agent());
+        let client = if let Some(cli) = custom_client {
+            cli
+        } else {
+            client!(imageboard.user_agent())
+        };
 
         Self {
             list: posts.posts,
