@@ -134,13 +134,16 @@ impl Queue {
         let mut task_pool = vec![];
 
         if self.cbz {
-            let output_dir = place.join(PathBuf::from(self.imageboard.to_string()));
+            let output_file = place.join(PathBuf::from(format!(
+                "{}/{}.cbz",
+                self.imageboard.to_string(),
+                self.tag_s
+            )));
 
-            debug!("Target file: {}/{}.cbz", output_dir.display(), self.tag_s);
-            create_dir_all(&output_dir).await?;
-
-            let output_file = output_dir.join(PathBuf::from(format!("{}.cbz", self.tag_s)));
             let oc = output_file.clone();
+
+            debug!("Target file: {}", output_file.display());
+            create_dir_all(&output_file.parent().unwrap()).await?;
 
             let zf = File::create(&output_file)?;
             let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
