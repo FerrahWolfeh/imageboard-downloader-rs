@@ -69,7 +69,6 @@ pub struct Queue {
     imageboard: ImageBoards,
     sim_downloads: usize,
     client: Client,
-    limit: Option<usize>,
     cbz: bool,
     zip_file: Option<Arc<Mutex<ZipWriter<File>>>>,
 }
@@ -92,13 +91,32 @@ impl Queue {
             client!(imageboard.user_agent())
         };
 
+        let fstart = Instant::now();
+
+        let mut plist = posts.posts;
+
+        if let Some(max) = limit {
+            let l_len = plist.len();
+
+            if max < l_len {
+                plist = plist[0..max].to_vec();
+            }
+        }
+
+        plist.sort();
+
+        plist.reverse();
+
+        let fend = Instant::now();
+
+        debug!("List final sorting took {:?}", fend - fstart);
+
         Self {
-            list: posts.posts,
+            list: plist,
             tag_s: st,
             cbz: save_as_cbz,
             imageboard,
             sim_downloads,
-            limit,
             client,
             zip_file: None,
         }
@@ -110,24 +128,6 @@ impl Queue {
         output: Option<PathBuf>,
         save_as_id: bool,
     ) -> Result<(), Error> {
-        let fstart = Instant::now();
-
-        if let Some(max) = self.limit {
-            let l_len = self.list.len();
-
-            if max < l_len {
-                self.list = self.list[0..max].to_vec();
-            }
-        }
-
-        self.list.sort();
-
-        self.list.reverse();
-
-        let fend = Instant::now();
-
-        debug!("List final sorting took {:?}", fend - fstart);
-
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
             None => std::env::current_dir()?,
@@ -136,7 +136,27 @@ impl Queue {
 
         let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
-        let mut task_pool = vec![];
+        let output_place = if self.cbz {
+            let output_file = place.join(PathBuf::from(format!(
+                "{}/{}.cbz",
+                self.imageboard.to_string(),
+                self.tag_s
+            )));
+
+            debug!("Target file: {}", output_file.display());
+            create_dir_all(&output_file.parent().unwrap()).await?;
+            output_file
+        } else {
+            let output_dir = place.join(PathBuf::from(format!(
+                "{}/{}",
+                self.imageboard.to_string(),
+                self.tag_s
+            )));
+
+            debug!("Target dir: {}", output_dir.display());
+            create_dir_all(&output_dir).await?;
+            output_dir
+        };
 
         if self.cbz {
             let output_file = place.join(PathBuf::from(format!(
@@ -144,8 +164,6 @@ impl Queue {
                 self.imageboard.to_string(),
                 self.tag_s
             )));
-
-            let oc = output_file.clone();
 
             debug!("Target file: {}", output_file.display());
             create_dir_all(&output_file.parent().unwrap()).await?;
@@ -181,50 +199,24 @@ impl Queue {
 
                 z_1.write_all(ap.as_bytes())?;
             }
-
-            for i in &self.list {
-                let post = i.clone();
-                let cli = self.client.clone();
-                let output = oc.clone();
-                let file = zf.clone();
-                let imgbrd = self.imageboard;
-                let counter = counters.clone();
-
-                let task = tokio::task::spawn(async move {
-                    post.get(&cli, &output, counter, imgbrd, save_as_id, Some(file))
-                        .await
-                });
-                task_pool.push(task);
-            }
-        } else {
-            let output_dir = place.join(PathBuf::from(format!(
-                "{}/{}",
-                self.imageboard.to_string(),
-                self.tag_s
-            )));
-
-            debug!("Target dir: {}", output_dir.display());
-            create_dir_all(&output_dir).await?;
-
-            for i in &self.list {
-                let post = i.clone();
-                let cli = self.client.clone();
-                let output = output_dir.clone();
-                let imgbrd = self.imageboard;
-                let counter = counters.clone();
-
-                let task = tokio::task::spawn(async move {
-                    post.get(&cli, &output, counter, imgbrd, save_as_id, None)
-                        .await
-                });
-                task_pool.push(task);
-            }
         }
 
         debug!("Fetching {} posts", self.list.len());
 
-        futures::stream::iter(task_pool)
-            .map(|d| d)
+        futures::stream::iter(&self.list)
+            .map(|d| {
+                let post = d.clone();
+                let cli = self.client.clone();
+                let output = output_place.clone();
+                let imgbrd = self.imageboard;
+                let counter = counters.clone();
+                let selfe = self.zip_file.clone();
+
+                tokio::task::spawn(async move {
+                    post.get(&cli, &output, counter, imgbrd, save_as_id, selfe)
+                        .await
+                })
+            })
             .buffer_unordered(self.sim_downloads)
             .collect::<Vec<_>>()
             .await;
