@@ -138,11 +138,11 @@ impl ImageBoards {
         match self {
             ImageBoards::E621 => BarTemplates {
                 main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} (eta. {eta})",
-                download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:.blue})",
+                download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:21.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:<4.blue})",
             },
             ImageBoards::Realbooru => BarTemplates {
                 main: "{spinner:.red.bold} {elapsed_precise:.bold} {wide_bar:.red/white.dim} {percent:.bold}  {pos:.bold} (eta. {eta})", 
-                download: "{spinner:.red.bold} {bar:40.red/white.dim} {percent:.bold} | {byte_progress:.bold.green} @ {bytes_per_sec:>13.red} (eta. {eta})",
+                download: "{spinner:.red.bold} {bar:40.red/white.dim} {percent:.bold} | {byte_progress:21.bold.green} @ {bytes_per_sec:>13.red} (eta. {eta:<4})",
             },
             _ => BarTemplates::default(),
         }

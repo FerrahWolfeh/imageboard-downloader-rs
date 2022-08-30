@@ -20,7 +20,7 @@ impl Default for BarTemplates {
     fn default() -> Self {
         Self {
             main: "{spinner:.green.bold} {elapsed_precise:.bold} {wide_bar:.green/white.dim} {percent:.bold}  {pos:.green} (eta. {eta:.blue})",
-            download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} | {byte_progress:.green} @ {bytes_per_sec:>13.red} (eta. {eta:.blue})",
+            download: "{spinner:.green.bold} {bar:40.green/white.dim} {percent:.bold} | {byte_progress:21.green} @ {bytes_per_sec:>13.red} (eta. {eta:<4.blue})",
         }
     }
 }
