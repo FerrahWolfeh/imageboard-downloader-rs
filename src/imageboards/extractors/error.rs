@@ -4,7 +4,7 @@ use crate::imageboards::auth::AuthError;
 
 #[derive(Error, Debug)]
 pub enum ExtractorError {
-    #[error("Too many tags, got: {current} while this imageboard supports a max of {max}")]
+    #[error("Too many tags, got: {current} while this imageboard only supports a max of {max}")]
     TooManyTags { current: usize, max: u64 },
 
     #[error("No posts found for tag selection")]
