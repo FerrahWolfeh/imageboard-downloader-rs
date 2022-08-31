@@ -45,7 +45,6 @@ use crate::imageboards::post::rating::Rating;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use anyhow::Error;
-use colored::Colorize;
 use futures::StreamExt;
 use log::debug;
 use reqwest::Client;
@@ -128,7 +127,7 @@ impl Queue {
         &mut self,
         output: Option<PathBuf>,
         save_as_id: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<u64, Error> {
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
             None => std::env::current_dir()?,
@@ -230,29 +229,9 @@ impl Queue {
         }
 
         counters.main.finish_and_clear();
-        println!(
-            "{} {} {}",
-            counters
-                .downloaded_mtx
-                .lock()
-                .unwrap()
-                .to_string()
-                .bold()
-                .blue(),
-            "files".bold().blue(),
-            "downloaded".bold()
-        );
 
-        // if removed > 0 && self.limit.is_none() {
-        //     println!(
-        //         "{} {}",
-        //         removed.to_string().bold().red(),
-        //         "posts with blacklisted tags were not downloaded."
-        //             .bold()
-        //             .red()
-        //     )
-        // }
+        let tot = counters.downloaded_mtx.lock().unwrap();
 
-        Ok(())
+        Ok(*tot)
     }
 }

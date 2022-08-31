@@ -1,8 +1,9 @@
 use anyhow::Error;
 use clap::Parser;
+use colored::Colorize;
 use imageboard_downloader::*;
 use log::debug;
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 extern crate tokio;
 
@@ -31,11 +32,11 @@ struct Cli {
     #[clap(
         short = 'd',
         value_name = "NUMBER",
-        value_parser,
+        value_parser(clap::value_parser!(u64).range(1..=20)),
         default_value_t = 3,
         help_heading = "DOWNLOAD"
     )]
-    simultaneous_downloads: usize,
+    simultaneous_downloads: u64,
 
     /// Authenticate to the imageboard website.
     ///
@@ -90,7 +91,14 @@ async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-    let (post_queue, client) = match args.imageboard {
+    print!(
+        "{}{}",
+        "Scanning for posts, please wait".bold(),
+        "...".bold().blink()
+    );
+    std::io::stdout().flush()?;
+
+    let (post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit =
                 DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -99,7 +107,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            (posts, unit.client())
+            (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::E621 => {
             let mut unit = E621Extractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -108,7 +116,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            (posts, unit.client())
+            (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit = GelbooruExtractor::new(&args.tags, false, args.disable_blacklist)
@@ -117,7 +125,7 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            (posts, unit.client())
+            (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::Konachan => {
             let mut unit =
@@ -126,20 +134,40 @@ async fn main() -> Result<(), Error> {
 
             debug!("Collected {} valid posts", posts.posts.len());
 
-            (posts, unit.client())
+            (posts, unit.total_removed(), unit.client())
         }
     };
 
     let mut qw = Queue::new(
         args.imageboard,
         post_queue,
-        args.simultaneous_downloads,
+        args.simultaneous_downloads as usize,
         Some(client),
         args.limit,
         args.cbz,
     );
 
-    qw.download(args.output, args.save_file_as_id).await?;
+    print!("\r");
+    std::io::stdout().flush()?;
+
+    let total_down = qw.download(args.output, args.save_file_as_id).await?;
+
+    println!(
+        "{} {} {}",
+        total_down.to_string().bold().blue(),
+        "files".bold().blue(),
+        "downloaded".bold()
+    );
+
+    if total_black > 0 {
+        println!(
+            "{} {}",
+            total_black.to_string().bold().red(),
+            "posts with blacklisted tags were not downloaded."
+                .bold()
+                .red()
+        )
+    }
 
     Ok(())
 }

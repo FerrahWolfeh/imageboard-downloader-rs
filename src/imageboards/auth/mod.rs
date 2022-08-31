@@ -1,7 +1,4 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
-use std::io::{self, Write};
-use std::path::Path;
-
 use crate::ImageBoards;
 use ahash::AHashSet;
 use bincode::serialize;
@@ -9,6 +6,8 @@ use colored::Colorize;
 use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::io::{self, Write};
+use std::path::Path;
 use thiserror::Error;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
