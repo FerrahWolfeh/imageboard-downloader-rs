@@ -55,6 +55,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
+use tokio::task;
 use tokio::time::Instant;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
@@ -212,7 +213,7 @@ impl Queue {
                 let counter = counters.clone();
                 let selfe = self.zip_file.clone();
 
-                tokio::task::spawn(async move {
+                task::spawn(async move {
                     post.get(&cli, &output, counter, imgbrd, save_as_id, selfe)
                         .await
                 })

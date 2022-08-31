@@ -28,6 +28,7 @@ use tokio::{
     fs::{self, read, OpenOptions},
     io::AsyncWriteExt,
     io::BufWriter,
+    task::spawn_blocking,
 };
 use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
@@ -199,6 +200,8 @@ impl Post {
 
             let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 
+            let arr = Arc::new(self.clone());
+
             while let Some(item) = stream.next().await {
                 // Retrieve chunk.
                 let mut chunk = match item {
@@ -213,18 +216,29 @@ impl Post {
                 buf.write_all_buf(&mut chunk).await?;
             }
 
-            let mut un_mut = zf.lock().unwrap();
-            un_mut.start_file(
-                format!(
-                    "{}/{}.{}",
-                    self.rating.to_string(),
-                    self.md5,
-                    self.extension
-                ),
-                options,
-            )?;
+            let ite = arr.clone();
 
-            un_mut.write_all(buf.buffer())?;
+            let file_name = output.file_stem().unwrap().to_str().unwrap().to_string();
+
+            spawn_blocking(move || -> Result<(), Error> {
+                let mut un_mut = zf.lock().unwrap();
+
+                let data = ite;
+
+                un_mut.start_file(
+                    format!(
+                        "{}/{}.{}",
+                        data.rating.to_string(),
+                        file_name,
+                        data.extension
+                    ),
+                    options,
+                )?;
+
+                un_mut.write_all(buf.buffer())?;
+                Ok(())
+            })
+            .await??;
         } else {
             let mut file = OpenOptions::new()
                 .append(true)
