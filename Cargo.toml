@@ -72,3 +72,10 @@ lto = false
 opt-level = 3
 strip = true
 debug = false
+
+[profile.opttest]
+inherits = "release"
+lto = false
+opt-level = 3
+strip = false
+debug = true
