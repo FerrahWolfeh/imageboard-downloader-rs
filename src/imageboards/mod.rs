@@ -96,6 +96,7 @@ impl ImageBoards {
         }
     }
 
+    /// Returns `true` if the imageboard has a user-defined blacklist and thus, authentication support.
     #[inline]
     pub fn has_native_blacklist(self) -> bool {
         matches!(self, Self::Danbooru | Self::E621)
