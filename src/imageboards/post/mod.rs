@@ -128,26 +128,35 @@ impl Post {
         let md5_name = format!("{}.{}", self.md5, self.extension);
 
         let name = if name_id { &id_name } else { &md5_name };
+        let inv_name = if name_id { &md5_name } else { &id_name };
 
         let raw_path = output.parent().unwrap();
 
         let mut file_is_same = false;
 
         let actual = if output.exists() {
+            debug!("File {} found.", &name);
             output.to_path_buf()
         } else if name_id {
+            debug!("File {} not found.", &name);
+            debug!("Trying possibly matching file: {}", &md5_name);
             file_is_same = true;
             raw_path.join(Path::new(&md5_name))
         } else {
+            debug!("File {} not found.", &name);
+            debug!("Trying possibly matching file: {}", &id_name);
             file_is_same = true;
             raw_path.join(Path::new(&id_name))
         };
 
         if actual.exists() {
+            debug!("Checking MD5 sum of {}.", inv_name);
             let file_digest = compute(read(&actual).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
+                debug!("MD5 matches. File is OK.");
                 if file_is_same {
+                    debug!("Found similar file in directory, renaming.");
                     match counters.multi.println(format!(
                         "{} {} {}",
                         "A file similar to".bold().green(),
@@ -170,6 +179,7 @@ impl Post {
                     *counters.total_mtx.lock().unwrap() += 1;
                     return Err(PostError::CorrectFileExists);
                 } else {
+                    debug!("Skipping download.");
                     match counters.multi.println(format!(
                         "{} {} {}",
                         "File".bold().green(),
@@ -190,6 +200,9 @@ impl Post {
                 }
             }
 
+            debug!("MD5 doesn't match, File might be corrupted");
+            debug!("Expected: {}, got: {}", self.md5, hash);
+            debug!("Removing file...");
             fs::remove_file(&output).await?;
             counters.multi.println(format!(
                 "{} {} {}",
@@ -227,13 +240,14 @@ impl Post {
         }
 
         let size = res.content_length().unwrap_or_default();
+
+        debug!("Remote file is {:.2} KB", size as f32 / 1024.0);
+
         let bar = ProgressBar::new(size)
             .with_style(download_progress_style(&variant.progress_template()));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
         let pb = counters.multi.add(bar);
-
-        debug!("Creating destination file {:?}", &output);
 
         // Download the file chunk by chunk.
         debug!("Retrieving chunks...");
@@ -273,6 +287,7 @@ impl Post {
 
                 let data = ite;
 
+                debug!("Writing {}.{} to cbz file", file_name, data.extension);
                 un_mut.start_file(
                     format!(
                         "{}/{}.{}",
@@ -288,6 +303,7 @@ impl Post {
             })
             .await??;
         } else {
+            debug!("Creating {:?}", &output);
             let mut file = OpenOptions::new()
                 .append(true)
                 .create(true)
