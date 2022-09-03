@@ -130,6 +130,34 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Test PostRenamer",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "kurobe_natsumi_(shiromanta)",
+                "-l",
+                "50",
+                "-i",
+                "danbooru",
+                "-o",
+                "/mnt/Mass/Media/Imageboards",
+                "-d",
+                "1"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Test Realbooru",
             "cargo": {
                 "args": [
