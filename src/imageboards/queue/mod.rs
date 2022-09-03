@@ -44,7 +44,6 @@
 use crate::imageboards::post::rating::Rating;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
-use anyhow::Error;
 use futures::StreamExt;
 use log::debug;
 use reqwest::Client;
@@ -60,7 +59,11 @@ use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
 
+use self::error::QueueError;
+
 use super::post::PostQueue;
+
+mod error;
 
 /// Struct where all the downloading and filtering will take place
 pub struct Queue {
@@ -127,10 +130,13 @@ impl Queue {
         &mut self,
         output: Option<PathBuf>,
         save_as_id: bool,
-    ) -> Result<u64, Error> {
+    ) -> Result<u64, QueueError> {
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
-            None => std::env::current_dir()?,
+            None => match std::env::current_dir() {
+                Ok(result) => result,
+                Err(reason) => return Err(QueueError::EnvError { source: reason }),
+            },
             Some(dir) => dir,
         };
 
@@ -144,7 +150,14 @@ impl Queue {
             )));
 
             debug!("Target file: {}", output_file.display());
-            create_dir_all(&output_file.parent().unwrap()).await?;
+            match create_dir_all(&output_file.parent().unwrap()).await {
+                Ok(_) => (),
+                Err(error) => {
+                    return Err(QueueError::DirCreationError {
+                        message: error.to_string(),
+                    })
+                }
+            };
             output_file
         } else {
             let output_dir = place.join(PathBuf::from(format!(
@@ -154,7 +167,14 @@ impl Queue {
             )));
 
             debug!("Target dir: {}", output_dir.display());
-            create_dir_all(&output_dir).await?;
+            match create_dir_all(&output_dir).await {
+                Ok(_) => (),
+                Err(error) => {
+                    return Err(QueueError::DirCreationError {
+                        message: error.to_string(),
+                    })
+                }
+            };
             output_dir
         };
 

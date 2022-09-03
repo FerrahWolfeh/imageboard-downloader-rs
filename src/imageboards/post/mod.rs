@@ -9,7 +9,6 @@ use crate::{
     ImageBoards,
 };
 use ahash::AHashSet;
-use anyhow::{bail, Error};
 use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{ProgressBar, ProgressDrawTarget};
@@ -32,8 +31,9 @@ use tokio::{
 };
 use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
-use self::rating::Rating;
+use self::{error::PostError, rating::Rating};
 
+mod error;
 pub mod rating;
 
 /// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
@@ -101,7 +101,7 @@ impl Post {
         variant: ImageBoards,
         name_id: bool,
         zip: Option<Arc<Mutex<ZipWriter<File>>>>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), PostError> {
         let name = if name_id {
             self.id.to_string()
         } else {
@@ -123,7 +123,7 @@ impl Post {
         output: &Path,
         counters: Arc<ProgressCounter>,
         name_id: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), PostError> {
         if output.exists() {
             let name = if name_id {
                 self.id.to_string()
@@ -133,15 +133,23 @@ impl Post {
             let file_digest = compute(read(&output).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
-                counters.multi.println(format!(
+                match counters.multi.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
                     format!("{}.{}", &name, &self.extension).bold().green(),
                     "already exists. Skipping.".bold().green()
-                ))?;
+                )) {
+                    Ok(_) => (),
+                    Err(error) => {
+                        return Err(PostError::ProgressBarPrintFail {
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
                 counters.main.inc(1);
                 *counters.total_mtx.lock().unwrap() += 1;
-                bail!("")
+                return Err(PostError::CorrectFileExists);
             }
 
             fs::remove_file(&output).await?;
@@ -165,7 +173,7 @@ impl Post {
         output: &Path,
         variant: ImageBoards,
         zip: Option<Arc<Mutex<ZipWriter<File>>>>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), PostError> {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
 
@@ -177,7 +185,7 @@ impl Post {
                 ". Skipping download.".bold().red()
             ))?;
             counters.main.inc(1);
-            bail!("Post is valid but original file doesn't exist")
+            return Err(PostError::RemoteFileNotFound);
         }
 
         let size = res.content_length().unwrap_or_default();
@@ -207,7 +215,9 @@ impl Post {
                 let mut chunk = match item {
                     Ok(chunk) => chunk,
                     Err(e) => {
-                        bail!(e)
+                        return Err(PostError::ChunkDownloadFail {
+                            message: e.to_string(),
+                        })
                     }
                 };
                 pb.inc(chunk.len() as u64);
@@ -220,7 +230,7 @@ impl Post {
 
             let file_name = output.file_stem().unwrap().to_str().unwrap().to_string();
 
-            spawn_blocking(move || -> Result<(), Error> {
+            spawn_blocking(move || -> Result<(), PostError> {
                 let mut un_mut = zf.lock().unwrap();
 
                 let data = ite;
@@ -251,18 +261,15 @@ impl Post {
                 let mut chunk = match item {
                     Ok(chunk) => chunk,
                     Err(e) => {
-                        bail!(e)
+                        return Err(PostError::ChunkDownloadFail {
+                            message: e.to_string(),
+                        })
                     }
                 };
                 pb.inc(chunk.len() as u64);
 
                 // Write to file.
-                match file.write_all_buf(&mut chunk).await {
-                    Ok(_res) => (),
-                    Err(e) => {
-                        bail!(e);
-                    }
-                };
+                file.write_all_buf(&mut chunk).await?;
             }
         }
 
