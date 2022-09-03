@@ -73,7 +73,9 @@ struct Cli {
     #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
     disable_blacklist: bool,
 
-    /// Save posts inside a cbz file
+    /// Save posts inside a cbz file.
+    ///
+    /// Will always overwrite the destination file.
     #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
     cbz: bool,
 
