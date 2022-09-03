@@ -86,9 +86,9 @@ impl GlobalBlacklist {
     /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
     /// or first run), it will be created.
     pub async fn get() -> Result<Self, ExtractorError> {
-        let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+        let cache_dir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
 
-        let cfold = cdir.config_dir();
+        let cfold = cache_dir.config_dir();
 
         if !cfold.exists() {
             create_dir_all(cfold).await?;
@@ -153,7 +153,9 @@ pub async fn blacklist_filter(
             let gbl = GlobalBlacklist::get().await?;
 
             if let Some(tags) = gbl.blacklist {
-                if !tags.global.is_empty() {
+                if tags.global.is_empty() {
+                    debug!("Global blacklist is empty");
+                } else {
                     let fsize = list.len();
                     debug!("Removing posts with tags [{:?}]", tags);
                     list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
@@ -161,8 +163,6 @@ pub async fn blacklist_filter(
                     let bp = fsize - list.len();
                     debug!("Global blacklist removed {} posts", bp);
                     removed += bp as u64;
-                } else {
-                    debug!("Global blacklist is empty")
                 }
 
                 let special_tags = match imageboard {

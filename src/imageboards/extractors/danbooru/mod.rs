@@ -2,30 +2,8 @@
 //!
 //! The danbooru extractor has the following features:
 //! - Authentication
-//! - Tag blacklist (defined in user profile page)
-//! - Native safe mode (don't download NSFW posts)
+//! - Native blacklist (defined in user profile page)
 //!
-//! # Example basic usage
-//!
-//! ```rust
-//! use imageboard_downloader::*;
-//!
-//! async fn fetch_posts() {
-//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
-//!     
-//!     let safe_mode = true; // Set to true to download posts from safebooru
-//!
-//!     let mut ext = DanbooruExtractor::new(&tags, safe_mode); // Initialize the extractor
-//!
-//!     ext.auth(true);
-//!
-//!     // Will iterate through all pages until it finds no more posts, then returns the list.
-//!     let posts = ext.full_search().await.unwrap();
-//!
-//!     // Print all information collected
-//!     println!("{:?}", posts);
-//! }
-//! ```
 use super::error::ExtractorError;
 use super::{Auth, Extractor};
 use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
@@ -82,7 +60,7 @@ impl Extractor for DanbooruExtractor {
             tags: strvec,
             tag_string,
             auth_state: false,
-            auth: Default::default(),
+            auth: ImageboardConfig::default(),
             safe_mode,
             disable_blacklist,
             total_removed: 0,
@@ -96,7 +74,7 @@ impl Extractor for DanbooruExtractor {
 
         let qw = PostQueue {
             posts,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
 
         Ok(qw)
@@ -157,7 +135,7 @@ impl Extractor for DanbooruExtractor {
 
         let fin = PostQueue {
             posts: fvec,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
         Ok(fin)
     }

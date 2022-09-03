@@ -32,11 +32,11 @@ struct Cli {
     #[clap(
         short = 'd',
         value_name = "NUMBER",
-        value_parser(clap::value_parser!(u64).range(1..=20)),
+        value_parser(clap::value_parser!(u8).range(1..=20)),
         default_value_t = 3,
         help_heading = "DOWNLOAD"
     )]
-    simultaneous_downloads: u64,
+    simultaneous_downloads: u8,
 
     /// Authenticate to the imageboard website.
     ///
@@ -145,7 +145,7 @@ async fn main() -> Result<(), Error> {
     let mut qw = Queue::new(
         args.imageboard,
         post_queue,
-        args.simultaneous_downloads as usize,
+        args.simultaneous_downloads,
         Some(client),
         args.limit,
         args.cbz,
@@ -170,7 +170,7 @@ async fn main() -> Result<(), Error> {
             "posts with blacklisted tags were not downloaded."
                 .bold()
                 .red()
-        )
+        );
     }
 
     Ok(())

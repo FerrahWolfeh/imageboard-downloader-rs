@@ -1,7 +1,7 @@
 //! Main representation of a imageboard post
 //!
 //! # Post
-//! A [Post struct](Post) is a generic representation of an imageboard post.
+//! A [`Post` struct](Post) is a generic representation of an imageboard post.
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
     ImageBoards,
 };
 use ahash::AHashSet;
+use bytesize::ByteSize;
 use colored::Colorize;
 use futures::StreamExt;
 use indicatif::{ProgressBar, ProgressDrawTarget};
@@ -178,26 +179,25 @@ impl Post {
                     counters.main.inc(1);
                     *counters.total_mtx.lock().unwrap() += 1;
                     return Err(PostError::CorrectFileExists);
-                } else {
-                    debug!("Skipping download.");
-                    match counters.multi.println(format!(
-                        "{} {} {}",
-                        "File".bold().green(),
-                        name.bold().blue().italic(),
-                        "already exists. Skipping.".bold().green()
-                    )) {
-                        Ok(_) => (),
-                        Err(error) => {
-                            return Err(PostError::ProgressBarPrintFail {
-                                message: error.to_string(),
-                            })
-                        }
-                    };
-
-                    counters.main.inc(1);
-                    *counters.total_mtx.lock().unwrap() += 1;
-                    return Err(PostError::CorrectFileExists);
                 }
+                debug!("Skipping download.");
+                match counters.multi.println(format!(
+                    "{} {} {}",
+                    "File".bold().green(),
+                    name.bold().blue().italic(),
+                    "already exists. Skipping.".bold().green()
+                )) {
+                    Ok(_) => (),
+                    Err(error) => {
+                        return Err(PostError::ProgressBarPrintFail {
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
+                counters.main.inc(1);
+                *counters.total_mtx.lock().unwrap() += 1;
+                return Err(PostError::CorrectFileExists);
             }
 
             debug!("MD5 doesn't match, File might be corrupted");
@@ -241,7 +241,7 @@ impl Post {
 
         let size = res.content_length().unwrap_or_default();
 
-        debug!("Remote file is {:.2} KB", size as f32 / 1024.0);
+        debug!("Remote file is {}", ByteSize::b(size).to_string_as(true));
 
         let bar = ProgressBar::new(size)
             .with_style(download_progress_style(&variant.progress_template()));
@@ -254,9 +254,9 @@ impl Post {
         let mut stream = res.bytes_stream();
 
         if let Some(zf) = zip {
-            let fvec: Vec<u8> = Vec::with_capacity(size as usize);
+            let fvec: Vec<u8> = Vec::with_capacity(size.try_into()?);
 
-            let mut buf = BufWriter::with_capacity(size as usize, fvec);
+            let mut buf = BufWriter::with_capacity(size.try_into()?, fvec);
 
             let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 

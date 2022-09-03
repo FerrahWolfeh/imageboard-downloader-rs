@@ -108,10 +108,8 @@ impl ImageBoards {
         match self {
             ImageBoards::Danbooru => 200,
             ImageBoards::E621 => 320,
-            ImageBoards::Rule34 => 1000,
-            ImageBoards::Realbooru => 1000,
-            ImageBoards::Konachan => 100,
-            ImageBoards::Gelbooru => 100,
+            ImageBoards::Rule34 | ImageBoards::Realbooru => 1000,
+            ImageBoards::Konachan | ImageBoards::Gelbooru => 100,
         }
     }
 
@@ -131,7 +129,7 @@ impl ImageBoards {
         }
     }
 
-    /// Returns the url used for validating the login input and parsing the user`s profile.
+    /// Returns the url used for validating the login input and parsing the user's profile.
     #[inline]
     pub fn auth_url(self) -> &'static str {
         match self {

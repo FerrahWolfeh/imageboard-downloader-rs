@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, num::TryFromIntError};
 
 use thiserror::Error;
 use tokio::task;
@@ -40,4 +40,7 @@ pub enum PostError {
         #[from]
         source: zip::result::ZipError,
     },
+
+    #[error("Int conversion failed (maybe size is too large?)")]
+    IntConversion(#[from] TryFromIntError),
 }

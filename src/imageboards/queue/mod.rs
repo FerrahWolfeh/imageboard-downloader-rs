@@ -2,21 +2,30 @@
 //!
 //! # Example usage
 //!
+//! Conveniently using the same example from [here](crate::imageboards::extractors)
+//!
 //! ```rust
 //! use imageboard_downloader::*;
 //! use std::path::PathBuf;
 //!
 //! async fn download_posts() {
-//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
+//!     let tags = ["umbreon", "espeon"]; // The tags to search
 //!     
-//!     let safe_mode = true; // Set to true to download posts from safebooru
+//!     let safe_mode = false; // Setting this to true, will ignore searching NSFW posts
 //!
-//!     let mut ext = DanbooruExtractor::new(&tags, safe_mode); // Initialize the extractor
+//!     let disable_blacklist = false; // Will filter all items according to what's set in GBL
 //!
-//!     ext.auth(false);
+//!     let mut unit = DanbooruExtractor::new(&tags, safe_mode, disable_blacklist); // Initialize
 //!
-//!     // Will iterate through all pages until it finds no more posts, then returns the list
-//!     let posts = ext.full_search().await.unwrap();
+//!     let prompt = true; // If true, will ask the user to input thei username and API key.
+//!
+//!     unit.auth(prompt).await.unwrap(); // Try to authenticate
+//!
+//!     let start_page = Some(1); // Start searching from the first page
+//!
+//!     let limit = Some(50); // Max number of posts to download
+//!
+//!     let posts = unit.full_search(start_page, limit).await.unwrap(); // and then, finally search
 //!
 //!     let sd = 10; // Number of simultaneous downloads.
 //!
@@ -28,17 +37,16 @@
 //!         ImageBoards::Danbooru,
 //!         posts,
 //!         sd,
+//!         Some(unit.client()), // Re-use the client from the extractor
 //!         limit,
 //!         cbz,
 //!     );
 //!
 //!     let output = Some(PathBuf::from("./")); // Where to save the downloaded files or .cbz file
 //!
-//!     let db = false; // Disable blacklist filtering
-//!
 //!     let id = true; // Save file with their ID as the filename instead of MD5
 //!
-//!     qw.download(output, db, id).await.unwrap(); // Start downloading
+//!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
 use crate::imageboards::post::rating::Rating;
@@ -70,7 +78,7 @@ pub struct Queue {
     list: Vec<Post>,
     tag_s: String,
     imageboard: ImageBoards,
-    sim_downloads: usize,
+    sim_downloads: u8,
     client: Client,
     cbz: bool,
     zip_file: Option<Arc<Mutex<ZipWriter<File>>>>,
@@ -78,10 +86,11 @@ pub struct Queue {
 
 impl Queue {
     /// Set up the queue for download
+    #[must_use]
     pub fn new(
         imageboard: ImageBoards,
         posts: PostQueue,
-        sim_downloads: usize,
+        sim_downloads: u8,
         custom_client: Option<Client>,
         limit: Option<usize>,
         save_as_cbz: bool,
@@ -205,10 +214,10 @@ impl Queue {
                     self.list.len()
                 ));
 
-                z_1.add_directory(Rating::Safe.to_string(), Default::default())?;
-                z_1.add_directory(Rating::Questionable.to_string(), Default::default())?;
-                z_1.add_directory(Rating::Explicit.to_string(), Default::default())?;
-                z_1.add_directory(Rating::Unknown.to_string(), Default::default())?;
+                z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
+                z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
+                z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
+                z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
 
                 z_1.start_file(
                     "00_summary.json",
@@ -237,7 +246,7 @@ impl Queue {
                         .await
                 })
             })
-            .buffer_unordered(self.sim_downloads)
+            .buffer_unordered(self.sim_downloads as usize)
             .collect::<Vec<_>>()
             .await;
 

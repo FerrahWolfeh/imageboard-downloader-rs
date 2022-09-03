@@ -5,26 +5,6 @@
 //! * `Imageboards::Realbooru`
 //! * `Imageboards::Gelbooru`
 //!
-//! # Example usage
-//!
-//! ```rust
-//! use imageboard_downloader::*;
-//!
-//! async fn fetch_posts() {
-//!     let tags = ["umbreon".to_string(), "espeon".to_string()];
-//!
-//!     // Note: Safe mode with this extractor is ignored
-//!     let mut ext = GelbooruExtractor::new(&tags, false) // Initialize the extractor
-//!         .set_imageboard(ImageBoards::Rule34); // Set to extract from Rule34
-//!
-//!
-//!     // Will iterate through all pages until it finds no more posts, then returns the list.
-//!     let posts = ext.full_search().await.unwrap();
-//!
-//!     // Print all information collected
-//!     println!("{:?}", posts);
-//! }
-//! ```
 use crate::extract_ext_from_url;
 use crate::imageboards::extractors::blacklist::blacklist_filter;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
@@ -40,7 +20,7 @@ use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use super::error::ExtractorError;
-use super::Extractor;
+use super::{Extractor, MultiWebsite};
 
 pub struct GelbooruExtractor {
     active_imageboard: ImageBoards,
@@ -94,7 +74,7 @@ impl Extractor for GelbooruExtractor {
 
         let qw = PostQueue {
             posts,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
 
         Ok(qw)
@@ -130,7 +110,7 @@ impl Extractor for GelbooruExtractor {
                 self.total_removed += blacklist_filter(
                     self.active_imageboard,
                     &mut posts,
-                    &Default::default(),
+                    &AHashSet::default(),
                     self.safe_mode,
                 )
                 .await?;
@@ -157,7 +137,7 @@ impl Extractor for GelbooruExtractor {
 
         let fin = PostQueue {
             posts: fvec,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
 
         Ok(fin)
@@ -172,11 +152,14 @@ impl Extractor for GelbooruExtractor {
     }
 }
 
-impl GelbooruExtractor {
+impl MultiWebsite for GelbooruExtractor {
     /// Sets the imageboard to extract posts from
     ///
     /// If not set, defaults to `ImageBoards::Rule34`
-    pub fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError> {
+    fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
+    where
+        Self: std::marker::Sized,
+    {
         let imageboard = match imageboard {
             ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
             _ => {
@@ -197,7 +180,9 @@ impl GelbooruExtractor {
             safe_mode: self.safe_mode,
         })
     }
+}
 
+impl GelbooruExtractor {
     async fn validate_tags(&mut self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}&tags={}",

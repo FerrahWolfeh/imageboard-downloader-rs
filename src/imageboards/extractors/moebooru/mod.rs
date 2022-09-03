@@ -1,27 +1,4 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
-//!
-//! The moebooru extractor has the following features:
-//! - Native safe mode (don't download NSFW posts)
-//!
-//! # Example basic usage
-//!
-//! ```rust
-//! use imageboard_downloader::*;
-//!
-//! async fn fetch_posts() {
-//!     let tags = ["umbreon", "espeon"];
-//!     
-//!     let safe_mode = true; // Set to true to download posts from safebooru
-//!
-//!     let mut ext = MoebooruExtractor::new(&tags, safe_mode, false); // Initialize the extractor
-//!
-//!     // Will iterate through all pages until it finds no more posts, then returns the list.
-//!     let posts = ext.full_search(None, None).await.unwrap();
-//!
-//!     // Print all information collected
-//!     println!("{:?}", posts);
-//! }
-//! ```
 use crate::imageboards::extractors::error::ExtractorError;
 use crate::imageboards::extractors::moebooru::models::KonachanPost;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
@@ -88,7 +65,7 @@ impl Extractor for MoebooruExtractor {
 
         let qw = PostQueue {
             posts,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
 
         Ok(qw)
@@ -124,7 +101,7 @@ impl Extractor for MoebooruExtractor {
                 self.total_removed += blacklist_filter(
                     ImageBoards::Konachan,
                     &mut posts,
-                    &Default::default(),
+                    &AHashSet::default(),
                     self.safe_mode,
                 )
                 .await?;
@@ -147,7 +124,7 @@ impl Extractor for MoebooruExtractor {
 
         let fin = PostQueue {
             posts: fvec,
-            tags: self.tags.to_vec(),
+            tags: self.tags.clone(),
         };
 
         Ok(fin)

@@ -19,6 +19,7 @@ pub use imageboards::post::Post;
 
 pub use imageboards::extractors::Auth;
 pub use imageboards::extractors::Extractor;
+pub use imageboards::extractors::MultiWebsite;
 
 pub use imageboards::extractors::danbooru::DanbooruExtractor;
 pub use imageboards::extractors::e621::E621Extractor;

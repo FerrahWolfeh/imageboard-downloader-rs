@@ -72,6 +72,7 @@ impl Default for ImageboardConfig {
 }
 
 impl ImageboardConfig {
+    #[must_use]
     pub fn new(imageboard: ImageBoards, username: String, api_key: String) -> Self {
         Self {
             imageboard,
