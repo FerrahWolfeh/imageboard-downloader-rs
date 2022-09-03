@@ -70,58 +70,35 @@ impl ImageBoards {
     ///
     /// The ```safe``` bool will determine if the endpoint directs to ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
     #[inline]
-    pub fn post_count_url(self, safe: bool) -> Option<&'static str> {
+    pub fn post_count_url(self) -> Option<&'static str> {
         match self {
-            ImageBoards::Danbooru => {
-                if safe {
-                    Some("https://safebooru.donmai.us/counts/posts.json")
-                } else {
-                    Some("https://danbooru.donmai.us/counts/posts.json")
-                }
-            }
+            ImageBoards::Danbooru => Some("https://danbooru.donmai.us/counts/posts.json"),
             _ => None,
         }
     }
 
-    /// Returns ```Some``` with the endpoint for the post list with their respective tags.
-    ///
-    /// Will return ```None``` for still unimplemented imageboards.
-    ///
-    /// ```safe``` works only with ```Imageboards::Danbooru```, ```Imageboards::E621``` and ```Imageboards::Konachan``` since they are the only ones that have a safe variant for now.
+    /// Returns the endpoint for the post list with their respective tags.
     #[inline]
-    pub fn post_url(&self, safe: bool) -> Option<&str> {
+    pub fn post_url(&self) -> &'static str {
         match self {
-            ImageBoards::Danbooru => {
-                if safe {
-                    Some("https://safebooru.donmai.us/posts.json")
-                } else {
-                    Some("https://danbooru.donmai.us/posts.json")
-                }
-            }
-            ImageBoards::E621 => {
-                if safe {
-                    Some("https://e926.net/posts.json")
-                } else {
-                    Some("https://e621.net/posts.json")
-                }
-            }
+            ImageBoards::Danbooru => "https://danbooru.donmai.us/posts.json",
+            ImageBoards::E621 => "https://e621.net/posts.json",
             ImageBoards::Rule34 => {
-                Some("https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1")
+                "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
             }
-            ImageBoards::Konachan => {
-                if safe {
-                    Some("https://konachan.net/post.json")
-                } else {
-                    Some("https://konachan.com/post.json")
-                }
-            }
+            ImageBoards::Konachan => "https://konachan.com/post.json",
             ImageBoards::Realbooru => {
-                Some("http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1")
+                "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             }
             ImageBoards::Gelbooru => {
-                Some("http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1")
+                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             }
         }
+    }
+
+    #[inline]
+    pub fn has_native_blacklist(self) -> bool {
+        matches!(self, Self::Danbooru | Self::E621)
     }
 
     /// Returns max number of posts per page a imageboard can have

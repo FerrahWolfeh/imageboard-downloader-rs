@@ -26,21 +26,18 @@
 //! }
 //! ```
 use crate::extract_ext_from_url;
+use crate::imageboards::extractors::blacklist::blacklist_filter;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
-use cfg_if::cfg_if;
 use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::fmt::Display;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
-
-#[cfg(feature = "global_blacklist")]
-use super::blacklist::GlobalBlacklist;
 
 use super::error::ExtractorError;
 use super::Extractor;
@@ -52,6 +49,7 @@ pub struct GelbooruExtractor {
     tag_string: String,
     disable_blacklist: bool,
     total_removed: u64,
+    safe_mode: bool,
 }
 
 #[async_trait]
@@ -85,6 +83,7 @@ impl Extractor for GelbooruExtractor {
             tag_string,
             disable_blacklist,
             total_removed: 0,
+            safe_mode,
         }
     }
 
@@ -128,7 +127,13 @@ impl Extractor for GelbooruExtractor {
             }
 
             if !self.disable_blacklist {
-                self.blacklist_filter(&mut posts).await?;
+                self.total_removed += blacklist_filter(
+                    self.active_imageboard,
+                    &mut posts,
+                    &Default::default(),
+                    self.safe_mode,
+                )
+                .await?;
             }
 
             fvec.extend(posts);
@@ -189,13 +194,14 @@ impl GelbooruExtractor {
             tag_string: self.tag_string,
             disable_blacklist: self.disable_blacklist,
             total_removed: self.total_removed,
+            safe_mode: self.safe_mode,
         })
     }
 
     async fn validate_tags(&mut self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}&tags={}",
-            self.active_imageboard.post_url(false).unwrap(),
+            self.active_imageboard.post_url(),
             &self.tag_string
         );
 
@@ -228,71 +234,17 @@ impl GelbooruExtractor {
         Err(ExtractorError::InvalidServerResponse)
     }
 
-    #[inline]
-    async fn blacklist_filter(&mut self, list: &mut Vec<Post>) -> Result<(), ExtractorError> {
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                let mut removed = 0;
-                let start = Instant::now();
-                let gbl = GlobalBlacklist::get().await?;
-
-                if let Some(tags) = gbl.blacklist {
-                    if !tags.global.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    } else {
-                        debug!("Global blacklist is empty")
-                    }
-
-                    let special_tags = match self.active_imageboard {
-                        ImageBoards::Rule34 => {
-                            tags.rule34
-                        }
-                        ImageBoards::Gelbooru => {
-                            tags.gelbooru
-                        }
-                        ImageBoards::Realbooru => {
-                            tags.realbooru
-                        }
-                        _ => return Err(ExtractorError::ImpossibleBehavior)
-                    };
-
-                    if !special_tags.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", special_tags);
-                        list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
-                }
-
-                let end = Instant::now();
-                debug!("Blacklist filtering took {:?}", end - start);
-                debug!("Removed {} blacklisted posts", removed);
-                self.total_removed += removed;
-            }
-        }
-        Ok(())
-    }
-
     // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
-        let url_mode = format!(
+        let url = format!(
             "{}&tags={}",
-            self.active_imageboard.post_url(false).unwrap(),
+            self.active_imageboard.post_url(),
             &self.tag_string
         );
 
         let items = &self
             .client
-            .get(&url_mode)
+            .get(&url)
             .query(&[("pid", page), ("limit", 1000)])
             .send()
             .await?

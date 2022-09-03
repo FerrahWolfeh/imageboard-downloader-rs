@@ -29,15 +29,12 @@ use crate::imageboards::ImageBoards;
 use crate::{client, extract_ext_from_url, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
-use cfg_if::cfg_if;
 use log::debug;
 use reqwest::Client;
 use std::fmt::Display;
 use tokio::time::Instant;
 
-#[cfg(feature = "global_blacklist")]
-use super::blacklist::GlobalBlacklist;
-
+use super::blacklist::blacklist_filter;
 use super::Extractor;
 
 mod models;
@@ -124,7 +121,13 @@ impl Extractor for MoebooruExtractor {
             }
 
             if !self.disable_blacklist {
-                self.blacklist_filter(&mut posts).await?;
+                self.total_removed += blacklist_filter(
+                    ImageBoards::Konachan,
+                    &mut posts,
+                    &Default::default(),
+                    self.safe_mode,
+                )
+                .await?;
             }
 
             fvec.extend(posts);
@@ -163,7 +166,7 @@ impl MoebooruExtractor {
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
         let count_endpoint = format!(
             "{}?tags={}",
-            ImageBoards::Konachan.post_url(self.safe_mode).unwrap(),
+            ImageBoards::Konachan.post_url(),
             &self.tag_string
         );
 
@@ -185,64 +188,24 @@ impl MoebooruExtractor {
         Ok(())
     }
 
-    #[inline]
-    async fn blacklist_filter(&mut self, list: &mut Vec<Post>) -> Result<(), ExtractorError> {
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                let mut removed = 0;
-                let start = Instant::now();
-                let gbl = GlobalBlacklist::get().await?;
-
-                if let Some(tags) = gbl.blacklist {
-                    if !tags.global.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    } else {
-                        debug!("Global blacklist is empty")
-                    }
-
-                    if !tags.danbooru.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags.konachan);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.konachan.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Konachan blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
-                }
-
-                let end = Instant::now();
-                debug!("Blacklist filtering took {:?}", end - start);
-                debug!("Removed {} blacklisted posts", removed);
-                self.total_removed += removed;
-            }
-        }
-        Ok(())
-    }
-
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Get URL
-        let count_endpoint = format!(
+        let url = format!(
             "{}?tags={}",
-            ImageBoards::Konachan.post_url(self.safe_mode).unwrap(),
+            ImageBoards::Konachan.post_url(),
             &self.tag_string
         );
 
         let items = &self
             .client
-            .get(&count_endpoint)
+            .get(&url)
             .query(&[("page", page), ("limit", 100)])
             .send()
             .await?
             .json::<Vec<KonachanPost>>()
             .await?;
 
+        let start = Instant::now();
         let post_list: Vec<Post> = items
             .iter()
             .filter(|c| c.file_url.is_some())
@@ -265,6 +228,10 @@ impl MoebooruExtractor {
                 }
             })
             .collect();
+        let end = Instant::now();
+
+        debug!("List size: {}", post_list.len());
+        debug!("Post mapping took {:?}", end - start);
 
         Ok(post_list)
     }

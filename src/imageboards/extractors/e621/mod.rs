@@ -27,13 +27,13 @@
 //! }
 //! ```
 use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
+use crate::imageboards::extractors::blacklist::blacklist_filter;
 use crate::imageboards::extractors::e621::models::E621TopLevel;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags};
 use ahash::AHashSet;
 use async_trait::async_trait;
-use cfg_if::cfg_if;
 use log::debug;
 use reqwest::Client;
 use std::fmt::Display;
@@ -42,9 +42,6 @@ use tokio::time::{sleep, Instant};
 
 use super::error::ExtractorError;
 use super::{Auth, Extractor};
-
-#[cfg(feature = "global_blacklist")]
-use super::blacklist::GlobalBlacklist;
 
 pub mod models;
 
@@ -137,7 +134,13 @@ impl Extractor for E621Extractor {
             }
 
             if !self.disable_blacklist {
-                self.blacklist_filter(&mut posts).await?;
+                self.total_removed += blacklist_filter(
+                    ImageBoards::E621,
+                    &mut posts,
+                    &self.auth.user_data.blacklisted_tags,
+                    self.safe_mode,
+                )
+                .await?;
             }
 
             fvec.extend(posts);
@@ -195,11 +198,7 @@ impl Auth for E621Extractor {
 
 impl E621Extractor {
     async fn validate_tags(&self) -> Result<(), ExtractorError> {
-        let count_endpoint = format!(
-            "{}?tags={}",
-            ImageBoards::E621.post_url(self.safe_mode).unwrap(),
-            &self.tag_string
-        );
+        let count_endpoint = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
 
         // Get an estimate of total posts and pages to search
         let request = if self.auth_state {
@@ -223,76 +222,20 @@ impl E621Extractor {
         Ok(())
     }
 
-    #[inline]
-    async fn blacklist_filter(&mut self, list: &mut Vec<Post>) -> Result<(), ExtractorError> {
-        let original_size = list.len();
-        let blacklist = &self.auth.user_data.blacklisted_tags;
-        let mut removed = 0;
-
-        let start = Instant::now();
-        if !blacklist.is_empty() {
-            list.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
-
-            let bp = original_size - list.len();
-            debug!("User blacklist removed {} posts", bp);
-            removed += bp as u64;
-        }
-
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                let gbl = GlobalBlacklist::get().await?;
-
-                if let Some(tags) = gbl.blacklist {
-                    if !tags.global.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    } else {
-                        debug!("Global blacklist is empty")
-                    }
-
-                    if !tags.danbooru.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", tags.e621);
-                        list.retain(|c| !c.tags.iter().any(|s| tags.e621.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("E621 blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
-                }
-            }
-        }
-        let end = Instant::now();
-        debug!("Blacklist filtering took {:?}", end - start);
-        debug!("Removed {} blacklisted posts", removed);
-        self.total_removed += removed;
-
-        Ok(())
-    }
-
     pub async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Check safe mode
-        let url_mode = format!(
-            "{}?tags={}",
-            ImageBoards::E621.post_url(self.safe_mode).unwrap(),
-            &self.tag_string
-        );
+        let url = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
 
         let req = if self.auth_state {
             debug!("[AUTH] Fetching posts from page {}", page);
             self.client
-                .get(&url_mode)
+                .get(&url)
                 .query(&[("page", page), ("limit", 320)])
                 .basic_auth(&self.auth.username, Some(&self.auth.api_key))
         } else {
             debug!("Fetching posts from page {}", page);
             self.client
-                .get(&url_mode)
+                .get(&url)
                 .query(&[("page", page), ("limit", 320)])
         };
 

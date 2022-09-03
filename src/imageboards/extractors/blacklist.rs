@@ -33,12 +33,17 @@ use std::path::Path;
 
 use ahash::AHashSet;
 use anyhow::Context;
+use cfg_if::cfg_if;
 use directories::ProjectDirs;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio::fs::{create_dir_all, read_to_string, File};
 use tokio::io::AsyncWriteExt;
+use tokio::time::Instant;
 use toml::from_str;
+
+use crate::imageboards::post::rating::Rating;
+use crate::{ImageBoards, Post};
 
 use super::error::ExtractorError;
 
@@ -110,4 +115,85 @@ impl GlobalBlacklist {
         debug!("Global blacklist decoded");
         Ok(deserialized)
     }
+}
+
+#[inline]
+pub async fn blacklist_filter(
+    imageboard: ImageBoards,
+    list: &mut Vec<Post>,
+    tags: &AHashSet<String>,
+    safe: bool,
+) -> Result<u64, ExtractorError> {
+    let original_size = list.len();
+    let blacklist = tags;
+    let mut removed = 0;
+
+    let start = Instant::now();
+    if safe {
+        list.retain(|c| c.rating != Rating::Safe)
+    }
+
+    if !blacklist.is_empty() && matches!(imageboard, ImageBoards::Danbooru | ImageBoards::E621) {
+        list.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
+
+        let bp = original_size - list.len();
+        debug!("User blacklist removed {} posts", bp);
+        removed += bp as u64;
+    }
+
+    cfg_if! {
+        if #[cfg(feature = "global_blacklist")] {
+            let gbl = GlobalBlacklist::get().await?;
+
+            if let Some(tags) = gbl.blacklist {
+                if !tags.global.is_empty() {
+                    let fsize = list.len();
+                    debug!("Removing posts with tags [{:?}]", tags);
+                    list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
+
+                    let bp = fsize - list.len();
+                    debug!("Global blacklist removed {} posts", bp);
+                    removed += bp as u64;
+                } else {
+                    debug!("Global blacklist is empty")
+                }
+
+                let special_tags = match imageboard {
+                        ImageBoards::Danbooru => {
+                            tags.danbooru
+                        }
+                        ImageBoards::E621 => {
+                            tags.e621
+                        }
+                        ImageBoards::Rule34 => {
+                            tags.rule34
+                        }
+                        ImageBoards::Gelbooru => {
+                            tags.gelbooru
+                        }
+                        ImageBoards::Realbooru => {
+                            tags.realbooru
+                        }
+                        ImageBoards::Konachan => {
+                            tags.konachan
+                        }
+                    };
+
+                    if !special_tags.is_empty() {
+                        let fsize = list.len();
+                        debug!("Removing posts with tags [{:?}]", special_tags);
+                        list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
+
+                        let bp = fsize - list.len();
+                        debug!("Blacklist removed {} posts", bp);
+                        removed += bp as u64;
+                    }
+            }
+        }
+    }
+    let end = Instant::now();
+    debug!("Filtering took {:?}", end - start);
+    debug!("Removed {} blacklisted posts", removed);
+
+    Ok(removed)
 }
