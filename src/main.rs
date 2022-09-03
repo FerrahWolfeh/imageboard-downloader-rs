@@ -55,6 +55,8 @@ struct Cli {
     safe_mode: bool,
 
     /// Save files with their ID as filename instead of it's MD5
+    ///
+    /// If the output dir has the same file downloaded with the MD5 name, it will be renamed to the post's ID
     #[clap(
         long = "id",
         value_parser,

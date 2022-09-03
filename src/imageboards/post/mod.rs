@@ -24,7 +24,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::{
-    fs::{self, read, OpenOptions},
+    fs::{self, read, rename, OpenOptions},
     io::AsyncWriteExt,
     io::BufWriter,
     task::spawn_blocking,
@@ -124,39 +124,77 @@ impl Post {
         counters: Arc<ProgressCounter>,
         name_id: bool,
     ) -> Result<(), PostError> {
-        if output.exists() {
-            let name = if name_id {
-                self.id.to_string()
-            } else {
-                self.md5.clone()
-            };
-            let file_digest = compute(read(&output).await?);
+        let id_name = format!("{}.{}", self.id, self.extension);
+        let md5_name = format!("{}.{}", self.md5, self.extension);
+
+        let name = if name_id { &id_name } else { &md5_name };
+
+        let raw_path = output.parent().unwrap();
+
+        let mut file_is_same = false;
+
+        let actual = if output.exists() {
+            output.to_path_buf()
+        } else if name_id {
+            file_is_same = true;
+            raw_path.join(Path::new(&md5_name))
+        } else {
+            file_is_same = true;
+            raw_path.join(Path::new(&id_name))
+        };
+
+        if actual.exists() {
+            let file_digest = compute(read(&actual).await?);
             let hash = format!("{:x}", file_digest);
             if hash == self.md5 {
-                match counters.multi.println(format!(
-                    "{} {} {}",
-                    "File".bold().green(),
-                    format!("{}.{}", &name, &self.extension).bold().green(),
-                    "already exists. Skipping.".bold().green()
-                )) {
-                    Ok(_) => (),
-                    Err(error) => {
-                        return Err(PostError::ProgressBarPrintFail {
-                            message: error.to_string(),
-                        })
-                    }
-                };
+                if file_is_same {
+                    match counters.multi.println(format!(
+                        "{} {} {}",
+                        "A file similar to".bold().green(),
+                        name.bold().blue().italic(),
+                        "already exists and will be renamed accordingly."
+                            .bold()
+                            .green()
+                    )) {
+                        Ok(_) => {
+                            rename(&actual, output).await?;
+                        }
+                        Err(error) => {
+                            return Err(PostError::ProgressBarPrintFail {
+                                message: error.to_string(),
+                            })
+                        }
+                    };
 
-                counters.main.inc(1);
-                *counters.total_mtx.lock().unwrap() += 1;
-                return Err(PostError::CorrectFileExists);
+                    counters.main.inc(1);
+                    *counters.total_mtx.lock().unwrap() += 1;
+                    return Err(PostError::CorrectFileExists);
+                } else {
+                    match counters.multi.println(format!(
+                        "{} {} {}",
+                        "File".bold().green(),
+                        name.bold().blue().italic(),
+                        "already exists. Skipping.".bold().green()
+                    )) {
+                        Ok(_) => (),
+                        Err(error) => {
+                            return Err(PostError::ProgressBarPrintFail {
+                                message: error.to_string(),
+                            })
+                        }
+                    };
+
+                    counters.main.inc(1);
+                    *counters.total_mtx.lock().unwrap() += 1;
+                    return Err(PostError::CorrectFileExists);
+                }
             }
 
             fs::remove_file(&output).await?;
             counters.multi.println(format!(
                 "{} {} {}",
                 "File".bold().red(),
-                format!("{}.{}", &name, &self.extension).bold().red(),
+                name.bold().yellow().italic(),
                 "is corrupted. Re-downloading...".bold().red()
             ))?;
 
