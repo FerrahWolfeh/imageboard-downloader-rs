@@ -69,7 +69,7 @@ version = "1.0.143"
 features = ["derive"]
 
 [profile.release]
-lto = false
+lto = true
 opt-level = 3
 strip = true
 debug = false
