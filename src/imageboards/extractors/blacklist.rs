@@ -130,13 +130,20 @@ pub async fn blacklist_filter(
 
     let start = Instant::now();
     if safe {
-        list.retain(|c| c.rating != Rating::Safe)
+        debug!("Safe mode active");
+        list.retain(|c| c.rating != Rating::Safe);
+
+        let safe_counter = original_size - list.len();
+        debug!("Safe mode removed {} posts", safe_counter);
+
+        removed += safe_counter as u64;
     }
 
     if !blacklist.is_empty() && matches!(imageboard, ImageBoards::Danbooru | ImageBoards::E621) {
+        let secondary_sz = list.len();
         list.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
 
-        let bp = original_size - list.len();
+        let bp = secondary_sz - list.len();
         debug!("User blacklist removed {} posts", bp);
         removed += bp as u64;
     }
@@ -185,7 +192,7 @@ pub async fn blacklist_filter(
                         list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
 
                         let bp = fsize - list.len();
-                        debug!("Blacklist removed {} posts", bp);
+                        debug!("Global blacklist removed {} posts", bp);
                         removed += bp as u64;
                     }
             }
@@ -193,7 +200,7 @@ pub async fn blacklist_filter(
     }
     let end = Instant::now();
     debug!("Filtering took {:?}", end - start);
-    debug!("Removed {} blacklisted posts", removed);
+    debug!("Removed total of {} posts", removed);
 
     Ok(removed)
 }
