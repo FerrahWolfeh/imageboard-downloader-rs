@@ -100,7 +100,7 @@ impl Queue {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client!(imageboard.user_agent())
+            client!(imageboard)
         };
 
         let fstart = Instant::now();

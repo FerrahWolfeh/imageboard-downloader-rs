@@ -44,7 +44,7 @@ impl Extractor for E621Extractor {
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621.user_agent());
+        let client = client!(ImageBoards::E621);
 
         // Set Safe mode status
         let safe_mode = safe_mode;

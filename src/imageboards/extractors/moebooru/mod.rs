@@ -32,7 +32,7 @@ impl Extractor for MoebooruExtractor {
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Konachan.user_agent());
+        let client = client!(ImageBoards::Konachan);
 
         // Set Safe mode status
         let safe_mode = safe_mode;

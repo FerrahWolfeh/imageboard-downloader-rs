@@ -29,7 +29,10 @@ pub use imageboards::extractors::moebooru::MoebooruExtractor;
 #[macro_export]
 macro_rules! client {
     ($x:expr) => {{
-        Client::builder().user_agent($x).build().unwrap()
+        Client::builder()
+            .user_agent($x.user_agent())
+            .build()
+            .unwrap()
     }};
 }
 

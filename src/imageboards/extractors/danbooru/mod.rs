@@ -39,7 +39,7 @@ impl Extractor for DanbooruExtractor {
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Danbooru.user_agent());
+        let client = client!(ImageBoards::Danbooru);
 
         // Set Safe mode status
         let safe_mode = safe_mode;

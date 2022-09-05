@@ -168,7 +168,7 @@ impl MultiWebsite for GelbooruExtractor {
                 })
             }
         };
-        let client = client!(imageboard.user_agent());
+        let client = client!(imageboard);
 
         Ok(Self {
             active_imageboard: imageboard,
