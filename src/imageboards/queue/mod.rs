@@ -52,21 +52,19 @@
 use crate::imageboards::post::rating::Rating;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
-use bincode::serialize;
 use futures::StreamExt;
 use log::debug;
 use reqwest::Client;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
-use tokio::task::{self, spawn_blocking};
+use tokio::task;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
-use zstd::encode_all;
 
 use self::error::QueueError;
 
@@ -179,28 +177,6 @@ impl Queue {
                     })
                 }
             };
-
-            let last_post = self.list.iter().max_by_key(|post| post.id).unwrap().clone();
-
-            let odir = output_dir.clone();
-
-            spawn_blocking(move || -> Result<(), QueueError> {
-                let mut dsum = File::create(&odir.join(Path::new(".00_download_summary.bin")))?;
-
-                let string = match serialize(&last_post) {
-                    Ok(data) => encode_all(&*data, 9)?,
-                    Err(err) => {
-                        return Err(QueueError::BinarySerializeFail {
-                            error: err.to_string(),
-                        })
-                    }
-                };
-
-                dsum.write_all(&string)?;
-                Ok(())
-            })
-            .await
-            .unwrap()?;
 
             output_dir
         };

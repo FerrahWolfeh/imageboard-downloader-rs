@@ -1,5 +1,5 @@
-use anyhow::Error;
-use bincode::deserialize;
+use anyhow::{bail, Error};
+use bincode::{deserialize, serialize};
 use clap::Parser;
 use colored::Colorize;
 use imageboard_downloader::*;
@@ -9,7 +9,8 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use zstd::decode_all;
+use tokio::task::spawn_blocking;
+use zstd::{decode_all, encode_all};
 
 extern crate tokio;
 
@@ -158,25 +159,33 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    if args.update {
-        let place = match &args.output {
-            None => std::env::current_dir()?,
-            Some(dir) => dir.to_path_buf(),
-        };
+    let last_post = post_queue
+        .posts
+        .iter()
+        .max_by_key(|post| post.id)
+        .unwrap()
+        .clone();
 
-        let tgs = place.join(Path::new(&format!(
-            "{}/{}/{}",
-            args.imageboard.to_string(),
-            join_tags!(&args.tags),
-            ".00_download_summary.bin"
-        )));
-        if tgs.exists() {
-            let dsum = File::open(&tgs)?;
+    let place = match &args.output {
+        None => std::env::current_dir()?,
+        Some(dir) => dir.to_path_buf(),
+    };
 
-            let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
-            debug!("Latest post {:#?}", decomp);
-            post_queue.posts.retain(|c| c.id > decomp.id);
-        }
+    let tgs = place.join(Path::new(&format!(
+        "{}/{}/{}",
+        args.imageboard.to_string(),
+        join_tags!(&args.tags),
+        ".00_download_summary.bin"
+    )));
+
+    let odir = tgs.clone();
+
+    if args.update && tgs.exists() {
+        let dsum = File::open(&tgs)?;
+
+        let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
+        debug!("Latest post {:#?}", decomp);
+        post_queue.posts.retain(|c| c.id > decomp.id);
     }
 
     let mut qw = Queue::new(
@@ -192,6 +201,20 @@ async fn main() -> Result<(), Error> {
     std::io::stdout().flush()?;
 
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
+
+    spawn_blocking(move || -> Result<(), Error> {
+        let mut dsum = File::create(&odir.join(Path::new(".00_download_summary.bin")))?;
+
+        let string = match serialize(&last_post) {
+            Ok(data) => encode_all(&*data, 9)?,
+            Err(_) => bail!("Failed to serialize summary file"),
+        };
+
+        dsum.write_all(&string)?;
+        Ok(())
+    })
+    .await
+    .unwrap()?;
 
     println!(
         "{} {} {}",
