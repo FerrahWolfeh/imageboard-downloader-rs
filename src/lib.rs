@@ -40,7 +40,6 @@ macro_rules! client {
 macro_rules! join_tags {
     ($x:expr) => {{
         let tl = $x.join("+");
-        debug!("Tag List: {}", tl);
         tl
     }};
 }

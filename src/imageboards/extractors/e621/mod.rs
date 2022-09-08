@@ -59,6 +59,7 @@ impl Extractor for E621Extractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
@@ -139,6 +140,9 @@ impl Extractor for E621Extractor {
             debug!("Debouncing API calls by 500 ms");
             sleep(Duration::from_millis(500)).await;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,

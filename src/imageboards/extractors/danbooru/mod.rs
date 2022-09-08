@@ -54,6 +54,7 @@ impl Extractor for DanbooruExtractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
@@ -70,7 +71,10 @@ impl Extractor for DanbooruExtractor {
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
-        let posts = Self::get_post_list(self, page).await?;
+        let mut posts = Self::get_post_list(self, page).await?;
+
+        posts.sort();
+        posts.reverse();
 
         let qw = PostQueue {
             posts,
@@ -132,6 +136,9 @@ impl Extractor for DanbooruExtractor {
 
             page += 1;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,

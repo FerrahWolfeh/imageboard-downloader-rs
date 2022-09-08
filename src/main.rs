@@ -1,9 +1,15 @@
 use anyhow::Error;
+use bincode::deserialize;
 use clap::Parser;
 use colored::Colorize;
 use imageboard_downloader::*;
 use log::debug;
-use std::{io::Write, path::PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
+use zstd::decode_all;
 
 extern crate tokio;
 
@@ -88,6 +94,16 @@ struct Cli {
         value_name = "PAGE"
     )]
     start_page: Option<usize>,
+
+    /// Download only the latest images for tag selection.
+    #[clap(
+        short,
+        long,
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE"
+    )]
+    update: bool,
 }
 
 #[tokio::main]
@@ -102,7 +118,7 @@ async fn main() -> Result<(), Error> {
     );
     std::io::stdout().flush()?;
 
-    let (post_queue, total_black, client) = match args.imageboard {
+    let (mut post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit =
                 DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -141,6 +157,27 @@ async fn main() -> Result<(), Error> {
             (posts, unit.total_removed(), unit.client())
         }
     };
+
+    if args.update {
+        let place = match &args.output {
+            None => std::env::current_dir()?,
+            Some(dir) => dir.to_path_buf(),
+        };
+
+        let tgs = place.join(Path::new(&format!(
+            "{}/{}/{}",
+            args.imageboard.to_string(),
+            join_tags!(&args.tags),
+            ".00_download_summary.bin"
+        )));
+        if tgs.exists() {
+            let dsum = File::open(&tgs)?;
+
+            let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
+            debug!("Latest post {:#?}", decomp);
+            post_queue.posts.retain(|c| c.id > decomp.id);
+        }
+    }
 
     let mut qw = Queue::new(
         args.imageboard,

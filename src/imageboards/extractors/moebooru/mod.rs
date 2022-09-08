@@ -47,6 +47,7 @@ impl Extractor for MoebooruExtractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
@@ -121,6 +122,9 @@ impl Extractor for MoebooruExtractor {
 
             page += 1;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,

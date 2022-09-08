@@ -55,6 +55,7 @@ impl Extractor for GelbooruExtractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             active_imageboard: ImageBoards::Rule34,
@@ -134,6 +135,9 @@ impl Extractor for GelbooruExtractor {
             debug!("Debouncing API calls by 500 ms");
             sleep(Duration::from_millis(500)).await;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,
