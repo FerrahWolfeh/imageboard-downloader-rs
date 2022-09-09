@@ -233,7 +233,6 @@ impl E621Extractor {
                 tag_list.extend(c.tags.character.iter().cloned());
                 tag_list.extend(c.tags.artist.iter().cloned());
                 tag_list.extend(c.tags.general.iter().cloned());
-                tag_list.extend(c.tags.invalid.iter().cloned());
                 tag_list.extend(c.tags.copyright.iter().cloned());
                 tag_list.extend(c.tags.lore.iter().cloned());
                 tag_list.extend(c.tags.meta.iter().cloned());

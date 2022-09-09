@@ -36,7 +36,6 @@ pub struct Tags {
     pub character: Vec<String>,
     pub copyright: Vec<String>,
     pub artist: Vec<String>,
-    pub invalid: Vec<String>,
     pub lore: Vec<String>,
     pub meta: Vec<String>,
 }
