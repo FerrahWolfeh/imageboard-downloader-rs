@@ -187,10 +187,14 @@ async fn main() -> Result<(), Error> {
             let dsum = File::open(&tgs)?;
 
             let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
-            debug!("Latest post {:#?}", decomp);
+            debug!("Latest post id: {}", decomp.id);
             Ok(decomp)
         };
         if let Ok(post) = last_post_downloaded {
+            debug!(
+                "Latest post found: {}",
+                post_queue.posts.first().unwrap().id
+            );
             post_queue.posts.retain(|c| c.id > post.id);
         } else {
             debug!("Summary file is corrupted, ignoring...");
@@ -199,7 +203,7 @@ async fn main() -> Result<(), Error> {
     }
 
     if post_queue.posts.is_empty() {
-        println!("\n{}", "No posts left to download!".bold());
+        println!("\r{}", "No posts left to download!".bold());
         return Ok(());
     }
 
@@ -212,7 +216,7 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    print!("\r");
+    print!("\r ");
     std::io::stdout().flush()?;
 
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
