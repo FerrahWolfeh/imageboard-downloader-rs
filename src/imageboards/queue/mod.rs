@@ -129,10 +129,6 @@ impl Queue {
         output: Option<PathBuf>,
         save_as_id: bool,
     ) -> Result<u64, QueueError> {
-        if self.list.is_empty() {
-            return Err(QueueError::NoPostsInQueue);
-        }
-
         // If out_dir is not set via cli flags, use current dir
         let place = match output {
             None => match std::env::current_dir() {

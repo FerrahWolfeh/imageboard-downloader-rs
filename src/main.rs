@@ -9,7 +9,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tokio::task::spawn_blocking;
+use tokio::{fs::remove_file, task::spawn_blocking};
 use zstd::{decode_all, encode_all};
 
 extern crate tokio;
@@ -97,6 +97,8 @@ struct Cli {
     start_page: Option<usize>,
 
     /// Download only the latest images for tag selection.
+    ///
+    /// Will not re-download already present and deleted images from folder
     #[clap(
         short,
         long,
@@ -174,18 +176,31 @@ async fn main() -> Result<(), Error> {
     let tgs = place.join(Path::new(&format!(
         "{}/{}/{}",
         args.imageboard.to_string(),
-        join_tags!(&args.tags),
+        &args.tags.join(" "),
         ".00_download_summary.bin"
     )));
 
     let odir = tgs.clone();
 
     if args.update && tgs.exists() {
-        let dsum = File::open(&tgs)?;
+        let last_post_downloaded: Result<Post, Error> = {
+            let dsum = File::open(&tgs)?;
 
-        let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
-        debug!("Latest post {:#?}", decomp);
-        post_queue.posts.retain(|c| c.id > decomp.id);
+            let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
+            debug!("Latest post {:#?}", decomp);
+            Ok(decomp)
+        };
+        if let Ok(post) = last_post_downloaded {
+            post_queue.posts.retain(|c| c.id > post.id);
+        } else {
+            debug!("Summary file is corrupted, ignoring...");
+            remove_file(&tgs).await?;
+        }
+    }
+
+    if post_queue.posts.is_empty() {
+        println!("\n{}", "No posts left to download!".bold());
+        return Ok(());
     }
 
     let mut qw = Queue::new(
@@ -203,7 +218,7 @@ async fn main() -> Result<(), Error> {
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
 
     spawn_blocking(move || -> Result<(), Error> {
-        let mut dsum = File::create(&odir.join(Path::new(".00_download_summary.bin")))?;
+        let mut dsum = File::create(&odir)?;
 
         let string = match serialize(&last_post) {
             Ok(data) => encode_all(&*data, 9)?,
