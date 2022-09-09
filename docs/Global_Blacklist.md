@@ -31,9 +31,15 @@ Placing strings inside `global` such as
 global = ["a_nasty_tag", "other_nasty_tag"]
 ```
 
-will make the Queue Manager drop all posts that contain one or all of the tags when downloading from **any** imageboard.
+will make the Extractor drop all posts that contain any of the tags when downloading from **any** imageboard.
 
-While placing strings inside any other array, will make the Queue Manager drop all posts with those tags while downloading from that imageboard.
+While placing strings inside any other array, will make the Extractor drop all posts the tags specific to it.
+
+## Safe Mode
+
+The safe mode is now tied to the Global Blacklist, and is processed along with the blacklist tags. Currently, enabling safe mode via the `--safe-mode` flag will make the Extractor drop all posts that have a rating other than `Rating::Safe`.
+
+There are plans to further expand this functionality to be able to download posts with specific ratings.
 
 ## Disabling
 

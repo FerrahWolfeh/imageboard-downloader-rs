@@ -122,6 +122,7 @@ pub struct BlacklistFilter {
     auth_tags: AHashSet<String>,
     gbl_tags: AHashSet<String>,
     safe: bool,
+    disabled: bool,
 }
 
 impl BlacklistFilter {
@@ -129,6 +130,7 @@ impl BlacklistFilter {
         imageboard: ImageBoards,
         auth_tags: &AHashSet<String>,
         safe: bool,
+        disabled: bool,
     ) -> Result<Self, ExtractorError> {
         if safe {
             debug!("Safe mode active");
@@ -179,6 +181,7 @@ impl BlacklistFilter {
             auth_tags: auth_tags.clone(),
             gbl_tags,
             safe,
+            disabled,
         })
     }
 
@@ -199,28 +202,30 @@ impl BlacklistFilter {
             removed += safe_counter as u64;
         }
 
-        if !self.auth_tags.is_empty()
-            && matches!(self.imageboard, ImageBoards::Danbooru | ImageBoards::E621)
-        {
-            let secondary_sz = original_list.len();
-            original_list.retain(|c| !c.tags.iter().any(|s| self.auth_tags.contains(s)));
+        if !self.disabled {
+            if !self.auth_tags.is_empty()
+                && matches!(self.imageboard, ImageBoards::Danbooru | ImageBoards::E621)
+            {
+                let secondary_sz = original_list.len();
+                original_list.retain(|c| !c.tags.iter().any(|s| self.auth_tags.contains(s)));
 
-            let bp = secondary_sz - original_list.len();
-            debug!("User blacklist removed {} posts", bp);
-            removed += bp as u64;
-        }
+                let bp = secondary_sz - original_list.len();
+                debug!("User blacklist removed {} posts", bp);
+                removed += bp as u64;
+            }
 
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                if !self.gbl_tags.is_empty() {
-                    let fsize = original_list.len();
-                    debug!("Removing posts with tags [{:?}]", self.gbl_tags);
+            cfg_if! {
+                if #[cfg(feature = "global_blacklist")] {
+                    if !self.gbl_tags.is_empty() {
+                        let fsize = original_list.len();
+                        debug!("Removing posts with tags [{:?}]", self.gbl_tags);
 
-                    original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
+                        original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
 
-                    let bp = fsize - original_list.len();
-                    debug!("Global blacklist removed {} posts", bp);
-                    removed += bp as u64;
+                        let bp = fsize - original_list.len();
+                        debug!("Global blacklist removed {} posts", bp);
+                        removed += bp as u64;
+                    }
                 }
             }
         }

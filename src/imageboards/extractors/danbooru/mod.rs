@@ -95,6 +95,7 @@ impl Extractor for DanbooruExtractor {
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
             self.safe_mode,
+            self.disable_blacklist,
         )
         .await?;
 
@@ -119,7 +120,7 @@ impl Extractor for DanbooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist {
+            let list = if !self.disable_blacklist || self.safe_mode {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts

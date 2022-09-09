@@ -79,9 +79,13 @@ impl Extractor for MoebooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
-        let blacklist =
-            BlacklistFilter::init(ImageBoards::Konachan, &AHashSet::default(), self.safe_mode)
-                .await?;
+        let blacklist = BlacklistFilter::init(
+            ImageBoards::Konachan,
+            &AHashSet::default(),
+            self.safe_mode,
+            self.disable_blacklist,
+        )
+        .await?;
 
         let mut fvec = Vec::new();
 
@@ -102,7 +106,7 @@ impl Extractor for MoebooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist {
+            let list = if !self.disable_blacklist || self.safe_mode {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts

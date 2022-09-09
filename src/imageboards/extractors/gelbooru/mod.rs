@@ -88,9 +88,13 @@ impl Extractor for GelbooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
-        let blacklist =
-            BlacklistFilter::init(self.active_imageboard, &AHashSet::default(), self.safe_mode)
-                .await?;
+        let blacklist = BlacklistFilter::init(
+            self.active_imageboard,
+            &AHashSet::default(),
+            self.safe_mode,
+            self.disable_blacklist,
+        )
+        .await?;
 
         let mut fvec = Vec::new();
 
@@ -111,7 +115,7 @@ impl Extractor for GelbooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist {
+            let list = if !self.disable_blacklist || self.safe_mode {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts

@@ -94,9 +94,10 @@ impl Extractor for E621Extractor {
         Self::validate_tags(self).await?;
 
         let blacklist = BlacklistFilter::init(
-            ImageBoards::E621,
+            ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
             self.safe_mode,
+            self.disable_blacklist,
         )
         .await?;
 
@@ -119,7 +120,7 @@ impl Extractor for E621Extractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist {
+            let list = if !self.disable_blacklist || self.safe_mode {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
