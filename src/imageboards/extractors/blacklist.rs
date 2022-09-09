@@ -137,41 +137,43 @@ impl BlacklistFilter {
         }
 
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
-        cfg_if! {
-            if #[cfg(feature = "global_blacklist")] {
-                let gbl = GlobalBlacklist::get().await?;
+        if disabled {
+            cfg_if! {
+                if #[cfg(feature = "global_blacklist")] {
+                    let gbl = GlobalBlacklist::get().await?;
 
-                if let Some(tags) = gbl.blacklist {
-                    if tags.global.is_empty() {
-                        debug!("Global blacklist is empty");
-                    } else {
-                        gbl_tags.extend(tags.global);
-                    }
-
-                    let special_tags = match imageboard {
-                            ImageBoards::Danbooru => {
-                                tags.danbooru
-                            }
-                            ImageBoards::E621 => {
-                                tags.e621
-                            }
-                            ImageBoards::Rule34 => {
-                                tags.rule34
-                            }
-                            ImageBoards::Gelbooru => {
-                                tags.gelbooru
-                            }
-                            ImageBoards::Realbooru => {
-                                tags.realbooru
-                            }
-                            ImageBoards::Konachan => {
-                                tags.konachan
-                            }
-                        };
-
-                        if !special_tags.is_empty() {
-                            gbl_tags.extend(special_tags);
+                    if let Some(tags) = gbl.blacklist {
+                        if tags.global.is_empty() {
+                            debug!("Global blacklist is empty");
+                        } else {
+                            gbl_tags.extend(tags.global);
                         }
+
+                        let special_tags = match imageboard {
+                                ImageBoards::Danbooru => {
+                                    tags.danbooru
+                                }
+                                ImageBoards::E621 => {
+                                    tags.e621
+                                }
+                                ImageBoards::Rule34 => {
+                                    tags.rule34
+                                }
+                                ImageBoards::Gelbooru => {
+                                    tags.gelbooru
+                                }
+                                ImageBoards::Realbooru => {
+                                    tags.realbooru
+                                }
+                                ImageBoards::Konachan => {
+                                    tags.konachan
+                                }
+                            };
+
+                            if !special_tags.is_empty() {
+                                gbl_tags.extend(special_tags);
+                            }
+                    }
                 }
             }
         }
