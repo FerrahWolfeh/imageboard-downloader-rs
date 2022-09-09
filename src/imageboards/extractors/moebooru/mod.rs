@@ -11,7 +11,7 @@ use reqwest::Client;
 use std::fmt::Display;
 use tokio::time::Instant;
 
-use super::blacklist::blacklist_filter;
+use super::blacklist::BlacklistFilter;
 use super::Extractor;
 
 mod models;
@@ -79,6 +79,10 @@ impl Extractor for MoebooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
+        let blacklist =
+            BlacklistFilter::init(ImageBoards::Konachan, &AHashSet::default(), self.safe_mode)
+                .await?;
+
         let mut fvec = Vec::new();
 
         let mut page = 1;
@@ -90,7 +94,7 @@ impl Extractor for MoebooruExtractor {
                 page
             };
 
-            let mut posts = Self::get_post_list(self, position).await?;
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -98,17 +102,15 @@ impl Extractor for MoebooruExtractor {
                 break;
             }
 
-            if !self.disable_blacklist {
-                self.total_removed += blacklist_filter(
-                    ImageBoards::Konachan,
-                    &mut posts,
-                    &AHashSet::default(),
-                    self.safe_mode,
-                )
-                .await?;
-            }
+            let list = if !self.disable_blacklist {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
+                posts
+            } else {
+                posts
+            };
 
-            fvec.extend(posts);
+            fvec.extend(list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num {

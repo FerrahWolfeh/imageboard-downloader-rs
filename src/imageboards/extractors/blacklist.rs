@@ -86,7 +86,7 @@ impl GlobalBlacklist {
     /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
     /// or first run), it will be created.
     pub async fn get() -> Result<Self, ExtractorError> {
-        let cache_dir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+        let cache_dir = ProjectDirs::from("com", "ferrahwolfeh", "imageboard-downloader").unwrap();
 
         let cfold = cache_dir.config_dir();
 
@@ -117,90 +117,118 @@ impl GlobalBlacklist {
     }
 }
 
-#[inline]
-pub async fn blacklist_filter(
+pub struct BlacklistFilter {
     imageboard: ImageBoards,
-    list: &mut Vec<Post>,
-    tags: &AHashSet<String>,
+    auth_tags: AHashSet<String>,
+    gbl_tags: AHashSet<String>,
     safe: bool,
-) -> Result<u64, ExtractorError> {
-    let original_size = list.len();
-    let blacklist = tags;
-    let mut removed = 0;
+}
 
-    let start = Instant::now();
-    if safe {
-        debug!("Safe mode active");
-        list.retain(|c| c.rating != Rating::Safe);
+impl BlacklistFilter {
+    pub async fn init(
+        imageboard: ImageBoards,
+        auth_tags: &AHashSet<String>,
+        safe: bool,
+    ) -> Result<Self, ExtractorError> {
+        if safe {
+            debug!("Safe mode active");
+        }
 
-        let safe_counter = original_size - list.len();
-        debug!("Safe mode removed {} posts", safe_counter);
+        let mut gbl_tags: AHashSet<String> = AHashSet::new();
+        cfg_if! {
+            if #[cfg(feature = "global_blacklist")] {
+                let gbl = GlobalBlacklist::get().await?;
 
-        removed += safe_counter as u64;
+                if let Some(tags) = gbl.blacklist {
+                    if tags.global.is_empty() {
+                        debug!("Global blacklist is empty");
+                    } else {
+                        gbl_tags.extend(tags.global);
+                    }
+
+                    let special_tags = match imageboard {
+                            ImageBoards::Danbooru => {
+                                tags.danbooru
+                            }
+                            ImageBoards::E621 => {
+                                tags.e621
+                            }
+                            ImageBoards::Rule34 => {
+                                tags.rule34
+                            }
+                            ImageBoards::Gelbooru => {
+                                tags.gelbooru
+                            }
+                            ImageBoards::Realbooru => {
+                                tags.realbooru
+                            }
+                            ImageBoards::Konachan => {
+                                tags.konachan
+                            }
+                        };
+
+                        if !special_tags.is_empty() {
+                            gbl_tags.extend(special_tags);
+                        }
+                }
+            }
+        }
+
+        Ok(Self {
+            imageboard,
+            auth_tags: auth_tags.clone(),
+            gbl_tags,
+            safe,
+        })
     }
 
-    if !blacklist.is_empty() && matches!(imageboard, ImageBoards::Danbooru | ImageBoards::E621) {
-        let secondary_sz = list.len();
-        list.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
+    #[inline]
+    pub fn filter(&self, list: Vec<Post>) -> (u64, Vec<Post>) {
+        let mut original_list = list;
 
-        let bp = secondary_sz - list.len();
-        debug!("User blacklist removed {} posts", bp);
-        removed += bp as u64;
-    }
+        let original_size = original_list.len();
+        let mut removed = 0;
 
-    cfg_if! {
-        if #[cfg(feature = "global_blacklist")] {
-            let gbl = GlobalBlacklist::get().await?;
+        let start = Instant::now();
+        if self.safe {
+            original_list.retain(|c| c.rating != Rating::Safe);
 
-            if let Some(tags) = gbl.blacklist {
-                if tags.global.is_empty() {
-                    debug!("Global blacklist is empty");
-                } else {
-                    let fsize = list.len();
-                    debug!("Removing posts with tags [{:?}]", tags);
-                    list.retain(|c| !c.tags.iter().any(|s| tags.global.contains(s)));
+            let safe_counter = original_size - original_list.len();
+            debug!("Safe mode removed {} posts", safe_counter);
 
-                    let bp = fsize - list.len();
+            removed += safe_counter as u64;
+        }
+
+        if !self.auth_tags.is_empty()
+            && matches!(self.imageboard, ImageBoards::Danbooru | ImageBoards::E621)
+        {
+            let secondary_sz = original_list.len();
+            original_list.retain(|c| !c.tags.iter().any(|s| self.auth_tags.contains(s)));
+
+            let bp = secondary_sz - original_list.len();
+            debug!("User blacklist removed {} posts", bp);
+            removed += bp as u64;
+        }
+
+        cfg_if! {
+            if #[cfg(feature = "global_blacklist")] {
+                if !self.gbl_tags.is_empty() {
+                    let fsize = original_list.len();
+                    debug!("Removing posts with tags [{:?}]", self.gbl_tags);
+
+                    original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
+
+                    let bp = fsize - original_list.len();
                     debug!("Global blacklist removed {} posts", bp);
                     removed += bp as u64;
                 }
-
-                let special_tags = match imageboard {
-                        ImageBoards::Danbooru => {
-                            tags.danbooru
-                        }
-                        ImageBoards::E621 => {
-                            tags.e621
-                        }
-                        ImageBoards::Rule34 => {
-                            tags.rule34
-                        }
-                        ImageBoards::Gelbooru => {
-                            tags.gelbooru
-                        }
-                        ImageBoards::Realbooru => {
-                            tags.realbooru
-                        }
-                        ImageBoards::Konachan => {
-                            tags.konachan
-                        }
-                    };
-
-                    if !special_tags.is_empty() {
-                        let fsize = list.len();
-                        debug!("Removing posts with tags [{:?}]", special_tags);
-                        list.retain(|c| !c.tags.iter().any(|s| special_tags.contains(s)));
-
-                        let bp = fsize - list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
             }
         }
-    }
-    let end = Instant::now();
-    debug!("Filtering took {:?}", end - start);
-    debug!("Removed total of {} posts", removed);
 
-    Ok(removed)
+        let end = Instant::now();
+        debug!("Filtering took {:?}", end - start);
+        debug!("Removed total of {} posts", removed);
+
+        (removed, original_list)
+    }
 }

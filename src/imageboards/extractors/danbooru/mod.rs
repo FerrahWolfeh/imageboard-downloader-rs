@@ -7,7 +7,7 @@
 use super::error::ExtractorError;
 use super::{Auth, Extractor};
 use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
-use crate::imageboards::extractors::blacklist::blacklist_filter;
+use crate::imageboards::extractors::blacklist::BlacklistFilter;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags};
@@ -91,6 +91,13 @@ impl Extractor for DanbooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
+        let blacklist = BlacklistFilter::init(
+            ImageBoards::Danbooru,
+            &self.auth.user_data.blacklisted_tags,
+            self.safe_mode,
+        )
+        .await?;
+
         let mut fvec = Vec::new();
 
         let mut page = 1;
@@ -104,7 +111,7 @@ impl Extractor for DanbooruExtractor {
 
             debug!("Scanning page {}", position);
 
-            let mut posts = Self::get_post_list(self, position).await?;
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -112,17 +119,15 @@ impl Extractor for DanbooruExtractor {
                 break;
             }
 
-            if !self.disable_blacklist {
-                self.total_removed += blacklist_filter(
-                    ImageBoards::Danbooru,
-                    &mut posts,
-                    &self.auth.user_data.blacklisted_tags,
-                    self.safe_mode,
-                )
-                .await?;
-            }
+            let list = if !self.disable_blacklist {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
+                posts
+            } else {
+                posts
+            };
 
-            fvec.extend(posts);
+            fvec.extend(list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num {
