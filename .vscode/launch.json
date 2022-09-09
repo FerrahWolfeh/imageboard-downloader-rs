@@ -158,6 +158,32 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Test Update",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "mari_(blue_archive)",
+                "-i",
+                "danbooru",
+                "-d",
+                "1",
+                "--update",
+                "--id"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Test Realbooru",
             "cargo": {
                 "args": [

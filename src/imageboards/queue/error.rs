@@ -20,9 +20,15 @@ pub enum QueueError {
         source: serde_json::Error,
     },
 
+    #[error("Failed to serialize data into summary file: {error}")]
+    BinarySerializeFail { error: String },
+
     #[error("Error while adding file to cbz file: {source}")]
     ZipIOError {
         #[from]
         source: zip::result::ZipError,
     },
+
+    #[error("No posts to download!")]
+    NoPostsInQueue,
 }

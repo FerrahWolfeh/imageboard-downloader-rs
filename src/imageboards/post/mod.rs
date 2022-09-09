@@ -16,7 +16,7 @@ use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fs::File,
@@ -47,7 +47,7 @@ pub struct PostQueue {
 }
 
 /// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Post {
     /// ID number of the post given by the imageboard
     pub id: u64,

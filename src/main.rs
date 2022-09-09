@@ -1,9 +1,16 @@
-use anyhow::Error;
+use anyhow::{bail, Error};
+use bincode::{deserialize, serialize};
 use clap::Parser;
 use colored::Colorize;
 use imageboard_downloader::*;
 use log::debug;
-use std::{io::Write, path::PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
+use tokio::{fs::remove_file, task::spawn_blocking};
+use zstd::{decode_all, encode_all};
 
 extern crate tokio;
 
@@ -88,6 +95,18 @@ struct Cli {
         value_name = "PAGE"
     )]
     start_page: Option<usize>,
+
+    /// Download only the latest images for tag selection.
+    ///
+    /// Will not re-download already present and deleted images from folder
+    #[clap(
+        short,
+        long,
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE"
+    )]
+    update: bool,
 }
 
 #[tokio::main]
@@ -102,7 +121,7 @@ async fn main() -> Result<(), Error> {
     );
     std::io::stdout().flush()?;
 
-    let (post_queue, total_black, client) = match args.imageboard {
+    let (mut post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit =
                 DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
@@ -142,6 +161,52 @@ async fn main() -> Result<(), Error> {
         }
     };
 
+    let last_post = post_queue
+        .posts
+        .iter()
+        .max_by_key(|post| post.id)
+        .unwrap()
+        .clone();
+
+    let place = match &args.output {
+        None => std::env::current_dir()?,
+        Some(dir) => dir.to_path_buf(),
+    };
+
+    let tgs = place.join(Path::new(&format!(
+        "{}/{}/{}",
+        args.imageboard.to_string(),
+        &args.tags.join(" "),
+        ".00_download_summary.bin"
+    )));
+
+    let odir = tgs.clone();
+
+    if args.update && tgs.exists() {
+        let last_post_downloaded: Result<Post, Error> = {
+            let dsum = File::open(&tgs)?;
+
+            let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
+            debug!("Latest post id: {}", decomp.id);
+            Ok(decomp)
+        };
+        if let Ok(post) = last_post_downloaded {
+            debug!(
+                "Latest post found: {}",
+                post_queue.posts.first().unwrap().id
+            );
+            post_queue.posts.retain(|c| c.id > post.id);
+        } else {
+            debug!("Summary file is corrupted, ignoring...");
+            remove_file(&tgs).await?;
+        }
+    }
+
+    if post_queue.posts.is_empty() {
+        println!("\r{}", "No posts left to download!".bold());
+        return Ok(());
+    }
+
     let mut qw = Queue::new(
         args.imageboard,
         post_queue,
@@ -151,10 +216,24 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    print!("\r");
+    print!("\r ");
     std::io::stdout().flush()?;
 
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
+
+    spawn_blocking(move || -> Result<(), Error> {
+        let mut dsum = File::create(&odir)?;
+
+        let string = match serialize(&last_post) {
+            Ok(data) => encode_all(&*data, 9)?,
+            Err(_) => bail!("Failed to serialize summary file"),
+        };
+
+        dsum.write_all(&string)?;
+        Ok(())
+    })
+    .await
+    .unwrap()?;
 
     println!(
         "{} {} {}",

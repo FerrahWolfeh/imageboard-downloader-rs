@@ -62,7 +62,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::create_dir_all;
 use tokio::task;
-use tokio::time::Instant;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
@@ -100,10 +99,8 @@ impl Queue {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client!(imageboard.user_agent())
+            client!(imageboard)
         };
-
-        let fstart = Instant::now();
 
         let mut plist = posts.posts;
 
@@ -114,14 +111,6 @@ impl Queue {
                 plist = plist[0..max].to_vec();
             }
         }
-
-        plist.sort();
-
-        plist.reverse();
-
-        let fend = Instant::now();
-
-        debug!("List final sorting took {:?}", fend - fstart);
 
         Self {
             list: plist,
@@ -184,6 +173,7 @@ impl Queue {
                     })
                 }
             };
+
             output_dir
         };
 

@@ -6,7 +6,7 @@
 //! * `Imageboards::Gelbooru`
 //!
 use crate::extract_ext_from_url;
-use crate::imageboards::extractors::blacklist::blacklist_filter;
+use crate::imageboards::extractors::blacklist::BlacklistFilter;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
 use crate::{client, join_tags};
@@ -55,6 +55,7 @@ impl Extractor for GelbooruExtractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             active_imageboard: ImageBoards::Rule34,
@@ -87,6 +88,10 @@ impl Extractor for GelbooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
+        let blacklist =
+            BlacklistFilter::init(self.active_imageboard, &AHashSet::default(), self.safe_mode)
+                .await?;
+
         let mut fvec = Vec::new();
 
         let mut page = 1;
@@ -98,7 +103,7 @@ impl Extractor for GelbooruExtractor {
                 page - 1
             };
 
-            let mut posts = Self::get_post_list(self, position).await?;
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -106,17 +111,15 @@ impl Extractor for GelbooruExtractor {
                 break;
             }
 
-            if !self.disable_blacklist {
-                self.total_removed += blacklist_filter(
-                    self.active_imageboard,
-                    &mut posts,
-                    &AHashSet::default(),
-                    self.safe_mode,
-                )
-                .await?;
-            }
+            let list = if !self.disable_blacklist {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
+                posts
+            } else {
+                posts
+            };
 
-            fvec.extend(posts);
+            fvec.extend(list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num {
@@ -134,6 +137,9 @@ impl Extractor for GelbooruExtractor {
             debug!("Debouncing API calls by 500 ms");
             sleep(Duration::from_millis(500)).await;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,
@@ -168,7 +174,7 @@ impl MultiWebsite for GelbooruExtractor {
                 })
             }
         };
-        let client = client!(imageboard.user_agent());
+        let client = client!(imageboard);
 
         Ok(Self {
             active_imageboard: imageboard,

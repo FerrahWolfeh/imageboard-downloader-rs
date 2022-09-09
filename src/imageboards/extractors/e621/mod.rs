@@ -5,7 +5,7 @@
 //! - Native blacklist (defined in user profile page)
 //!
 use crate::imageboards::auth::{auth_prompt, ImageboardConfig};
-use crate::imageboards::extractors::blacklist::blacklist_filter;
+use crate::imageboards::extractors::blacklist::BlacklistFilter;
 use crate::imageboards::extractors::e621::models::E621TopLevel;
 use crate::imageboards::post::{rating::Rating, Post, PostQueue};
 use crate::imageboards::ImageBoards;
@@ -44,7 +44,7 @@ impl Extractor for E621Extractor {
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621.user_agent());
+        let client = client!(ImageBoards::E621);
 
         // Set Safe mode status
         let safe_mode = safe_mode;
@@ -59,6 +59,7 @@ impl Extractor for E621Extractor {
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
@@ -92,6 +93,13 @@ impl Extractor for E621Extractor {
     ) -> Result<PostQueue, ExtractorError> {
         Self::validate_tags(self).await?;
 
+        let blacklist = BlacklistFilter::init(
+            ImageBoards::E621,
+            &self.auth.user_data.blacklisted_tags,
+            self.safe_mode,
+        )
+        .await?;
+
         let mut fvec = Vec::new();
 
         let mut page = 1;
@@ -103,7 +111,7 @@ impl Extractor for E621Extractor {
                 page
             };
 
-            let mut posts = Self::get_post_list(self, position).await?;
+            let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -111,17 +119,15 @@ impl Extractor for E621Extractor {
                 break;
             }
 
-            if !self.disable_blacklist {
-                self.total_removed += blacklist_filter(
-                    ImageBoards::E621,
-                    &mut posts,
-                    &self.auth.user_data.blacklisted_tags,
-                    self.safe_mode,
-                )
-                .await?;
-            }
+            let list = if !self.disable_blacklist {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
+                posts
+            } else {
+                posts
+            };
 
-            fvec.extend(posts);
+            fvec.extend(list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num {
@@ -139,6 +145,9 @@ impl Extractor for E621Extractor {
             debug!("Debouncing API calls by 500 ms");
             sleep(Duration::from_millis(500)).await;
         }
+
+        fvec.sort();
+        fvec.reverse();
 
         let fin = PostQueue {
             posts: fvec,
@@ -229,7 +238,6 @@ impl E621Extractor {
                 tag_list.extend(c.tags.character.iter().cloned());
                 tag_list.extend(c.tags.artist.iter().cloned());
                 tag_list.extend(c.tags.general.iter().cloned());
-                tag_list.extend(c.tags.invalid.iter().cloned());
                 tag_list.extend(c.tags.copyright.iter().cloned());
                 tag_list.extend(c.tags.lore.iter().cloned());
                 tag_list.extend(c.tags.meta.iter().cloned());
