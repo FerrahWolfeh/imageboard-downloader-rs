@@ -4,8 +4,6 @@
 
 When ran with the `--cbz` flag, instead of downloading all images to `./<imageboard>/<tag1 tag2>/<image>.png`, the utility will save all of them in real time to a `cbz` file in `./<imageboard>/<tag1 tag2>.cbz` using `store` compression (so, no compression).
 
-***NOTE:*** Currently, downloading with this option enabled slightly slows down execution.
-
 ### File structure
 
 After download, the images will be saved inside the zip file as follows:

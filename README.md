@@ -18,6 +18,7 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 - [x] Download limit.
 - [x] Global blacklist. [See more](docs/Global_Blacklist.md)
 - [x] Store downloads in `cbz` file. [See more](docs/CBZ.md)
+- [x] Update already downloaded galleries
 - [ ] Download user favorites
 
 ## Installation
@@ -82,7 +83,7 @@ imageboard_downloader "skyfire_(arknights)" -s 10
 
 ***
 
-### Download only images with "safe" rating from e621 (also works with danbooru/konachan)
+### Download only images with "safe" rating from e621
 
 ```bash
 imageboard_downloader -i e621 "ash_(pokemon)" "pikachu" --safe-mode
@@ -114,6 +115,16 @@ imageboard_downloader "kroos_(arknights)" -o /any/other/dir
 
 This will save files in `/any/other/dir/danbooru/kroos_(arknights)/<file_md5>.png`
 If the specified directory does not exist, it will be created.
+
+***
+
+### Update already downloaded gallery
+
+When using the `--update` flag and using a previous tag and dir selection, the utility will only download images newer than the last post downloaded in a previous successful run.
+
+```bash
+imageboard_downloader "kroos_(arknights)" -o /any/other/dir --update
+```
 
 ***
 
