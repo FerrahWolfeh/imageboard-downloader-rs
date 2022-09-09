@@ -137,7 +137,7 @@ impl BlacklistFilter {
         }
 
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
-        if disabled {
+        if !disabled {
             cfg_if! {
                 if #[cfg(feature = "global_blacklist")] {
                     let gbl = GlobalBlacklist::get().await?;
