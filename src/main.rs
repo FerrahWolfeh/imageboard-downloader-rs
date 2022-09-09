@@ -221,19 +221,21 @@ async fn main() -> Result<(), Error> {
 
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
 
-    spawn_blocking(move || -> Result<(), Error> {
-        let mut dsum = File::create(&odir)?;
+    if !args.cbz {
+        spawn_blocking(move || -> Result<(), Error> {
+            let mut dsum = File::create(&odir)?;
 
-        let string = match serialize(&last_post) {
-            Ok(data) => encode_all(&*data, 9)?,
-            Err(_) => bail!("Failed to serialize summary file"),
-        };
+            let string = match serialize(&last_post) {
+                Ok(data) => encode_all(&*data, 9)?,
+                Err(_) => bail!("Failed to serialize summary file"),
+            };
 
-        dsum.write_all(&string)?;
-        Ok(())
-    })
-    .await
-    .unwrap()?;
+            dsum.write_all(&string)?;
+            Ok(())
+        })
+        .await
+        .unwrap()?;
+    }
 
     println!(
         "{} {} {}",
