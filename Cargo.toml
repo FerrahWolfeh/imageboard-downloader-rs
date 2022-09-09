@@ -77,7 +77,7 @@ name = "post_filter"
 harness = false
 
 [profile.release]
-lto = true
+lto = false
 opt-level = 3
 strip = true
 debug = false
