@@ -33,7 +33,7 @@ global = ["a_nasty_tag", "other_nasty_tag"]
 
 will make the Extractor drop all posts that contain any of the tags when downloading from **any** imageboard.
 
-While placing strings inside any other array, will make the Extractor drop all posts the tags specific to it.
+While placing strings inside any other array, will make the Extractor drop all posts with the tags specific to it.
 
 ## Safe Mode
 
