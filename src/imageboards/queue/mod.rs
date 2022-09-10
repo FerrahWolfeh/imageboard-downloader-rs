@@ -141,13 +141,8 @@ impl Queue {
         let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
         let output_place = if self.cbz {
-            let output_file = place.join(PathBuf::from(format!(
-                "{}/{}.cbz",
-                self.imageboard.to_string(),
-                self.tag_s
-            )));
+            let output_file = place.join(PathBuf::from(self.imageboard.to_string()));
 
-            debug!("Target file: {}", output_file.display());
             match create_dir_all(&output_file.parent().unwrap()).await {
                 Ok(_) => (),
                 Err(error) => {
@@ -178,14 +173,9 @@ impl Queue {
         };
 
         if self.cbz {
-            let output_file = place.join(PathBuf::from(format!(
-                "{}/{}.cbz",
-                self.imageboard.to_string(),
-                self.tag_s
-            )));
+            let output_file = output_place.join(PathBuf::from(format!("{}.cbz", self.tag_s)));
 
             debug!("Target file: {}", output_file.display());
-            create_dir_all(&output_file.parent().unwrap()).await?;
 
             let zf = File::create(&output_file)?;
             let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
