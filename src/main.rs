@@ -114,12 +114,11 @@ async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-    print!(
+    println!(
         "{}{}",
         "Scanning for posts, please wait".bold(),
         "...".bold().blink()
     );
-    std::io::stdout().flush()?;
 
     let (mut post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
@@ -215,9 +214,6 @@ async fn main() -> Result<(), Error> {
         args.limit,
         args.cbz,
     );
-
-    print!("\r ");
-    std::io::stdout().flush()?;
 
     let total_down = qw.download(args.output, args.save_file_as_id).await?;
 
