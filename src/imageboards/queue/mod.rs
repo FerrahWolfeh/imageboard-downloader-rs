@@ -71,6 +71,7 @@ use self::error::QueueError;
 use super::post::PostQueue;
 
 mod error;
+pub mod summary;
 
 /// Struct where all the downloading and filtering will take place
 pub struct Queue {
@@ -126,22 +127,13 @@ impl Queue {
     /// Starts the download of all posts collected inside a [`PostQueue`]
     pub async fn download(
         &mut self,
-        output: Option<PathBuf>,
+        output_dir: PathBuf,
         save_as_id: bool,
     ) -> Result<u64, QueueError> {
-        // If out_dir is not set via cli flags, use current dir
-        let place = match output {
-            None => match std::env::current_dir() {
-                Ok(result) => result,
-                Err(reason) => return Err(QueueError::EnvError { source: reason }),
-            },
-            Some(dir) => dir,
-        };
-
         let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
         let output_place = if self.cbz {
-            let output_file = place.join(PathBuf::from(self.imageboard.to_string()));
+            let output_file = output_dir.join(PathBuf::from(self.imageboard.to_string()));
 
             match create_dir_all(&output_file.parent().unwrap()).await {
                 Ok(_) => (),
@@ -153,7 +145,7 @@ impl Queue {
             };
             output_file
         } else {
-            let output_dir = place.join(PathBuf::from(format!(
+            let output_dir = output_dir.join(PathBuf::from(format!(
                 "{}/{}",
                 self.imageboard.to_string(),
                 self.tag_s

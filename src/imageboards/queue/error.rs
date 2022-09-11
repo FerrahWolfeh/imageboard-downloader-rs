@@ -23,6 +23,9 @@ pub enum QueueError {
     #[error("Failed to serialize data into summary file: {error}")]
     BinarySerializeFail { error: String },
 
+    #[error("Failed to deserialize summary file: {error}")]
+    SummaryDeserializeError { error: String },
+
     #[error("Error while adding file to cbz file: {source}")]
     ZipIOError {
         #[from]

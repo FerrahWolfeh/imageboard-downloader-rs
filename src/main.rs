@@ -1,18 +1,13 @@
-use anyhow::{bail, Error};
-use bincode::{deserialize, serialize};
+use anyhow::Error;
 use clap::Parser;
 use colored::Colorize;
-use imageboard_downloader::*;
+use imageboard_downloader::{imageboards::queue::summary::SummaryFile, *};
 use log::debug;
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
-use tokio::{fs::remove_file, task::spawn_blocking};
-use zstd::{decode_all, encode_all};
+use std::path::{Path, PathBuf};
+use tokio::fs::remove_file;
 
 extern crate tokio;
+mod cli_utils;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -160,13 +155,6 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let last_post = post_queue
-        .posts
-        .iter()
-        .max_by_key(|post| post.id)
-        .unwrap()
-        .clone();
-
     let place = match &args.output {
         None => std::env::current_dir()?,
         Some(dir) => dir.to_path_buf(),
@@ -179,22 +167,11 @@ async fn main() -> Result<(), Error> {
         ".00_download_summary.bin"
     )));
 
-    let odir = tgs.clone();
-
     if args.update && tgs.exists() {
-        let last_post_downloaded: Result<Post, Error> = {
-            let dsum = File::open(&tgs)?;
-
-            let decomp = deserialize::<Post>(&decode_all(dsum)?)?;
-            debug!("Latest post id: {}", decomp.id);
-            Ok(decomp)
-        };
-        if let Ok(post) = last_post_downloaded {
-            debug!(
-                "Latest post found: {}",
-                post_queue.posts.first().unwrap().id
-            );
-            post_queue.posts.retain(|c| c.id > post.id);
+        let summary_file = SummaryFile::read_summary(&tgs).await;
+        if let Ok(post) = summary_file {
+            debug!("Latest post found: {}", post.last_downloaded.id);
+            post_queue.posts.retain(|c| c.id > post.last_downloaded.id);
         } else {
             debug!("Summary file is corrupted, ignoring...");
             remove_file(&tgs).await?;
@@ -202,9 +179,11 @@ async fn main() -> Result<(), Error> {
     }
 
     if post_queue.posts.is_empty() {
-        println!("\r{}", "No posts left to download!".bold());
+        println!("{}", "No posts left to download!".bold());
         return Ok(());
     }
+
+    let post_list = post_queue.posts.clone();
 
     let mut qw = Queue::new(
         args.imageboard,
@@ -215,22 +194,11 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    let total_down = qw.download(args.output, args.save_file_as_id).await?;
+    let total_down = qw.download(place, args.save_file_as_id).await?;
 
     if !args.cbz {
-        spawn_blocking(move || -> Result<(), Error> {
-            let mut dsum = File::create(&odir)?;
-
-            let string = match serialize(&last_post) {
-                Ok(data) => encode_all(&*data, 9)?,
-                Err(_) => bail!("Failed to serialize summary file"),
-            };
-
-            dsum.write_all(&string)?;
-            Ok(())
-        })
-        .await
-        .unwrap()?;
+        let summary = SummaryFile::new(post_list);
+        summary.write_summary(&tgs).await?;
     }
 
     println!(
