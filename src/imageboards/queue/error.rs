@@ -32,6 +32,9 @@ pub enum QueueError {
         source: zip::result::ZipError,
     },
 
+    #[error("Summary file in {file} not found or corrupted")]
+    ZipSummaryReadError { file: String },
+
     #[error("No posts to download!")]
     NoPostsInQueue,
 }

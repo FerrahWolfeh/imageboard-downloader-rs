@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use tokio::fs::remove_file;
 
 extern crate tokio;
-mod cli_utils;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]

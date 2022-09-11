@@ -1,13 +1,18 @@
-use std::{fs::File, io::Write, path::Path};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
+};
 use tokio::{
     fs::File as AsyncFile,
     io::{AsyncReadExt, AsyncWriteExt},
+    task::spawn_blocking,
 };
 
 use bincode::{deserialize, serialize};
 use chrono::{serde::ts_seconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use zip::{write::FileOptions, CompressionMethod, ZipWriter};
+use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use zstd::{decode_all, encode_all};
 
 use crate::Post;
@@ -76,5 +81,34 @@ impl SummaryFile {
                 error: err.to_string(),
             }),
         }
+    }
+
+    pub async fn read_zip_summary(path: &Path) -> Result<Self, QueueError> {
+        let path = path.to_path_buf();
+        spawn_blocking(move || -> Result<Self, QueueError> {
+            let file = File::open(&path)?;
+            let mut zip = ZipArchive::new(file)?;
+            let mut raw_bytes = match zip.by_name("00_summary.json") {
+                Ok(bytes) => bytes,
+                Err(_) => {
+                    return Err(QueueError::ZipSummaryReadError {
+                        file: path.display().to_string(),
+                    })
+                }
+            };
+
+            let mut summary_slice = vec![];
+
+            raw_bytes.read_to_end(&mut summary_slice)?;
+
+            match serde_json::from_slice::<SummaryFile>(&summary_slice) {
+                Ok(sum) => Ok(sum),
+                Err(error) => Err(QueueError::SummaryDeserializeError {
+                    error: error.to_string(),
+                }),
+            }
+        })
+        .await
+        .unwrap()
     }
 }
