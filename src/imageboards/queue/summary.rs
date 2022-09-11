@@ -74,7 +74,7 @@ impl SummaryFile {
 
         match deserialize::<Self>(&decode_all(&*raw_data)?) {
             Ok(summary) => Ok(summary),
-            Err(err) => Err(QueueError::SummaryDeserializeError {
+            Err(err) => Err(QueueError::SummaryDeserializeFail {
                 error: err.to_string(),
             }),
         }
@@ -100,7 +100,7 @@ impl SummaryFile {
 
             match serde_json::from_slice::<SummaryFile>(&summary_slice) {
                 Ok(sum) => Ok(sum),
-                Err(error) => Err(QueueError::SummaryDeserializeError {
+                Err(error) => Err(QueueError::SummaryDeserializeFail {
                     error: error.to_string(),
                 }),
             }
@@ -113,7 +113,7 @@ impl SummaryFile {
     pub fn to_json(&self) -> Result<String, QueueError> {
         match serde_json::to_string_pretty(self) {
             Ok(json) => Ok(json),
-            Err(err) => Err(QueueError::BinarySerializeFail {
+            Err(err) => Err(QueueError::SummarySerializeFail {
                 error: err.to_string(),
             }),
         }
@@ -123,7 +123,7 @@ impl SummaryFile {
     pub fn to_bincode(&self) -> Result<Vec<u8>, QueueError> {
         match serialize(&self) {
             Ok(data) => Ok(encode_all(&*data, 9)?),
-            Err(err) => Err(QueueError::BinarySerializeFail {
+            Err(err) => Err(QueueError::SummarySerializeFail {
                 error: err.to_string(),
             }),
         }
