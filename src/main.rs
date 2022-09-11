@@ -154,6 +154,8 @@ async fn main() -> Result<(), Error> {
         }
     };
 
+    post_queue.posts.shrink_to_fit();
+
     let place = match &args.output {
         None => std::env::current_dir()?,
         Some(dir) => dir.to_path_buf(),
