@@ -50,6 +50,7 @@
 //! }
 //! ```
 use crate::imageboards::post::rating::Rating;
+use crate::imageboards::queue::summary::SummaryFile;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
 use futures::StreamExt;
@@ -176,7 +177,7 @@ impl Queue {
             let zf = self.zip_file.clone().unwrap();
 
             {
-                let ap = serde_json::to_string_pretty(&self.list)?;
+                let ap = SummaryFile::new(self.list.clone()).to_json()?;
 
                 let mut z_1 = zf.lock().unwrap();
                 z_1.set_comment(format!(

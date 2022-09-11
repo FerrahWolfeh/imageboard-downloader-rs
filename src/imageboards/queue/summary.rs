@@ -39,7 +39,7 @@ impl SummaryFile {
     }
 
     pub fn write_zip_summary(&self, zip: &mut ZipWriter<File>) -> Result<(), QueueError> {
-        let serialized = serde_json::to_string_pretty(self)?;
+        let serialized = self.to_json()?;
 
         zip.start_file(
             "00_summary.json",
@@ -55,14 +55,7 @@ impl SummaryFile {
     pub async fn write_summary(&self, path: &Path) -> Result<(), QueueError> {
         let mut dsum = AsyncFile::create(path).await?;
 
-        let string = match serialize(&self) {
-            Ok(data) => encode_all(&*data, 9)?,
-            Err(err) => {
-                return Err(QueueError::BinarySerializeFail {
-                    error: err.to_string(),
-                })
-            }
-        };
+        let string = self.to_bincode()?;
 
         dsum.write_all(&string).await?;
 
@@ -110,5 +103,25 @@ impl SummaryFile {
         })
         .await
         .unwrap()
+    }
+
+    #[inline]
+    pub fn to_json(&self) -> Result<String, QueueError> {
+        match serde_json::to_string_pretty(self) {
+            Ok(json) => Ok(json),
+            Err(err) => Err(QueueError::BinarySerializeFail {
+                error: err.to_string(),
+            }),
+        }
+    }
+
+    #[inline]
+    pub fn to_bincode(&self) -> Result<Vec<u8>, QueueError> {
+        match serialize(&self) {
+            Ok(data) => Ok(encode_all(&*data, 9)?),
+            Err(err) => Err(QueueError::BinarySerializeFail {
+                error: err.to_string(),
+            }),
+        }
     }
 }
