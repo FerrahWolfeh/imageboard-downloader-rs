@@ -205,7 +205,10 @@ impl GelbooruExtractor {
 
         debug!("Checking tags");
 
-        let count = request.send().await?.json::<Value>().await?;
+        let count = match request.send().await?.json::<Value>().await {
+            Ok(json) => json,
+            Err(_) => return Err(ExtractorError::ZeroPosts),
+        };
 
         // Bail out if no posts are found
         if let Some(res) = count.as_array() {
