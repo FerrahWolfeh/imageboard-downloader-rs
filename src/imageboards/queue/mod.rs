@@ -107,11 +107,7 @@ impl Queue {
         let mut plist = posts.posts;
 
         if let Some(max) = limit {
-            let l_len = plist.len();
-
-            if max < l_len {
-                plist = plist[0..max].to_vec();
-            }
+            plist.truncate(max);
         }
 
         Self {
