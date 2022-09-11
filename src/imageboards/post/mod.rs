@@ -4,15 +4,11 @@
 //! A [`Post` struct](Post) is a generic representation of an imageboard post.
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
-use crate::{
-    progress_bars::{download_progress_style, ProgressCounter},
-    ImageBoards,
-};
+use crate::{progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use bytesize::ByteSize;
 use colored::Colorize;
 use futures::StreamExt;
-use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::debug;
 use md5::compute;
 use reqwest::Client;
@@ -243,11 +239,7 @@ impl Post {
 
         debug!("Remote file is {}", ByteSize::b(size).to_string_as(true));
 
-        let bar = ProgressBar::new(size)
-            .with_style(download_progress_style(&variant.progress_template()));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-
-        let pb = counters.multi.add(bar);
+        let pb = counters.add_download_bar(size, variant);
 
         // Download the file chunk by chunk.
         debug!("Retrieving chunks...");

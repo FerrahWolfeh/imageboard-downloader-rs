@@ -54,6 +54,13 @@ impl ProgressCounter {
             downloaded_mtx: Arc::new(Mutex::new(0)),
         })
     }
+
+    pub fn add_download_bar(&self, len: u64, imageboard: ImageBoards) -> ProgressBar {
+        let bar = ProgressBar::new(len)
+            .with_style(download_progress_style(&imageboard.progress_template()));
+
+        self.multi.add(bar)
+    }
 }
 
 pub fn master_progress_style(templates: &BarTemplates) -> ProgressStyle {
