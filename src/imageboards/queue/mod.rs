@@ -77,7 +77,7 @@ pub mod summary;
 /// Struct where all the downloading and filtering will take place
 pub struct Queue {
     list: Vec<Post>,
-    tag_s: String,
+    tags: Vec<String>,
     imageboard: ImageBoards,
     sim_downloads: u8,
     client: Client,
@@ -96,8 +96,6 @@ impl Queue {
         limit: Option<usize>,
         save_as_cbz: bool,
     ) -> Self {
-        let st = posts.tags.join(" ");
-
         let client = if let Some(cli) = custom_client {
             cli
         } else {
@@ -112,7 +110,7 @@ impl Queue {
 
         Self {
             list: plist,
-            tag_s: st,
+            tags: posts.tags,
             cbz: save_as_cbz,
             imageboard,
             sim_downloads,
@@ -127,6 +125,8 @@ impl Queue {
         output_dir: PathBuf,
         save_as_id: bool,
     ) -> Result<u64, QueueError> {
+        let st = self.tags.join(" ");
+
         let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
 
         let output_place = if self.cbz {
@@ -145,7 +145,7 @@ impl Queue {
             let output_dir = output_dir.join(PathBuf::from(format!(
                 "{}/{}",
                 self.imageboard.to_string(),
-                self.tag_s
+                st
             )));
 
             debug!("Target dir: {}", output_dir.display());
@@ -162,7 +162,7 @@ impl Queue {
         };
 
         if self.cbz {
-            let output_file = output_place.join(PathBuf::from(format!("{}.cbz", self.tag_s)));
+            let output_file = output_place.join(PathBuf::from(format!("{}.cbz", st)));
 
             debug!("Target file: {}", output_file.display());
 
@@ -172,31 +172,7 @@ impl Queue {
 
             let zf = self.zip_file.clone().unwrap();
 
-            {
-                let ap = SummaryFile::new(self.list.clone()).to_json()?;
-
-                let mut z_1 = zf.lock().unwrap();
-                z_1.set_comment(format!(
-                    "ImageBoard Downloader\n\nWebsite: {}\n\nTags: {}\n\nPosts: {}",
-                    self.imageboard.to_string(),
-                    self.tag_s,
-                    self.list.len()
-                ));
-
-                z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
-                z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
-                z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
-                z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
-
-                z_1.start_file(
-                    "00_summary.json",
-                    FileOptions::default()
-                        .compression_method(CompressionMethod::Deflated)
-                        .compression_level(Some(9)),
-                )?;
-
-                z_1.write_all(ap.as_bytes())?;
-            }
+            self.write_zip_structure(zf)?;
         }
 
         debug!("Fetching {} posts", self.list.len());
@@ -231,5 +207,27 @@ impl Queue {
         let tot = counters.downloaded_mtx.lock().unwrap();
 
         Ok(*tot)
+    }
+
+    fn write_zip_structure(&self, zip: Arc<Mutex<ZipWriter<File>>>) -> Result<(), QueueError> {
+        let ap =
+            SummaryFile::new(self.imageboard, self.tags.clone(), self.list.clone()).to_json()?;
+
+        let mut z_1 = zip.lock().unwrap();
+
+        z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
+
+        z_1.start_file(
+            "00_summary.json",
+            FileOptions::default()
+                .compression_method(CompressionMethod::Deflated)
+                .compression_level(Some(9)),
+        )?;
+
+        z_1.write_all(ap.as_bytes())?;
+        Ok(())
     }
 }

@@ -15,25 +15,29 @@ use serde::{Deserialize, Serialize};
 use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use zstd::{decode_all, encode_all};
 
-use crate::Post;
+use crate::{ImageBoards, Post};
 
 use super::error::QueueError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SummaryFile {
+    pub imageboard: ImageBoards,
+    pub tags: Vec<String>,
     #[serde(with = "ts_seconds")]
     pub last_updated: DateTime<Utc>,
-    pub last_downloaded: Post,
+    pub last_downloaded: u64,
     pub posts: Vec<Post>,
 }
 
 impl SummaryFile {
-    pub fn new(posts: Vec<Post>) -> Self {
+    pub fn new(imageboard: ImageBoards, tags: Vec<String>, posts: Vec<Post>) -> Self {
         let last_down = posts.first().unwrap().clone();
 
         Self {
+            imageboard,
+            tags,
             last_updated: Utc::now(),
-            last_downloaded: last_down,
+            last_downloaded: last_down.id,
             posts,
         }
     }

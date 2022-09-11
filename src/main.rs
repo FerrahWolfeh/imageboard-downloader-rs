@@ -171,8 +171,8 @@ async fn main() -> Result<(), Error> {
     if args.update && tgs.exists() {
         let summary_file = SummaryFile::read_summary(&tgs).await;
         if let Ok(post) = summary_file {
-            debug!("Latest post found: {}", post.last_downloaded.id);
-            post_queue.posts.retain(|c| c.id > post.last_downloaded.id);
+            debug!("Latest post found: {}", post.last_downloaded);
+            post_queue.posts.retain(|c| c.id > post.last_downloaded);
         } else {
             debug!("Summary file is corrupted, ignoring...");
             remove_file(&tgs).await?;
@@ -198,7 +198,7 @@ async fn main() -> Result<(), Error> {
     let total_down = qw.download(place, args.save_file_as_id).await?;
 
     if !args.cbz {
-        let summary = SummaryFile::new(post_list);
+        let summary = SummaryFile::new(args.imageboard, args.tags, post_list);
         summary.write_summary(&tgs).await?;
     }
 
