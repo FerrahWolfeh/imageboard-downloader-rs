@@ -101,7 +101,11 @@ impl Extractor for E621Extractor {
         )
         .await?;
 
-        let mut fvec = Vec::new();
+        let mut fvec = if let Some(size) = limit {
+            Vec::with_capacity(size)
+        } else {
+            Vec::new()
+        };
 
         let mut page = 1;
 
