@@ -81,7 +81,7 @@ name = "post_filter"
 harness = false
 
 [profile.release]
-lto = false
+lto = "thin"
 opt-level = 3
 strip = true
 debug = false
