@@ -1,7 +1,10 @@
 use anyhow::Error;
 use clap::Parser;
 use colored::Colorize;
-use imageboard_downloader::{imageboards::queue::summary::SummaryFile, *};
+use imageboard_downloader::{
+    imageboards::{post::NameType, queue::summary::SummaryFile},
+    *,
+};
 use log::debug;
 use std::path::{Path, PathBuf};
 use tokio::fs::remove_file;
@@ -195,7 +198,12 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    let total_down = qw.download(place, args.save_file_as_id).await?;
+    let nt = match args.save_file_as_id {
+        true => NameType::ID,
+        false => NameType::MD5,
+    };
+
+    let total_down = qw.download(place, nt).await?;
 
     if !args.cbz {
         let summary = SummaryFile::new(args.imageboard, args.tags, post_list);

@@ -58,6 +58,7 @@ use log::debug;
 use reqwest::Client;
 use std::fs::File;
 use std::io::Write;
+use std::mem::take;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -69,7 +70,7 @@ use zip::ZipWriter;
 
 use self::error::QueueError;
 
-use super::post::PostQueue;
+use super::post::{NameType, PostQueue};
 
 mod error;
 pub mod summary;
@@ -123,7 +124,7 @@ impl Queue {
     pub async fn download(
         &mut self,
         output_dir: PathBuf,
-        save_as_id: bool,
+        name_type: NameType,
     ) -> Result<u64, QueueError> {
         let list = take(&mut self.list);
 
@@ -181,7 +182,6 @@ impl Queue {
 
         futures::stream::iter(list)
             .map(|d| {
-                let post = d.clone();
                 let cli = self.client.clone();
                 let output = output_place.clone();
                 let imgbrd = self.imageboard;
@@ -189,7 +189,7 @@ impl Queue {
                 let selfe = self.zip_file.clone();
 
                 task::spawn(async move {
-                    post.get(&cli, &output, counter, imgbrd, save_as_id, selfe)
+                    d.get(&cli, &output, counter, imgbrd, name_type, selfe)
                         .await
                 })
             })

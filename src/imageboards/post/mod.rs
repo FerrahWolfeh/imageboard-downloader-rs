@@ -18,6 +18,7 @@ use std::{
     convert::TryInto,
     fs::File,
     io::Write,
+    ops::Not,
     path::Path,
     sync::{Arc, Mutex},
 };
@@ -33,6 +34,29 @@ use self::{error::PostError, rating::Rating};
 
 mod error;
 pub mod rating;
+
+#[derive(Debug, Clone, Copy)]
+pub enum NameType {
+    ID,
+    MD5,
+}
+
+impl Not for NameType {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            NameType::ID => NameType::MD5,
+            NameType::MD5 => NameType::ID,
+        }
+    }
+}
+
+impl PartialEq for NameType {
+    fn eq(&self, other: &Self) -> bool {
+        core::mem::discriminant(self) == core::mem::discriminant(other)
+    }
+}
 
 /// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
 #[derive(Debug)]
@@ -97,36 +121,43 @@ impl Post {
         output: &Path,
         counters: Arc<ProgressCounter>,
         variant: ImageBoards,
-        name_id: bool,
+        name_type: NameType,
         zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), PostError> {
-        let name = if name_id {
-            self.id.to_string()
-        } else {
-            self.md5.clone()
-        };
-        let output = output.join(format!("{}.{}", name, &self.extension));
+        let output = output.join(&self.file_name(name_type));
 
-        if Self::check_file_exists(self, &output, counters.clone(), name_id)
-            .await
-            .is_ok()
+        if !self
+            .check_file_exists(&output, counters.clone(), name_type)
+            .await?
         {
-            Self::fetch(self, client, counters, &output, variant, zip).await?;
+            self.fetch(client, counters, &output, variant, zip).await?;
         }
         Ok(())
+    }
+
+    #[inline]
+    pub fn file_name(&self, name_type: NameType) -> String {
+        let name = match name_type {
+            NameType::ID => self.id.to_string(),
+            NameType::MD5 => self.md5.to_string(),
+        };
+
+        format!("{}.{}", name, self.extension)
     }
 
     async fn check_file_exists(
         &self,
         output: &Path,
         counters: Arc<ProgressCounter>,
-        name_id: bool,
-    ) -> Result<(), PostError> {
-        let id_name = format!("{}.{}", self.id, self.extension);
-        let md5_name = format!("{}.{}", self.md5, self.extension);
+        name_type: NameType,
+    ) -> Result<bool, PostError> {
+        let id_name = self.file_name(NameType::ID);
+        let md5_name = self.file_name(NameType::MD5);
 
-        let name = if name_id { &id_name } else { &md5_name };
-        let inv_name = if name_id { &md5_name } else { &id_name };
+        let (name, inv_name) = match name_type {
+            NameType::ID => (&id_name, &md5_name),
+            NameType::MD5 => (&md5_name, &id_name),
+        };
 
         let raw_path = output.parent().unwrap();
 
@@ -135,7 +166,7 @@ impl Post {
         let actual = if output.exists() {
             debug!("File {} found.", &name);
             output.to_path_buf()
-        } else if name_id {
+        } else if name_type == NameType::ID {
             debug!("File {} not found.", &name);
             debug!("Trying possibly matching file: {}", &md5_name);
             file_is_same = true;
@@ -175,7 +206,7 @@ impl Post {
 
                     counters.main.inc(1);
                     *counters.total_mtx.lock().unwrap() += 1;
-                    return Err(PostError::CorrectFileExists);
+                    return Ok(true);
                 }
                 debug!("Skipping download.");
                 match counters.multi.println(format!(
@@ -194,7 +225,7 @@ impl Post {
 
                 counters.main.inc(1);
                 *counters.total_mtx.lock().unwrap() += 1;
-                return Err(PostError::CorrectFileExists);
+                return Ok(true);
             }
 
             debug!("MD5 doesn't match, File might be corrupted\nExpected: {}, got: {}\nRemoving file...", self.md5, hash);
@@ -207,9 +238,9 @@ impl Post {
                 "is corrupted. Re-downloading...".bold().red()
             ))?;
 
-            Ok(())
+            Ok(false)
         } else {
-            Ok(())
+            Ok(false)
         }
     }
 
