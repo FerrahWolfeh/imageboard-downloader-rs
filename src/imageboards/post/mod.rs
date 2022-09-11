@@ -200,9 +200,8 @@ impl Post {
                 return Err(PostError::CorrectFileExists);
             }
 
-            debug!("MD5 doesn't match, File might be corrupted");
-            debug!("Expected: {}, got: {}", self.md5, hash);
-            debug!("Removing file...");
+            debug!("MD5 doesn't match, File might be corrupted\nExpected: {}, got: {}\nRemoving file...", self.md5, hash);
+
             fs::remove_file(&output).await?;
             counters.multi.println(format!(
                 "{} {} {}",
