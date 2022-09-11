@@ -125,9 +125,11 @@ impl Queue {
         output_dir: PathBuf,
         save_as_id: bool,
     ) -> Result<u64, QueueError> {
+        let list = take(&mut self.list);
+
         let st = self.tags.join(" ");
 
-        let counters = ProgressCounter::initialize(self.list.len() as u64, self.imageboard);
+        let counters = ProgressCounter::initialize(list.len() as u64, self.imageboard);
 
         let output_place = if self.cbz {
             let output_file = output_dir.join(PathBuf::from(self.imageboard.to_string()));
@@ -175,9 +177,9 @@ impl Queue {
             self.write_zip_structure(zf)?;
         }
 
-        debug!("Fetching {} posts", self.list.len());
+        debug!("Fetching {} posts", list.len());
 
-        futures::stream::iter(&self.list)
+        futures::stream::iter(list)
             .map(|d| {
                 let post = d.clone();
                 let cli = self.client.clone();
