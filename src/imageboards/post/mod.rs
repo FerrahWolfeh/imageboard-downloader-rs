@@ -19,6 +19,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
+    convert::TryInto,
     fs::File,
     io::Write,
     path::Path,
@@ -252,10 +253,12 @@ impl Post {
         debug!("Retrieving chunks...");
         let mut stream = res.bytes_stream();
 
-        if let Some(zf) = zip {
-            let fvec: Vec<u8> = Vec::with_capacity(size.try_into()?);
+        let buf_size: usize = size.try_into()?;
 
-            let mut buf = BufWriter::with_capacity(size.try_into()?, fvec);
+        if let Some(zf) = zip {
+            let fvec: Vec<u8> = Vec::with_capacity(buf_size);
+
+            let mut buf = BufWriter::with_capacity(buf_size, fvec);
 
             let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 
@@ -303,11 +306,13 @@ impl Post {
             .await??;
         } else {
             debug!("Creating {:?}", &output);
-            let mut file = OpenOptions::new()
+            let file = OpenOptions::new()
                 .append(true)
                 .create(true)
                 .open(output)
                 .await?;
+
+            let mut bw = BufWriter::new(file);
 
             while let Some(item) = stream.next().await {
                 // Retrieve chunk.
@@ -322,7 +327,7 @@ impl Post {
                 pb.inc(chunk.len() as u64);
 
                 // Write to file.
-                file.write_all_buf(&mut chunk).await?;
+                bw.write_all_buf(&mut chunk).await?;
             }
         }
 
