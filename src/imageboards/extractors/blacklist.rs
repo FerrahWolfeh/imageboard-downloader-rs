@@ -196,7 +196,7 @@ impl BlacklistFilter {
 
         let start = Instant::now();
         if self.safe {
-            original_list.retain(|c| c.rating != Rating::Safe);
+            original_list.retain(|c| c.rating == Rating::Safe);
 
             let safe_counter = original_size - original_list.len();
             debug!("Safe mode removed {} posts", safe_counter);

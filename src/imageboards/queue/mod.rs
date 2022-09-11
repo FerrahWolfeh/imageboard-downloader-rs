@@ -135,7 +135,7 @@ impl Queue {
         let output_place = if self.cbz {
             let output_file = output_dir.join(PathBuf::from(self.imageboard.to_string()));
 
-            match create_dir_all(&output_file.parent().unwrap()).await {
+            match create_dir_all(&output_file).await {
                 Ok(_) => (),
                 Err(error) => {
                     return Err(QueueError::DirCreationError {
