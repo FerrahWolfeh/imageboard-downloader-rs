@@ -49,21 +49,26 @@
 //!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
+use crate::imageboards::post::error::PostError;
 use crate::imageboards::post::rating::Rating;
 use crate::imageboards::queue::summary::SummaryFile;
 use crate::Post;
 use crate::{client, progress_bars::ProgressCounter, ImageBoards};
+use bytesize::ByteSize;
+use colored::Colorize;
 use futures::StreamExt;
 use log::debug;
+use md5::compute;
 use reqwest::Client;
 use std::fs::File;
 use std::io::Write;
 use std::mem::take;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
-use tokio::fs::create_dir_all;
-use tokio::task;
+use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
+use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::task::{self, spawn_blocking};
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
@@ -183,14 +188,16 @@ impl Queue {
         futures::stream::iter(list)
             .map(|d| {
                 let cli = self.client.clone();
-                let output = output_place.clone();
-                let imgbrd = self.imageboard;
-                let counter = counters.clone();
-                let selfe = self.zip_file.clone();
+                let output = output_place.join(d.file_name(name_type));
+                let variant = self.imageboard;
+                let counters = counters.clone();
+                let zip = self.zip_file.clone();
 
                 task::spawn(async move {
-                    d.get(&cli, &output, counter, imgbrd, name_type, selfe)
-                        .await
+                    if !Self::check_file_exists(&d, &output, counters.clone(), name_type).await? {
+                        Self::fetch(cli, variant, d, counters, &output, zip).await?;
+                    }
+                    Ok::<(), QueueError>(())
                 })
             })
             .buffer_unordered(self.sim_downloads as usize)
@@ -230,6 +237,226 @@ impl Queue {
         )?;
 
         z_1.write_all(ap.as_bytes())?;
+        Ok(())
+    }
+
+    async fn check_file_exists(
+        post: &Post,
+        output: &Path,
+        counters: Arc<ProgressCounter>,
+        name_type: NameType,
+    ) -> Result<bool, QueueError> {
+        let id_name = post.file_name(NameType::ID);
+        let md5_name = post.file_name(NameType::MD5);
+
+        let (name, inv_name) = match name_type {
+            NameType::ID => (&id_name, &md5_name),
+            NameType::MD5 => (&md5_name, &id_name),
+        };
+
+        let raw_path = output.parent().unwrap();
+
+        let mut file_is_same = false;
+
+        let actual = if output.exists() {
+            debug!("File {} found.", &name);
+            output.to_path_buf()
+        } else if name_type == NameType::ID {
+            debug!("File {} not found.", &name);
+            debug!("Trying possibly matching file: {}", &md5_name);
+            file_is_same = true;
+            raw_path.join(Path::new(&md5_name))
+        } else {
+            debug!("File {} not found.", &name);
+            debug!("Trying possibly matching file: {}", &id_name);
+            file_is_same = true;
+            raw_path.join(Path::new(&id_name))
+        };
+
+        if actual.exists() {
+            debug!("Checking MD5 sum of {}.", inv_name);
+            let file_digest = compute(read(&actual).await?);
+            let hash = format!("{:x}", file_digest);
+            if hash == post.md5 {
+                debug!("MD5 matches. File is OK.");
+                if file_is_same {
+                    debug!("Found similar file in directory, renaming.");
+                    match counters.multi.println(format!(
+                        "{} {} {}",
+                        "A file similar to".bold().green(),
+                        name.bold().blue().italic(),
+                        "already exists and will be renamed accordingly."
+                            .bold()
+                            .green()
+                    )) {
+                        Ok(_) => {
+                            rename(&actual, output).await?;
+                        }
+                        Err(error) => {
+                            return Err(QueueError::ProgressBarPrintFail {
+                                message: error.to_string(),
+                            })
+                        }
+                    };
+
+                    counters.main.inc(1);
+                    *counters.total_mtx.lock().unwrap() += 1;
+                    return Ok(true);
+                }
+                debug!("Skipping download.");
+                match counters.multi.println(format!(
+                    "{} {} {}",
+                    "File".bold().green(),
+                    name.bold().blue().italic(),
+                    "already exists. Skipping.".bold().green()
+                )) {
+                    Ok(_) => (),
+                    Err(error) => {
+                        return Err(QueueError::ProgressBarPrintFail {
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
+                counters.main.inc(1);
+                *counters.total_mtx.lock().unwrap() += 1;
+                return Ok(true);
+            }
+
+            debug!("MD5 doesn't match, File might be corrupted\nExpected: {}, got: {}\nRemoving file...", post.md5, hash);
+
+            remove_file(&actual).await?;
+            counters.multi.println(format!(
+                "{} {} {}",
+                "File".bold().red(),
+                name.bold().yellow().italic(),
+                "is corrupted. Re-downloading...".bold().red()
+            ))?;
+
+            Ok(false)
+        } else {
+            Ok(false)
+        }
+    }
+
+    async fn fetch(
+        client: Client,
+        variant: ImageBoards,
+        post: Post,
+        counters: Arc<ProgressCounter>,
+        output: &Path,
+        zip: Option<Arc<Mutex<ZipWriter<File>>>>,
+    ) -> Result<(), PostError> {
+        debug!("Fetching {}", &post.url);
+        let res = client.get(&post.url).send().await?;
+
+        if res.status().is_client_error() {
+            counters.multi.println(format!(
+                "{} {}{}",
+                "Image source returned status".bold().red(),
+                res.status().as_str().bold().red(),
+                ". Skipping download.".bold().red()
+            ))?;
+            counters.main.inc(1);
+            return Err(PostError::RemoteFileNotFound);
+        }
+
+        let size = res.content_length().unwrap_or_default();
+
+        debug!("Remote file is {}", ByteSize::b(size).to_string_as(true));
+
+        let pb = counters.add_download_bar(size, variant);
+
+        // Download the file chunk by chunk.
+        debug!("Retrieving chunks...");
+        let mut stream = res.bytes_stream();
+
+        let buf_size: usize = size.try_into()?;
+
+        if let Some(zf) = zip {
+            let fvec: Vec<u8> = Vec::with_capacity(buf_size);
+
+            let mut buf = BufWriter::with_capacity(buf_size, fvec);
+
+            let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+
+            let arr = Arc::new(post);
+
+            while let Some(item) = stream.next().await {
+                // Retrieve chunk.
+                let mut chunk = match item {
+                    Ok(chunk) => chunk,
+                    Err(e) => {
+                        return Err(PostError::ChunkDownloadFail {
+                            message: e.to_string(),
+                        })
+                    }
+                };
+                pb.inc(chunk.len().try_into()?);
+
+                // Write to file.
+                buf.write_all_buf(&mut chunk).await?;
+            }
+
+            buf.flush().await?;
+
+            let data = arr.clone();
+
+            let file_name = output.file_stem().unwrap().to_str().unwrap().to_string();
+
+            spawn_blocking(move || -> Result<(), PostError> {
+                let mut un_mut = zf.lock().unwrap();
+
+                debug!("Writing {}.{} to cbz file", file_name, data.extension);
+                un_mut.start_file(
+                    format!(
+                        "{}/{}.{}",
+                        data.rating.to_string(),
+                        file_name,
+                        data.extension
+                    ),
+                    options,
+                )?;
+
+                un_mut.write_all(buf.buffer())?;
+                Ok(())
+            })
+            .await??;
+        } else {
+            debug!("Creating {:?}", &output);
+            let file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(output)
+                .await?;
+
+            let mut bw = BufWriter::with_capacity(size.try_into()?, file);
+
+            while let Some(item) = stream.next().await {
+                // Retrieve chunk.
+                let mut chunk = match item {
+                    Ok(chunk) => chunk,
+                    Err(e) => {
+                        return Err(PostError::ChunkDownloadFail {
+                            message: e.to_string(),
+                        })
+                    }
+                };
+                pb.inc(chunk.len().try_into()?);
+
+                // Write to file.
+                bw.write_all_buf(&mut chunk).await?;
+            }
+            bw.flush().await?;
+        }
+
+        pb.finish_and_clear();
+
+        counters.main.inc(1);
+        let mut down_count = counters.downloaded_mtx.lock().unwrap();
+        let mut total_count = counters.total_mtx.lock().unwrap();
+        *total_count += 1;
+        *down_count += 1;
         Ok(())
     }
 }

@@ -1,6 +1,8 @@
-use std::io;
+use std::{io, num::TryFromIntError};
 
 use thiserror::Error;
+
+use crate::imageboards::post::error::PostError;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Error, Debug)]
@@ -31,4 +33,13 @@ pub enum QueueError {
 
     #[error("No posts to download!")]
     NoPostsInQueue,
+
+    #[error("Failed to print line to Progress Bar: {message}")]
+    ProgressBarPrintFail { message: String },
+
+    #[error("Int conversion failed (maybe size is too large?)")]
+    IntConversion(#[from] TryFromIntError),
+
+    #[error("Failed to download Post")]
+    PostDownloadError(#[from] PostError),
 }

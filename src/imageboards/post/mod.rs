@@ -4,10 +4,8 @@
 //! A [`Post` struct](Post) is a generic representation of an imageboard post.
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
-use crate::{progress_bars::ProgressCounter, ImageBoards};
 use ahash::AHashSet;
 use bytesize::ByteSize;
-use colored::Colorize;
 use futures::StreamExt;
 use log::debug;
 use md5::compute;
@@ -23,7 +21,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::{
-    fs::{self, read, rename, OpenOptions},
+    fs::{self, read, OpenOptions},
     io::AsyncWriteExt,
     io::BufWriter,
     task::spawn_blocking,
@@ -32,7 +30,7 @@ use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
 use self::{error::PostError, rating::Rating};
 
-mod error;
+pub mod error;
 pub mod rating;
 
 #[derive(Debug, Clone, Copy)]
@@ -119,18 +117,13 @@ impl Post {
         &self,
         client: &Client,
         output: &Path,
-        counters: Arc<ProgressCounter>,
-        variant: ImageBoards,
         name_type: NameType,
         zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), PostError> {
         let output = output.join(&self.file_name(name_type));
 
-        if !self
-            .check_file_exists(&output, counters.clone(), name_type)
-            .await?
-        {
-            self.fetch(client, counters, &output, variant, zip).await?;
+        if !self.check_file_exists(&output, name_type).await? {
+            self.fetch(client, &output, zip).await?;
         }
         Ok(())
     }
@@ -148,7 +141,6 @@ impl Post {
     async fn check_file_exists(
         &self,
         output: &Path,
-        counters: Arc<ProgressCounter>,
         name_type: NameType,
     ) -> Result<bool, PostError> {
         let id_name = self.file_name(NameType::ID);
@@ -186,57 +178,16 @@ impl Post {
                 debug!("MD5 matches. File is OK.");
                 if file_is_same {
                     debug!("Found similar file in directory, renaming.");
-                    match counters.multi.println(format!(
-                        "{} {} {}",
-                        "A file similar to".bold().green(),
-                        name.bold().blue().italic(),
-                        "already exists and will be renamed accordingly."
-                            .bold()
-                            .green()
-                    )) {
-                        Ok(_) => {
-                            rename(&actual, output).await?;
-                        }
-                        Err(error) => {
-                            return Err(PostError::ProgressBarPrintFail {
-                                message: error.to_string(),
-                            })
-                        }
-                    };
-
-                    counters.main.inc(1);
-                    *counters.total_mtx.lock().unwrap() += 1;
-                    return Ok(true);
+                } else {
+                    debug!("Skipping download.");
                 }
-                debug!("Skipping download.");
-                match counters.multi.println(format!(
-                    "{} {} {}",
-                    "File".bold().green(),
-                    name.bold().blue().italic(),
-                    "already exists. Skipping.".bold().green()
-                )) {
-                    Ok(_) => (),
-                    Err(error) => {
-                        return Err(PostError::ProgressBarPrintFail {
-                            message: error.to_string(),
-                        })
-                    }
-                };
 
-                counters.main.inc(1);
-                *counters.total_mtx.lock().unwrap() += 1;
                 return Ok(true);
             }
 
             debug!("MD5 doesn't match, File might be corrupted\nExpected: {}, got: {}\nRemoving file...", self.md5, hash);
 
             fs::remove_file(&output).await?;
-            counters.multi.println(format!(
-                "{} {} {}",
-                "File".bold().red(),
-                name.bold().yellow().italic(),
-                "is corrupted. Re-downloading...".bold().red()
-            ))?;
 
             Ok(false)
         } else {
@@ -247,36 +198,26 @@ impl Post {
     async fn fetch(
         &self,
         client: &Client,
-        counters: Arc<ProgressCounter>,
         output: &Path,
-        variant: ImageBoards,
         zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &self.url);
         let res = client.get(&self.url).send().await?;
 
         if res.status().is_client_error() {
-            counters.multi.println(format!(
-                "{} {}{}",
-                "Image source returned status".bold().red(),
-                res.status().as_str().bold().red(),
-                ". Skipping download.".bold().red()
-            ))?;
-            counters.main.inc(1);
             return Err(PostError::RemoteFileNotFound);
         }
 
-        let size = res.content_length().unwrap_or_default();
+        let buf_size: usize = res.content_length().unwrap_or_default().try_into()?;
 
-        debug!("Remote file is {}", ByteSize::b(size).to_string_as(true));
-
-        let pb = counters.add_download_bar(size, variant);
+        debug!(
+            "Remote file is {}",
+            ByteSize::b(buf_size as u64).to_string_as(true)
+        );
 
         // Download the file chunk by chunk.
         debug!("Retrieving chunks...");
         let mut stream = res.bytes_stream();
-
-        let buf_size: usize = size.try_into()?;
 
         if let Some(zf) = zip {
             let fvec: Vec<u8> = Vec::with_capacity(buf_size);
@@ -297,7 +238,6 @@ impl Post {
                         })
                     }
                 };
-                pb.inc(chunk.len() as u64);
 
                 // Write to file.
                 buf.write_all_buf(&mut chunk).await?;
@@ -335,7 +275,7 @@ impl Post {
                 .open(output)
                 .await?;
 
-            let mut bw = BufWriter::new(file);
+            let mut bw = BufWriter::with_capacity(buf_size, file);
 
             while let Some(item) = stream.next().await {
                 // Retrieve chunk.
@@ -347,20 +287,13 @@ impl Post {
                         })
                     }
                 };
-                pb.inc(chunk.len() as u64);
 
                 // Write to file.
                 bw.write_all_buf(&mut chunk).await?;
             }
+            bw.flush().await?;
         }
 
-        pb.finish_and_clear();
-
-        counters.main.inc(1);
-        let mut down_count = counters.downloaded_mtx.lock().unwrap();
-        let mut total_count = counters.total_mtx.lock().unwrap();
-        *total_count += 1;
-        *down_count += 1;
         Ok(())
     }
 }
