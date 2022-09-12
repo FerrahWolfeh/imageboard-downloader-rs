@@ -4,7 +4,6 @@ use bincode::serialize;
 use colored::Colorize;
 use log::debug;
 use reqwest::Client;
-// use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::Path;
@@ -186,8 +185,8 @@ pub async fn auth_prompt(
         io::stdout().flush().unwrap();
         stdin.read_line(&mut api_key).unwrap();
 
-        debug!("Username: {:?}", username.trim());
-        debug!("API key: {:?}", api_key.trim());
+        debug!("Username: {}", username.trim());
+        debug!("API key: {}", api_key.trim());
 
         let mut at = ImageboardConfig::new(
             imageboard,

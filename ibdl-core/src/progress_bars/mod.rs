@@ -75,6 +75,7 @@ impl ProgressCounter {
     pub fn add_download_bar(&self, len: u64, imageboard: ImageBoards) -> ProgressBar {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(download_progress_style(&template));
+        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
         self.multi.add(bar)
     }

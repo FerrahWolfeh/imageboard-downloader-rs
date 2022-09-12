@@ -126,7 +126,7 @@ async fn main() -> Result<(), Error> {
         "downloaded".bold()
     );
 
-    if total_black > 0 {
+    if total_black > 0 && total_down != 0 {
         println!(
             "{} {}",
             total_black.to_string().bold().red(),

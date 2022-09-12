@@ -30,7 +30,7 @@ pub struct Cli {
         short = 'd',
         value_name = "NUMBER",
         value_parser(clap::value_parser!(u8).range(1..=20)),
-        default_value_t = 3,
+        default_value_t = 5,
         help_heading = "DOWNLOAD"
     )]
     pub simultaneous_downloads: u8,
@@ -44,8 +44,6 @@ pub struct Cli {
     pub auth: bool,
 
     /// Download images from the safe version of the selected Imageboard.
-    ///
-    /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
     ///
     /// Useful if you only want to download posts with "safe" rating.
     #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
@@ -62,11 +60,11 @@ pub struct Cli {
     )]
     pub save_file_as_id: bool,
 
-    /// Limit max number of downloads
+    /// Set a max number of posts to download
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     pub limit: Option<usize>,
 
-    /// Ignore both user and global blacklists
+    /// Disable blacklist filtering
     #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
     pub disable_blacklist: bool,
 
@@ -88,7 +86,7 @@ pub struct Cli {
 
     /// Download only the latest images for tag selection.
     ///
-    /// Will not re-download already present and deleted images from folder
+    /// Will not re-download already present or deleted images from destination directory
     #[clap(
         short,
         long,

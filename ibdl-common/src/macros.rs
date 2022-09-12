@@ -23,16 +23,3 @@ macro_rules! extract_ext_from_url {
         ext.to_string()
     }};
 }
-
-#[macro_export]
-macro_rules! print_found {
-    ($vec:expr) => {{
-        print!(
-            "\r{} {} {}",
-            "Found".bold(),
-            $vec.len().to_string().bold().blue(),
-            "posts".bold()
-        );
-        io::stdout().flush().unwrap();
-    }};
-}
