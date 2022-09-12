@@ -1,0 +1,24 @@
+[package]
+name = "ibdl-core"
+version = "1.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+indicatif = "0.17.0"
+ibdl-common = { path = "../ibdl-common" }
+thiserror = "1.0.32"
+thiserror-impl = "1.0.32"
+bytes = "1.2.1"
+futures = "0.3.21"
+md5 = "0.7.0"
+
+[dependencies.chrono]
+version = "0.4.22"
+features = ["serde"]
+
+[dependencies.zip]
+version = "0.6.2"
+default-features = false
+features = ["deflate", "time"]

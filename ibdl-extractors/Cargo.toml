@@ -1,0 +1,21 @@
+[package]
+name = "ibdl-extractors"
+version = "1.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ibdl-common = { path = "../ibdl-common" }
+cfg-if = "1.0.0"
+thiserror = "1.0.32"
+thiserror-impl = "1.0.32"
+async-trait = "0.1.57"
+
+[features]
+default = ["global_blacklist"]
+global_blacklist = ["toml"]
+
+[dependencies.toml]
+version = "0.5.9"
+optional = true

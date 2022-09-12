@@ -1,6 +1,6 @@
-use ahash::AHashSet;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use imageboard_downloader::{imageboards::post::rating::Rating, Post};
+use ibdl_common::ahash::AHashSet;
+use ibdl_common::post::{rating::Rating, Post};
 use rand::{
     distributions::{Alphanumeric, DistString},
     seq::SliceRandom,

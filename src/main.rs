@@ -1,120 +1,27 @@
 use anyhow::Error;
-use clap::Parser;
-use colored::Colorize;
-use imageboard_downloader::{
-    imageboards::{post::NameType, queue::summary::SummaryFile},
-    *,
+use ibdl_common::colored::Colorize;
+use ibdl_common::log::debug;
+use ibdl_common::tokio;
+use ibdl_common::{clap::Parser, cli::Cli, post::NameType, ImageBoards};
+use ibdl_core::queue::{summary::SummaryFile, Queue};
+use ibdl_extractors::websites::{
+    danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
+    moebooru::MoebooruExtractor, Auth, Extractor, MultiWebsite,
 };
-use log::debug;
-use std::path::{Path, PathBuf};
+use spinoff::{Color, Spinner, Spinners};
+use std::path::Path;
 use tokio::fs::remove_file;
-
-extern crate tokio;
-
-#[derive(Parser, Debug)]
-#[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
-struct Cli {
-    /// Tags to search
-    #[clap(value_parser, required = true)]
-    tags: Vec<String>,
-
-    /// Specify which website to download from
-    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
-    imageboard: ImageBoards,
-
-    /// Where to save downloaded files
-    #[clap(
-        short,
-        long,
-        parse(from_os_str),
-        value_name = "PATH",
-        help_heading = "SAVE"
-    )]
-    output: Option<PathBuf>,
-
-    /// Number of simultaneous downloads
-    #[clap(
-        short = 'd',
-        value_name = "NUMBER",
-        value_parser(clap::value_parser!(u8).range(1..=20)),
-        default_value_t = 3,
-        help_heading = "DOWNLOAD"
-    )]
-    simultaneous_downloads: u8,
-
-    /// Authenticate to the imageboard website.
-    ///
-    /// This flag only needs to be set a single time.
-    ///
-    /// Once authenticated, it's possible to use your blacklist to exclude posts with unwanted tags
-    #[clap(short, long, action, help_heading = "GENERAL")]
-    auth: bool,
-
-    /// Download images from the safe version of the selected Imageboard.
-    ///
-    /// Currently only works with Danbooru, e621 and Konachan. This flag will be silently ignored if other imageboard is selected
-    ///
-    /// Useful if you only want to download posts with "safe" rating.
-    #[clap(long, action, default_value_t = false, help_heading = "GENERAL")]
-    safe_mode: bool,
-
-    /// Save files with their ID as filename instead of it's MD5
-    ///
-    /// If the output dir has the same file downloaded with the MD5 name, it will be renamed to the post's ID
-    #[clap(
-        long = "id",
-        value_parser,
-        default_value_t = false,
-        help_heading = "SAVE"
-    )]
-    save_file_as_id: bool,
-
-    /// Limit max number of downloads
-    #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
-    limit: Option<usize>,
-
-    /// Ignore both user and global blacklists
-    #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
-    disable_blacklist: bool,
-
-    /// Save posts inside a cbz file.
-    ///
-    /// Will always overwrite the destination file.
-    #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
-    cbz: bool,
-
-    /// Select from which page to start scanning posts
-    #[clap(
-        short,
-        long,
-        value_parser,
-        help_heading = "DOWNLOAD",
-        value_name = "PAGE"
-    )]
-    start_page: Option<usize>,
-
-    /// Download only the latest images for tag selection.
-    ///
-    /// Will not re-download already present and deleted images from folder
-    #[clap(
-        short,
-        long,
-        value_parser,
-        default_value_t = false,
-        help_heading = "SAVE"
-    )]
-    update: bool,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
-    println!(
-        "{}{}",
-        "Scanning for posts, please wait".bold(),
-        "...".bold().blink()
+    let spinner = Spinner::new_with_stream(
+        Spinners::SimpleDotsScrolling,
+        "Scanning for posts, please wait".bold().to_string(),
+        Color::Blue,
+        spinoff::Streams::Stderr,
     );
 
     let (mut post_queue, total_black, client) = match args.imageboard {
@@ -158,6 +65,8 @@ async fn main() -> Result<(), Error> {
     };
 
     post_queue.posts.shrink_to_fit();
+
+    spinner.clear();
 
     let place = match &args.output {
         None => std::env::current_dir()?,
