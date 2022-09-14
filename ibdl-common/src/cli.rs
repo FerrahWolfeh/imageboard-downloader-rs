@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::ImageBoards;
+use crate::{post::rating::Rating, ImageBoards};
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -95,4 +95,7 @@ pub struct Cli {
         help_heading = "SAVE"
     )]
     pub update: bool,
+
+    #[clap(short, long, value_parser, help_heading = "GENERAL")]
+    pub rating: Vec<Rating>,
 }
