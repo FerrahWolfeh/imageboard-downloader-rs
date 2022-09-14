@@ -172,34 +172,7 @@ impl Extractor for E621Extractor {
         Ok(fin)
     }
 
-    fn client(self) -> Client {
-        self.client
-    }
-
-    fn total_removed(&self) -> u64 {
-        self.total_removed
-    }
-}
-
-#[async_trait]
-impl Auth for E621Extractor {
-    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
-        // Try to authenticate, does nothing if auth flag is not set
-        auth_prompt(prompt, ImageBoards::E621, &self.client).await?;
-
-        if let Some(creds) = ImageBoards::E621.read_config_from_fs().await? {
-            self.auth = creds;
-            self.auth_state = true;
-            return Ok(());
-        }
-
-        self.auth_state = false;
-        Ok(())
-    }
-}
-
-impl E621Extractor {
-    pub async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Check safe mode
         let url = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
 
@@ -248,5 +221,30 @@ impl E621Extractor {
         debug!("List size: {}", post_list.len());
         debug!("Post mapping took {:?}", end_point - start_point);
         Ok(post_list)
+    }
+
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
+    }
+}
+
+#[async_trait]
+impl Auth for E621Extractor {
+    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
+        // Try to authenticate, does nothing if auth flag is not set
+        auth_prompt(prompt, ImageBoards::E621, &self.client).await?;
+
+        if let Some(creds) = ImageBoards::E621.read_config_from_fs().await? {
+            self.auth = creds;
+            self.auth_state = true;
+            return Ok(());
+        }
+
+        self.auth_state = false;
+        Ok(())
     }
 }

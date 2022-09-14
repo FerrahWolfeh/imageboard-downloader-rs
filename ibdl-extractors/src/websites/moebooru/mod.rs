@@ -154,16 +154,6 @@ impl Extractor for MoebooruExtractor {
         Ok(fin)
     }
 
-    fn client(self) -> Client {
-        self.client
-    }
-
-    fn total_removed(&self) -> u64 {
-        self.total_removed
-    }
-}
-
-impl MoebooruExtractor {
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Get URL
         let url = format!(
@@ -210,5 +200,13 @@ impl MoebooruExtractor {
         debug!("Post mapping took {:?}", end - start);
 
         Ok(post_list)
+    }
+
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
     }
 }

@@ -67,7 +67,11 @@
 use std::fmt::Display;
 
 use async_trait::async_trait;
-use ibdl_common::{post::PostQueue, reqwest::Client, ImageBoards};
+use ibdl_common::{
+    post::{Post, PostQueue},
+    reqwest::Client,
+    ImageBoards,
+};
 
 use crate::error::ExtractorError;
 
@@ -99,6 +103,9 @@ pub trait Extractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError>;
+
+    /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
+    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError>;
 
     /// Consumes `self` and returns the used client for external use.
     fn client(self) -> Client;

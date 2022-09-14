@@ -162,32 +162,6 @@ impl Extractor for DanbooruExtractor {
         Ok(fin)
     }
 
-    fn client(self) -> Client {
-        self.client
-    }
-
-    fn total_removed(&self) -> u64 {
-        self.total_removed
-    }
-}
-
-#[async_trait]
-impl Auth for DanbooruExtractor {
-    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
-        auth_prompt(prompt, ImageBoards::Danbooru, &self.client).await?;
-
-        if let Some(creds) = ImageBoards::Danbooru.read_config_from_fs().await? {
-            self.auth = creds;
-            self.auth_state = true;
-            return Ok(());
-        }
-
-        self.auth_state = false;
-        Ok(())
-    }
-}
-
-impl DanbooruExtractor {
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
             "{}?tags={}",
@@ -251,5 +225,29 @@ impl DanbooruExtractor {
         debug!("List size: {}", posts.len());
         debug!("Post mapping took {:?}", end_iter - start_point);
         Ok(posts)
+    }
+
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
+    }
+}
+
+#[async_trait]
+impl Auth for DanbooruExtractor {
+    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
+        auth_prompt(prompt, ImageBoards::Danbooru, &self.client).await?;
+
+        if let Some(creds) = ImageBoards::Danbooru.read_config_from_fs().await? {
+            self.auth = creds;
+            self.auth_state = true;
+            return Ok(());
+        }
+
+        self.auth_state = false;
+        Ok(())
     }
 }

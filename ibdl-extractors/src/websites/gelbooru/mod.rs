@@ -166,47 +166,6 @@ impl Extractor for GelbooruExtractor {
         Ok(fin)
     }
 
-    fn client(self) -> Client {
-        self.client
-    }
-
-    fn total_removed(&self) -> u64 {
-        self.total_removed
-    }
-}
-
-impl MultiWebsite for GelbooruExtractor {
-    /// Sets the imageboard to extract posts from
-    ///
-    /// If not set, defaults to `ImageBoards::Rule34`
-    fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
-    where
-        Self: std::marker::Sized,
-    {
-        let imageboard = match imageboard {
-            ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
-            _ => {
-                return Err(ExtractorError::InvalidImageboard {
-                    imgboard: imageboard.to_string(),
-                })
-            }
-        };
-        let client = client!(imageboard);
-
-        Ok(Self {
-            active_imageboard: imageboard,
-            client,
-            tags: self.tags,
-            tag_string: self.tag_string,
-            disable_blacklist: self.disable_blacklist,
-            total_removed: self.total_removed,
-            safe_mode: self.safe_mode,
-        })
-    }
-}
-
-impl GelbooruExtractor {
-    // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
             "{}&tags={}",
@@ -306,5 +265,43 @@ impl GelbooruExtractor {
         }
 
         Err(ExtractorError::InvalidServerResponse)
+    }
+
+    fn client(self) -> Client {
+        self.client
+    }
+
+    fn total_removed(&self) -> u64 {
+        self.total_removed
+    }
+}
+
+impl MultiWebsite for GelbooruExtractor {
+    /// Sets the imageboard to extract posts from
+    ///
+    /// If not set, defaults to `ImageBoards::Rule34`
+    fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
+    where
+        Self: std::marker::Sized,
+    {
+        let imageboard = match imageboard {
+            ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
+            _ => {
+                return Err(ExtractorError::InvalidImageboard {
+                    imgboard: imageboard.to_string(),
+                })
+            }
+        };
+        let client = client!(imageboard);
+
+        Ok(Self {
+            active_imageboard: imageboard,
+            client,
+            tags: self.tags,
+            tag_string: self.tag_string,
+            disable_blacklist: self.disable_blacklist,
+            total_removed: self.total_removed,
+            safe_mode: self.safe_mode,
+        })
     }
 }
