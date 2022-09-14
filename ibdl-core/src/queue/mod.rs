@@ -179,7 +179,7 @@ impl Queue {
 
             let zf = self.zip_file.clone().unwrap();
 
-            self.write_zip_structure(zf)?;
+            self.write_zip_structure(zf, list.clone())?;
         }
 
         debug!("Fetching {} posts", list.len());
@@ -217,9 +217,12 @@ impl Queue {
         Ok(*tot)
     }
 
-    fn write_zip_structure(&self, zip: Arc<Mutex<ZipWriter<File>>>) -> Result<(), QueueError> {
-        let ap =
-            SummaryFile::new(self.imageboard, self.tags.clone(), self.list.clone()).to_json()?;
+    fn write_zip_structure(
+        &self,
+        zip: Arc<Mutex<ZipWriter<File>>>,
+        posts: Vec<Post>,
+    ) -> Result<(), QueueError> {
+        let ap = SummaryFile::new(self.imageboard, self.tags.clone(), posts).to_json()?;
 
         let mut z_1 = zip.lock().unwrap();
 
@@ -371,9 +374,7 @@ impl Queue {
         let buf_size: usize = size.try_into()?;
 
         if let Some(zf) = zip {
-            let fvec: Vec<u8> = Vec::with_capacity(buf_size);
-
-            let mut buf = BufWriter::with_capacity(buf_size, fvec);
+            let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
 
             let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 
@@ -381,7 +382,7 @@ impl Queue {
 
             while let Some(item) = stream.next().await {
                 // Retrieve chunk.
-                let mut chunk = match item {
+                let chunk = match item {
                     Ok(chunk) => chunk,
                     Err(e) => {
                         return Err(PostError::ChunkDownloadFail {
@@ -392,10 +393,8 @@ impl Queue {
                 pb.inc(chunk.len().try_into()?);
 
                 // Write to file.
-                buf.write_all_buf(&mut chunk).await?;
+                AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
             }
-
-            buf.flush().await?;
 
             let data = arr.clone();
 
@@ -422,7 +421,7 @@ impl Queue {
                     }
                 };
 
-                un_mut.write_all(buf.buffer())?;
+                un_mut.write_all(&fvec)?;
                 Ok(())
             })
             .await??;
