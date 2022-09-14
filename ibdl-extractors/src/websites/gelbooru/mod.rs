@@ -71,9 +71,14 @@ impl Extractor for GelbooruExtractor {
     }
 
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
+        let mut posts = Self::get_post_list(self, page).await?;
 
-        let posts = Self::get_post_list(self, page).await?;
+        if posts.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
+        posts.sort();
+        posts.reverse();
 
         let qw = PostQueue {
             posts,
@@ -88,8 +93,6 @@ impl Extractor for GelbooruExtractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
-
         let blacklist = BlacklistFilter::init(
             self.active_imageboard,
             &AHashSet::default(),
@@ -148,6 +151,10 @@ impl Extractor for GelbooruExtractor {
             sleep(Duration::from_millis(500)).await;
         }
 
+        if fvec.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
         fvec.sort();
         fvec.reverse();
 
@@ -199,45 +206,6 @@ impl MultiWebsite for GelbooruExtractor {
 }
 
 impl GelbooruExtractor {
-    async fn validate_tags(&mut self) -> Result<(), ExtractorError> {
-        let count_endpoint = format!(
-            "{}&tags={}",
-            self.active_imageboard.post_url(),
-            &self.tag_string
-        );
-
-        // Get an estimate of total posts and pages to search
-        let request = self.client.get(&count_endpoint);
-
-        debug!("Checking tags");
-
-        let count = match request.send().await?.json::<Value>().await {
-            Ok(json) => json,
-            Err(_) => return Err(ExtractorError::ZeroPosts),
-        };
-
-        // Bail out if no posts are found
-        if let Some(res) = count.as_array() {
-            if res.is_empty() {
-                return Err(ExtractorError::ZeroPosts);
-            }
-
-            debug!("Tag list is valid");
-            return Ok(());
-        }
-
-        if let Some(res) = count["post"].as_array() {
-            if res.is_empty() {
-                return Err(ExtractorError::ZeroPosts);
-            }
-
-            debug!("Tag list is valid");
-            return Ok(());
-        }
-
-        Err(ExtractorError::InvalidServerResponse)
-    }
-
     // This is mostly for sites running gelbooru 0.2, their xml API is way better than the JSON one
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
@@ -261,11 +229,13 @@ impl GelbooruExtractor {
                 .iter()
                 .filter(|f| f["hash"].as_str().is_some())
                 .map(|f| {
-                    let mut tags = AHashSet::new();
+                    let tag_iter = f["tags"].as_str().unwrap().split(' ');
 
-                    for i in f["tags"].as_str().unwrap().split(' ') {
-                        tags.insert(i.to_string());
-                    }
+                    let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+                    tag_iter.for_each(|f| {
+                        tags.insert(f.to_string());
+                    });
 
                     let rating = Rating::from_str(f["rating"].as_str().unwrap());
 

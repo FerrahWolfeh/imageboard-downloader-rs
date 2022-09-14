@@ -70,9 +70,11 @@ impl Extractor for DanbooruExtractor {
     }
 
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
-
         let mut posts = Self::get_post_list(self, page).await?;
+
+        if posts.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
 
         posts.sort();
         posts.reverse();
@@ -90,8 +92,6 @@ impl Extractor for DanbooruExtractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
-
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
@@ -148,6 +148,10 @@ impl Extractor for DanbooruExtractor {
             page += 1;
         }
 
+        if fvec.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
         fvec.sort();
         fvec.reverse();
 
@@ -184,46 +188,6 @@ impl Auth for DanbooruExtractor {
 }
 
 impl DanbooruExtractor {
-    async fn validate_tags(&self) -> Result<(), ExtractorError> {
-        if self.tags.len() > 2 {
-            return Err(ExtractorError::TooManyTags {
-                current: self.tags.len(),
-                max: 2,
-            });
-        };
-
-        let count_endpoint = format!(
-            "{}?tags={}",
-            ImageBoards::Danbooru.post_count_url().unwrap(),
-            &self.tag_string
-        );
-
-        // Get an estimate of total posts and pages to search
-        let request = if self.auth_state {
-            debug!("[AUTH] Validating tags");
-            self.client
-                .get(count_endpoint)
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
-        } else {
-            debug!("Validating tags");
-            self.client.get(count_endpoint)
-        };
-
-        let count = request.send().await?.json::<Value>().await?;
-
-        if let Some(count) = count["counts"]["posts"].as_u64() {
-            // Bail out if no posts are found
-            if count == 0 {
-                return Err(ExtractorError::ZeroPosts);
-            }
-
-            debug!("Found {} posts", count);
-            Ok(())
-        } else {
-            Err(ExtractorError::InvalidServerResponse)
-        }
-    }
-
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
             "{}?tags={}",
@@ -248,35 +212,40 @@ impl DanbooruExtractor {
         let post_array = req.send().await?.json::<Value>().await?;
 
         let start_point = Instant::now();
-        let posts: Vec<Post> = post_array
+        let batch = post_array
             .as_array()
             .unwrap()
             .iter()
-            .filter(|c| c["file_url"].as_str().is_some())
-            .map(|c| {
-                let mut tag_list = AHashSet::new();
+            .filter(|c| c["file_url"].as_str().is_some());
 
-                for i in c["tag_string"].as_str().unwrap().split(' ') {
-                    tag_list.insert(i.to_string());
-                }
+        let mut posts: Vec<Post> = Vec::with_capacity(batch.size_hint().0);
 
-                let rt = c["rating"].as_str().unwrap();
-                let rating = if rt == "s" {
-                    Rating::Questionable
-                } else {
-                    Rating::from_str(rt)
-                };
+        for c in batch {
+            let tag_list_iter = c["tag_string"].as_str().unwrap().split(' ');
+            let mut tag_list = AHashSet::with_capacity(tag_list_iter.size_hint().0);
 
-                Post {
-                    id: c["id"].as_u64().unwrap(),
-                    md5: c["md5"].as_str().unwrap().to_string(),
-                    url: c["file_url"].as_str().unwrap().to_string(),
-                    extension: c["file_ext"].as_str().unwrap().to_string(),
-                    tags: tag_list,
-                    rating,
-                }
-            })
-            .collect();
+            tag_list_iter.for_each(|i| {
+                tag_list.insert(i.to_string());
+            });
+
+            let rt = c["rating"].as_str().unwrap();
+            let rating = if rt == "s" {
+                Rating::Questionable
+            } else {
+                Rating::from_str(rt)
+            };
+
+            let unit = Post {
+                id: c["id"].as_u64().unwrap(),
+                md5: c["md5"].as_str().unwrap().to_string(),
+                url: c["file_url"].as_str().unwrap().to_string(),
+                extension: c["file_ext"].as_str().unwrap().to_string(),
+                tags: tag_list,
+                rating,
+            };
+
+            posts.push(unit);
+        }
         let end_iter = Instant::now();
 
         debug!("List size: {}", posts.len());

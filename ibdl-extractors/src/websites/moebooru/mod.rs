@@ -63,9 +63,14 @@ impl Extractor for MoebooruExtractor {
     }
 
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
+        let mut posts = Self::get_post_list(self, page).await?;
 
-        let posts = Self::get_post_list(self, page).await?;
+        if posts.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
+        posts.sort();
+        posts.reverse();
 
         let qw = PostQueue {
             posts,
@@ -80,8 +85,6 @@ impl Extractor for MoebooruExtractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
-
         let blacklist = BlacklistFilter::init(
             ImageBoards::Konachan,
             &AHashSet::default(),
@@ -136,6 +139,10 @@ impl Extractor for MoebooruExtractor {
             page += 1;
         }
 
+        if fvec.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
         fvec.sort();
         fvec.reverse();
 
@@ -157,31 +164,6 @@ impl Extractor for MoebooruExtractor {
 }
 
 impl MoebooruExtractor {
-    async fn validate_tags(&self) -> Result<(), ExtractorError> {
-        let count_endpoint = format!(
-            "{}?tags={}",
-            ImageBoards::Konachan.post_url(),
-            &self.tag_string
-        );
-
-        // Get an estimate of total posts and pages to search
-        let count = &self
-            .client
-            .get(&count_endpoint)
-            .send()
-            .await?
-            .json::<Vec<KonachanPost>>()
-            .await?;
-
-        // Bail out if no posts are found
-        if count.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-        debug!("Tag list is valid");
-
-        Ok(())
-    }
-
     async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Get URL
         let url = format!(

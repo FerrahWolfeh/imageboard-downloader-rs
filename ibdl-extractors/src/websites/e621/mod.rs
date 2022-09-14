@@ -77,9 +77,14 @@ impl Extractor for E621Extractor {
     }
 
     async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
+        let mut posts = Self::get_post_list(self, page).await?;
 
-        let posts = Self::get_post_list(self, page).await?;
+        if posts.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
+        posts.sort();
+        posts.reverse();
 
         let qw = PostQueue {
             posts,
@@ -94,8 +99,6 @@ impl Extractor for E621Extractor {
         start_page: Option<usize>,
         limit: Option<usize>,
     ) -> Result<PostQueue, ExtractorError> {
-        Self::validate_tags(self).await?;
-
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
@@ -154,6 +157,10 @@ impl Extractor for E621Extractor {
             sleep(Duration::from_millis(500)).await;
         }
 
+        if fvec.is_empty() {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
         fvec.sort();
         fvec.reverse();
 
@@ -192,31 +199,6 @@ impl Auth for E621Extractor {
 }
 
 impl E621Extractor {
-    async fn validate_tags(&self) -> Result<(), ExtractorError> {
-        let count_endpoint = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
-
-        // Get an estimate of total posts and pages to search
-        let request = if self.auth_state {
-            debug!("[AUTH] Checking tags");
-            self.client
-                .get(&count_endpoint)
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
-        } else {
-            debug!("Checking tags");
-            self.client.get(&count_endpoint)
-        };
-
-        let count = request.send().await?.json::<E621TopLevel>().await?;
-
-        // Bail out if no posts are found
-        if count.posts.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-        debug!("Tag list is valid");
-
-        Ok(())
-    }
-
     pub async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
         // Check safe mode
         let url = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
