@@ -80,6 +80,7 @@ impl Extractor for DanbooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
+            imageboard: ImageBoards::Danbooru,
             posts,
             tags: self.tags.clone(),
         };
@@ -156,6 +157,7 @@ impl Extractor for DanbooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
+            imageboard: ImageBoards::Danbooru,
             posts: fvec,
             tags: self.tags.clone(),
         };

@@ -87,6 +87,7 @@ impl Extractor for E621Extractor {
         posts.reverse();
 
         let qw = PostQueue {
+            imageboard: ImageBoards::E621,
             posts,
             tags: self.tags.clone(),
         };
@@ -165,6 +166,7 @@ impl Extractor for E621Extractor {
         fvec.reverse();
 
         let fin = PostQueue {
+            imageboard: ImageBoards::E621,
             posts: fvec,
             tags: self.tags.clone(),
         };

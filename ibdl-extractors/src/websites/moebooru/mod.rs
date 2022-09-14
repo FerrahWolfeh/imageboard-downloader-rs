@@ -73,6 +73,7 @@ impl Extractor for MoebooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
+            imageboard: ImageBoards::Konachan,
             posts,
             tags: self.tags.clone(),
         };
@@ -147,6 +148,7 @@ impl Extractor for MoebooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
+            imageboard: ImageBoards::Konachan,
             posts: fvec,
             tags: self.tags.clone(),
         };

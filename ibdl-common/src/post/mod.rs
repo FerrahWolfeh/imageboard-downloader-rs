@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use std::{cmp::Ordering, ops::Not};
 
+use crate::ImageBoards;
+
 use self::rating::Rating;
 
 pub mod error;
@@ -40,6 +42,7 @@ impl PartialEq for NameType {
 /// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
 #[derive(Debug)]
 pub struct PostQueue {
+    pub imageboard: ImageBoards,
     /// A list containing all `Post`s collected.
     pub posts: Vec<Post>,
     /// The tags used to search the collected posts.

@@ -81,6 +81,7 @@ impl Extractor for GelbooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
+            imageboard: self.active_imageboard,
             posts,
             tags: self.tags.clone(),
         };
@@ -159,6 +160,7 @@ impl Extractor for GelbooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
+            imageboard: self.active_imageboard,
             posts: fvec,
             tags: self.tags.clone(),
         };
