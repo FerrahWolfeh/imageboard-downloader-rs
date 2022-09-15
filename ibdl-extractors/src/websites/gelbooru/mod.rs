@@ -241,11 +241,13 @@ impl Extractor for GelbooruExtractor {
                 .filter(|i| i["file_url"].as_str().is_some())
                 .map(|post| {
                     let url = post["file_url"].as_str().unwrap().to_string();
-                    let mut tags = AHashSet::new();
+                    let tag_iter = post["tags"].as_str().unwrap().split(' ');
 
-                    for i in post["tags"].as_str().unwrap().split(' ') {
+                    let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+                    tag_iter.for_each(|i| {
                         tags.insert(i.to_string());
-                    }
+                    });
 
                     Post {
                         id: post["id"].as_u64().unwrap(),

@@ -192,23 +192,31 @@ impl Extractor for E621Extractor {
         let start_point = Instant::now();
         let post_list: Vec<Post> = items
             .posts
-            .iter()
+            .into_iter()
             .filter(|c| c.file.url.is_some())
             .map(|c| {
-                let mut tag_list = AHashSet::new();
-                tag_list.extend(c.tags.character.iter().cloned());
-                tag_list.extend(c.tags.artist.iter().cloned());
-                tag_list.extend(c.tags.general.iter().cloned());
-                tag_list.extend(c.tags.copyright.iter().cloned());
-                tag_list.extend(c.tags.lore.iter().cloned());
-                tag_list.extend(c.tags.meta.iter().cloned());
-                tag_list.extend(c.tags.species.iter().cloned());
+                let full_size = c.tags.artist.len()
+                    + c.tags.character.len()
+                    + c.tags.general.len()
+                    + c.tags.copyright.len()
+                    + c.tags.lore.len()
+                    + c.tags.meta.len()
+                    + c.tags.species.len();
+
+                let mut tag_list = AHashSet::with_capacity(full_size);
+                tag_list.extend(c.tags.character.into_iter());
+                tag_list.extend(c.tags.artist.into_iter());
+                tag_list.extend(c.tags.general.into_iter());
+                tag_list.extend(c.tags.copyright.into_iter());
+                tag_list.extend(c.tags.lore.into_iter());
+                tag_list.extend(c.tags.meta.into_iter());
+                tag_list.extend(c.tags.species.into_iter());
 
                 Post {
                     id: c.id.unwrap(),
                     url: c.file.url.clone().unwrap(),
                     md5: c.file.md5.clone().unwrap(),
-                    extension: c.file.ext.clone().unwrap(),
+                    extension: c.file.ext.unwrap(),
                     tags: tag_list,
                     rating: Rating::from_str(&c.rating),
                 }

@@ -176,11 +176,13 @@ impl Extractor for MoebooruExtractor {
             .map(|c| {
                 let url = c.file_url.clone().unwrap();
 
-                let mut tags = AHashSet::new();
+                let tag_iter = c.tags.split(' ');
 
-                for i in c.tags.split(' ') {
+                let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+                tag_iter.for_each(|i| {
                     tags.insert(i.to_string());
-                }
+                });
 
                 Post {
                     id: c.id.unwrap(),
