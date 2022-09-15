@@ -35,22 +35,19 @@ pub struct E621Extractor {
     tag_string: String,
     auth_state: bool,
     auth: ImageboardConfig,
-    safe_mode: bool,
+    download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
 }
 
 #[async_trait]
 impl Extractor for E621Extractor {
-    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
     where
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::E621);
-
-        // Set Safe mode status
-        let safe_mode = safe_mode;
 
         let strvec: Vec<String> = tags
             .iter()
@@ -70,7 +67,7 @@ impl Extractor for E621Extractor {
             tag_string,
             auth_state: false,
             auth: ImageboardConfig::default(),
-            safe_mode,
+            download_ratings,
             disable_blacklist,
             total_removed: 0,
         }
@@ -103,7 +100,7 @@ impl Extractor for E621Extractor {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
-            self.safe_mode,
+            &self.download_ratings,
             self.disable_blacklist,
         )
         .await?;
@@ -131,7 +128,7 @@ impl Extractor for E621Extractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist || self.safe_mode {
+            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts

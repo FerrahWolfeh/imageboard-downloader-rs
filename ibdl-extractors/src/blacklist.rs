@@ -120,7 +120,7 @@ pub struct BlacklistFilter {
     imageboard: ImageBoards,
     auth_tags: AHashSet<String>,
     gbl_tags: AHashSet<String>,
-    safe: bool,
+    selected_ratings: Vec<Rating>,
     disabled: bool,
 }
 
@@ -128,13 +128,9 @@ impl BlacklistFilter {
     pub async fn init(
         imageboard: ImageBoards,
         auth_tags: &AHashSet<String>,
-        safe: bool,
+        selected_ratings: &[Rating],
         disabled: bool,
     ) -> Result<Self, ExtractorError> {
-        if safe {
-            debug!("Safe mode active");
-        }
-
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
         if !disabled {
             cfg_if! {
@@ -181,7 +177,7 @@ impl BlacklistFilter {
             imageboard,
             auth_tags: auth_tags.clone(),
             gbl_tags,
-            safe,
+            selected_ratings: selected_ratings.to_vec(),
             disabled,
         })
     }
@@ -194,11 +190,11 @@ impl BlacklistFilter {
         let mut removed = 0;
 
         let start = Instant::now();
-        if self.safe {
-            original_list.retain(|c| c.rating == Rating::Safe);
+        if !self.selected_ratings.is_empty() {
+            original_list.retain(|c| self.selected_ratings.contains(&c.rating));
 
             let safe_counter = original_size - original_list.len();
-            debug!("Safe mode removed {} posts", safe_counter);
+            debug!("Removed {} posts with non-selected ratings", safe_counter);
 
             removed += safe_counter as u64;
         }

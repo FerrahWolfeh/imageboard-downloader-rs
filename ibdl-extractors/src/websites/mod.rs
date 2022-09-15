@@ -68,7 +68,7 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use ibdl_common::{
-    post::{Post, PostQueue},
+    post::{rating::Rating, Post, PostQueue},
     reqwest::Client,
     ImageBoards,
 };
@@ -89,7 +89,7 @@ pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
     where
         S: ToString + Display;
 

@@ -23,22 +23,19 @@ pub struct MoebooruExtractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
-    safe_mode: bool,
+    download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
 }
 
 #[async_trait]
 impl Extractor for MoebooruExtractor {
-    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
     where
         S: ToString + Display,
     {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Konachan);
-
-        // Set Safe mode status
-        let safe_mode = safe_mode;
 
         let strvec: Vec<String> = tags
             .iter()
@@ -56,7 +53,7 @@ impl Extractor for MoebooruExtractor {
             client,
             tags: strvec,
             tag_string,
-            safe_mode,
+            download_ratings,
             disable_blacklist,
             total_removed: 0,
         }
@@ -89,7 +86,7 @@ impl Extractor for MoebooruExtractor {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Konachan,
             &AHashSet::default(),
-            self.safe_mode,
+            &self.download_ratings,
             self.disable_blacklist,
         )
         .await?;
@@ -117,7 +114,7 @@ impl Extractor for MoebooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist || self.safe_mode {
+            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts

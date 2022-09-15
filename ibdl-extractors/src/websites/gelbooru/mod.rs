@@ -31,13 +31,13 @@ pub struct GelbooruExtractor {
     tag_string: String,
     disable_blacklist: bool,
     total_removed: u64,
-    safe_mode: bool,
+    download_ratings: Vec<Rating>,
 }
 
 #[async_trait]
 impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
-    fn new<S>(tags: &[S], safe_mode: bool, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
     where
         S: ToString + Display,
     {
@@ -66,7 +66,7 @@ impl Extractor for GelbooruExtractor {
             tag_string,
             disable_blacklist,
             total_removed: 0,
-            safe_mode,
+            download_ratings,
         }
     }
 
@@ -97,7 +97,7 @@ impl Extractor for GelbooruExtractor {
         let blacklist = BlacklistFilter::init(
             self.active_imageboard,
             &AHashSet::default(),
-            self.safe_mode,
+            &self.download_ratings,
             self.disable_blacklist,
         )
         .await?;
@@ -125,7 +125,7 @@ impl Extractor for GelbooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist || self.safe_mode {
+            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -303,7 +303,7 @@ impl MultiWebsite for GelbooruExtractor {
             tag_string: self.tag_string,
             disable_blacklist: self.disable_blacklist,
             total_removed: self.total_removed,
-            safe_mode: self.safe_mode,
+            download_ratings: self.download_ratings,
         })
     }
 }
