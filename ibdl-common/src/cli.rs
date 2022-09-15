@@ -101,7 +101,7 @@ pub struct Cli {
         long,
         value_parser,
         help_heading = "GENERAL",
-        conflicts_with("safe_mode")
+        conflicts_with("safe-mode")
     )]
     pub rating: Vec<Rating>,
 }
