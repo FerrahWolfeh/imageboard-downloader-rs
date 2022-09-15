@@ -96,6 +96,12 @@ pub struct Cli {
     )]
     pub update: bool,
 
-    #[clap(short, long, value_parser, help_heading = "GENERAL")]
+    #[clap(
+        short,
+        long,
+        value_parser,
+        help_heading = "GENERAL",
+        conflicts_with("safe_mode")
+    )]
     pub rating: Vec<Rating>,
 }

@@ -1,6 +1,7 @@
 use anyhow::Error;
 use ibdl_common::colored::Colorize;
 use ibdl_common::log::debug;
+use ibdl_common::post::rating::Rating;
 use ibdl_common::tokio;
 use ibdl_common::{clap::Parser, cli::Cli, post::NameType, ImageBoards};
 use ibdl_core::queue::{summary::SummaryFile, Queue};
@@ -24,10 +25,24 @@ async fn main() -> Result<(), Error> {
         spinoff::Streams::Stderr,
     );
 
+    let ratings = if args.rating.is_empty() {
+        if args.safe_mode {
+            vec![Rating::Safe, Rating::Unknown]
+        } else {
+            vec![
+                Rating::Safe,
+                Rating::Questionable,
+                Rating::Explicit,
+                Rating::Unknown,
+            ]
+        }
+    } else {
+        args.rating
+    };
+
     let (mut post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
-            let mut unit =
-                DanbooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
+            let mut unit = DanbooruExtractor::new(&args.tags, ratings, args.disable_blacklist);
             unit.auth(args.auth).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -36,7 +51,7 @@ async fn main() -> Result<(), Error> {
             (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::E621 => {
-            let mut unit = E621Extractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
+            let mut unit = E621Extractor::new(&args.tags, ratings, args.disable_blacklist);
             unit.auth(args.auth).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -45,7 +60,7 @@ async fn main() -> Result<(), Error> {
             (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let mut unit = GelbooruExtractor::new(&args.tags, false, args.disable_blacklist)
+            let mut unit = GelbooruExtractor::new(&args.tags, ratings, args.disable_blacklist)
                 .set_imageboard(args.imageboard)?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -54,8 +69,7 @@ async fn main() -> Result<(), Error> {
             (posts, unit.total_removed(), unit.client())
         }
         ImageBoards::Konachan => {
-            let mut unit =
-                MoebooruExtractor::new(&args.tags, args.safe_mode, args.disable_blacklist);
+            let mut unit = MoebooruExtractor::new(&args.tags, ratings, args.disable_blacklist);
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
