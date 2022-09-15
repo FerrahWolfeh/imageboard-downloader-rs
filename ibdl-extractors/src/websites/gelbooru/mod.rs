@@ -105,7 +105,7 @@ impl Extractor for GelbooruExtractor {
         let mut fvec = if let Some(size) = limit {
             Vec::with_capacity(size as usize)
         } else {
-            Vec::new()
+            Vec::with_capacity(self.active_imageboard.max_post_limit())
         };
 
         let mut page = 1;
@@ -121,11 +121,10 @@ impl Extractor for GelbooruExtractor {
             let size = posts.len();
 
             if size == 0 {
-                println!();
                 break;
             }
 
-            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -133,7 +132,7 @@ impl Extractor for GelbooruExtractor {
                 posts
             };
 
-            fvec.extend(list);
+            fvec.append(&mut list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num as usize {

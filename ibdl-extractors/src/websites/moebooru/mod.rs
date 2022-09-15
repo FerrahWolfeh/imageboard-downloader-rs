@@ -94,7 +94,7 @@ impl Extractor for MoebooruExtractor {
         let mut fvec = if let Some(size) = limit {
             Vec::with_capacity(size as usize)
         } else {
-            Vec::new()
+            Vec::with_capacity(100)
         };
 
         let mut page = 1;
@@ -110,11 +110,10 @@ impl Extractor for MoebooruExtractor {
             let size = posts.len();
 
             if size == 0 {
-                println!();
                 break;
             }
 
-            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -122,7 +121,7 @@ impl Extractor for MoebooruExtractor {
                 posts
             };
 
-            fvec.extend(list);
+            fvec.append(&mut list);
 
             if let Some(num) = limit {
                 if fvec.len() >= num as usize {
@@ -130,7 +129,7 @@ impl Extractor for MoebooruExtractor {
                 }
             }
 
-            if size < 320 || page == 100 {
+            if size < 100 || page == 100 {
                 break;
             }
 
