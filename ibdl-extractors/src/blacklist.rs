@@ -219,7 +219,7 @@ impl BlacklistFilter {
                 if #[cfg(feature = "global_blacklist")] {
                     if !self.gbl_tags.is_empty() {
                         let fsize = original_list.len();
-                        debug!("Removing posts with tags [{:?}]", self.gbl_tags);
+                        debug!("Removing posts with tags {:?}", self.gbl_tags);
 
                         original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
 
