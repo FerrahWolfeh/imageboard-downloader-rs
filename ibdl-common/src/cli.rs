@@ -1,3 +1,4 @@
+// 20002709
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -96,6 +97,7 @@ pub struct Cli {
     )]
     pub update: bool,
 
+    /// Download posts with the selected rating. Can be used multiple times to download posts with other ratings also.
     #[clap(
         short,
         long,
