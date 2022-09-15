@@ -20,11 +20,7 @@ async fn main() -> Result<(), Error> {
 
     let spinner = Spinner::new_with_stream(
         Spinners::SimpleDotsScrolling,
-        format!(
-            "{} {}",
-            "Scanning for posts, please wait".bold(),
-            "...".bold().blink()
-        ),
+        "Scanning for posts, please wait".bold().to_string(),
         Color::Blue,
         spinoff::Streams::Stderr,
     );
