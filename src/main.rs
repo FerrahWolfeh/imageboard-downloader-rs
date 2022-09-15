@@ -56,6 +56,7 @@ async fn main() -> Result<(), Error> {
         if let Ok(post) = summary_file {
             debug!("Latest post found: {}", post.last_downloaded);
             post_queue.posts.retain(|c| c.id > post.last_downloaded);
+            post_queue.posts.shrink_to_fit();
         } else {
             debug!("Summary file is corrupted, ignoring...");
             remove_file(&tgs).await?;
