@@ -63,7 +63,7 @@ pub struct Cli {
 
     /// Set a max number of posts to download
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
-    pub limit: Option<usize>,
+    pub limit: Option<u16>,
 
     /// Disable blacklist filtering
     #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
@@ -83,7 +83,7 @@ pub struct Cli {
         help_heading = "DOWNLOAD",
         value_name = "PAGE"
     )]
-    pub start_page: Option<usize>,
+    pub start_page: Option<u16>,
 
     /// Download only the latest images for tag selection.
     ///

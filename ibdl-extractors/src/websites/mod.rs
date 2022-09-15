@@ -95,17 +95,17 @@ pub trait Extractor {
 
     /// Searches the tags list on a per-page way. It's relatively the fastest way, but subject to slowdowns since it needs
     /// to iter through all pages manually in order to fetch all posts.
-    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError>;
+    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError>;
 
     /// Searches all posts from all pages with given tags, it's the most pratical one, but slower on startup since it will search all pages by itself until it finds no more posts.
     async fn full_search(
         &mut self,
-        start_page: Option<usize>,
-        limit: Option<usize>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError>;
 
     /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
-    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError>;
+    async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError>;
 
     /// Consumes `self` and returns the used client for external use.
     fn client(self) -> Client;

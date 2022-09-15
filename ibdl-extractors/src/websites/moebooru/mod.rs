@@ -59,7 +59,7 @@ impl Extractor for MoebooruExtractor {
         }
     }
 
-    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
+    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = Self::get_post_list(self, page).await?;
 
         if posts.is_empty() {
@@ -80,8 +80,8 @@ impl Extractor for MoebooruExtractor {
 
     async fn full_search(
         &mut self,
-        start_page: Option<usize>,
-        limit: Option<usize>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Konachan,
@@ -92,7 +92,7 @@ impl Extractor for MoebooruExtractor {
         .await?;
 
         let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size)
+            Vec::with_capacity(size as usize)
         } else {
             Vec::new()
         };
@@ -125,7 +125,7 @@ impl Extractor for MoebooruExtractor {
             fvec.extend(list);
 
             if let Some(num) = limit {
-                if fvec.len() >= num {
+                if fvec.len() >= num as usize {
                     break;
                 }
             }
@@ -153,7 +153,7 @@ impl Extractor for MoebooruExtractor {
         Ok(fin)
     }
 
-    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+    async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
         // Get URL
         let url = format!(
             "{}?tags={}",

@@ -73,7 +73,7 @@ impl Extractor for E621Extractor {
         }
     }
 
-    async fn search(&mut self, page: usize) -> Result<PostQueue, ExtractorError> {
+    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = Self::get_post_list(self, page).await?;
 
         if posts.is_empty() {
@@ -94,8 +94,8 @@ impl Extractor for E621Extractor {
 
     async fn full_search(
         &mut self,
-        start_page: Option<usize>,
-        limit: Option<usize>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
@@ -106,7 +106,7 @@ impl Extractor for E621Extractor {
         .await?;
 
         let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size)
+            Vec::with_capacity(size as usize)
         } else {
             Vec::new()
         };
@@ -139,7 +139,7 @@ impl Extractor for E621Extractor {
             fvec.extend(list);
 
             if let Some(num) = limit {
-                if fvec.len() >= num {
+                if fvec.len() >= num as usize {
                     break;
                 }
             }
@@ -171,7 +171,7 @@ impl Extractor for E621Extractor {
         Ok(fin)
     }
 
-    async fn get_post_list(&self, page: usize) -> Result<Vec<Post>, ExtractorError> {
+    async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
         // Check safe mode
         let url = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
 
