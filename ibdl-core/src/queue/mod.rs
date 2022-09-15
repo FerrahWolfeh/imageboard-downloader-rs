@@ -124,6 +124,39 @@ impl Queue {
         }
     }
 
+    async fn create_out(&self, dir: PathBuf, st: &String) -> Result<PathBuf, QueueError> {
+        if self.cbz {
+            let output_file = dir.join(PathBuf::from(self.imageboard.to_string()));
+
+            match create_dir_all(&output_file).await {
+                Ok(_) => (),
+                Err(error) => {
+                    return Err(QueueError::DirCreationError {
+                        message: error.to_string(),
+                    })
+                }
+            };
+            return Ok(output_file);
+        }
+        let output_dir = dir.join(PathBuf::from(format!(
+            "{}/{}",
+            self.imageboard.to_string(),
+            st
+        )));
+
+        debug!("Target dir: {}", output_dir.display());
+        match create_dir_all(&output_dir).await {
+            Ok(_) => (),
+            Err(error) => {
+                return Err(QueueError::DirCreationError {
+                    message: error.to_string(),
+                })
+            }
+        };
+
+        Ok(output_dir)
+    }
+
     /// Starts the download of all posts collected inside a [`PostQueue`]
     pub async fn download(
         &mut self,
@@ -136,37 +169,7 @@ impl Queue {
 
         let counters = ProgressCounter::initialize(list.len() as u64, self.imageboard);
 
-        let output_place = if self.cbz {
-            let output_file = output_dir.join(PathBuf::from(self.imageboard.to_string()));
-
-            match create_dir_all(&output_file).await {
-                Ok(_) => (),
-                Err(error) => {
-                    return Err(QueueError::DirCreationError {
-                        message: error.to_string(),
-                    })
-                }
-            };
-            output_file
-        } else {
-            let output_dir = output_dir.join(PathBuf::from(format!(
-                "{}/{}",
-                self.imageboard.to_string(),
-                st
-            )));
-
-            debug!("Target dir: {}", output_dir.display());
-            match create_dir_all(&output_dir).await {
-                Ok(_) => (),
-                Err(error) => {
-                    return Err(QueueError::DirCreationError {
-                        message: error.to_string(),
-                    })
-                }
-            };
-
-            output_dir
-        };
+        let output_place = self.create_out(output_dir, &st).await?;
 
         if self.cbz {
             let output_file = output_place.join(PathBuf::from(format!("{}.cbz", st)));
@@ -179,7 +182,7 @@ impl Queue {
 
             let zf = self.zip_file.clone().unwrap();
 
-            self.write_zip_structure(zf, list.clone())?;
+            self.write_zip_structure(zf, &list.clone())?;
         }
 
         debug!("Fetching {} posts", list.len());
@@ -220,9 +223,9 @@ impl Queue {
     fn write_zip_structure(
         &self,
         zip: Arc<Mutex<ZipWriter<File>>>,
-        posts: Vec<Post>,
+        posts: &[Post],
     ) -> Result<(), QueueError> {
-        let ap = SummaryFile::new(self.imageboard, self.tags.clone(), posts).to_json()?;
+        let ap = SummaryFile::new(self.imageboard, &self.tags, posts).to_json()?;
 
         let mut z_1 = zip.lock().unwrap();
 

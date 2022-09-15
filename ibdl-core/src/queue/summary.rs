@@ -35,15 +35,15 @@ pub struct SummaryFile {
 }
 
 impl SummaryFile {
-    pub fn new(imageboard: ImageBoards, tags: Vec<String>, posts: Vec<Post>) -> Self {
+    pub fn new(imageboard: ImageBoards, tags: &[String], posts: &[Post]) -> Self {
         let last_down = posts.first().unwrap().clone();
 
         Self {
             imageboard,
-            tags,
+            tags: tags.to_vec(),
             last_updated: Utc::now(),
             last_downloaded: last_down.id,
-            posts,
+            posts: posts.to_vec(),
         }
     }
 

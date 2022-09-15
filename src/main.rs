@@ -129,7 +129,7 @@ async fn main() -> Result<(), Error> {
     let total_down = qw.download(place, nt).await?;
 
     if !args.cbz {
-        let summary = SummaryFile::new(args.imageboard, args.tags, post_list);
+        let summary = SummaryFile::new(args.imageboard, &args.tags, &post_list);
         summary.write_summary(&tgs).await?;
     }
 
