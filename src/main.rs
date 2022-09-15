@@ -84,6 +84,12 @@ async fn main() -> Result<(), Error> {
         summary.write_summary(&tgs).await?;
     }
 
+    print_results(total_down, total_black);
+
+    Ok(())
+}
+
+fn print_results(total_down: u64, total_black: u64) {
     println!(
         "{} {} {}",
         total_down.to_string().bold().blue(),
@@ -100,8 +106,6 @@ async fn main() -> Result<(), Error> {
                 .red()
         );
     }
-
-    Ok(())
 }
 
 async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
