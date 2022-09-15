@@ -27,6 +27,12 @@ async fn main() -> Result<(), Error> {
         spinoff::Streams::Stderr,
     );
 
+    let nt = if args.save_file_as_id {
+        NameType::ID
+    } else {
+        NameType::MD5
+    };
+
     let (mut post_queue, total_black, client) = search_args(&args).await?;
 
     post_queue.posts.shrink_to_fit();
@@ -71,11 +77,6 @@ async fn main() -> Result<(), Error> {
         args.limit,
         args.cbz,
     );
-
-    let nt = match args.save_file_as_id {
-        true => NameType::ID,
-        false => NameType::MD5,
-    };
 
     let total_down = qw.download(place, nt).await?;
 
