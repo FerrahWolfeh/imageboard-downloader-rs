@@ -27,6 +27,8 @@ pub struct Cli {
     pub output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
+    ///
+    /// [max: 20]
     #[clap(
         short = 'd',
         value_name = "NUMBER",
@@ -61,7 +63,9 @@ pub struct Cli {
     )]
     pub save_file_as_id: bool,
 
-    /// Set a max number of posts to download with a maximum number of 65535 posts
+    /// Set a max number of posts to download.
+    ///
+    /// [max: 65535]
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 
@@ -76,6 +80,8 @@ pub struct Cli {
     pub cbz: bool,
 
     /// Select from which page to start scanning posts
+    ///
+    /// [max: 65535]
     #[clap(
         short,
         long,
@@ -97,7 +103,7 @@ pub struct Cli {
     )]
     pub update: bool,
 
-    /// Download posts with the selected rating. Can be used multiple times to download posts with other ratings also.
+    /// Download posts with the selected rating. Can be used multiple times to download posts with other ratings
     #[clap(
         short,
         long,
