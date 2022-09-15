@@ -1,7 +1,7 @@
 //! Global post filter
 //!
 //! # The Global Blacklist
-//! Imageboard websites tag their posts in order to facilitate searching,
+//! Imageboards tag their posts in order to facilitate searching,
 //! the global blacklist implements a filter to exclude from the download queue all posts with unwanted tags.
 //!
 //! ## Config file
