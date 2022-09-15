@@ -89,7 +89,7 @@ pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
     where
         S: ToString + Display;
 

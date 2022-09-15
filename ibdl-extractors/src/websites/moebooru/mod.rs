@@ -30,7 +30,7 @@ pub struct MoebooruExtractor {
 
 #[async_trait]
 impl Extractor for MoebooruExtractor {
-    fn new<S>(tags: &[S], download_ratings: Vec<Rating>, disable_blacklist: bool) -> Self
+    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
     where
         S: ToString + Display,
     {
@@ -53,7 +53,7 @@ impl Extractor for MoebooruExtractor {
             client,
             tags: strvec,
             tag_string,
-            download_ratings,
+            download_ratings: download_ratings.to_vec(),
             disable_blacklist,
             total_removed: 0,
         }
