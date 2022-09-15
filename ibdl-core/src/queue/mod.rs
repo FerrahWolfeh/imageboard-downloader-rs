@@ -98,7 +98,7 @@ impl Queue {
         posts: PostQueue,
         sim_downloads: u8,
         custom_client: Option<Client>,
-        limit: Option<usize>,
+        limit: Option<u16>,
         save_as_cbz: bool,
     ) -> Self {
         let client = if let Some(cli) = custom_client {
@@ -110,7 +110,7 @@ impl Queue {
         let mut plist = posts.posts;
 
         if let Some(max) = limit {
-            plist.truncate(max);
+            plist.truncate(max as usize);
         }
 
         Self {
