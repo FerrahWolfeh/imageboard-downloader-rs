@@ -61,7 +61,7 @@ pub struct Cli {
     )]
     pub save_file_as_id: bool,
 
-    /// Set a max number of posts to download
+    /// Set a max number of posts to download with a maximum number of 65535 posts
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 

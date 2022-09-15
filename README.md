@@ -5,7 +5,7 @@ extensible API.
 
 It is a cross-platform tool with speed, simple cli interface and multiple simultaneous downloads as its main focus.
 
-*imageboard_downloader_rs* currently has a hardcoded limit of **100** pages per download session to prevent API rate-limiting and put less strain on the imageboard servers.
+*imageboard_downloader_rs* has a hardcoded limit of **100 pages** per download session to prevent API rate-limiting and put less strain on the imageboard's servers.
 
 ⚠ **Avoid downloading single tag selections that span ~100k posts alone without using the download limiter. Be reasonate!**
 
