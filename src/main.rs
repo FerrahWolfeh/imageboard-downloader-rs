@@ -40,8 +40,6 @@ async fn main() -> Result<(), Error> {
         args.rating
     };
 
-    debug!("Selected ratings: {:?}", ratings);
-
     let (mut post_queue, total_black, client) = match args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, ratings, args.disable_blacklist);

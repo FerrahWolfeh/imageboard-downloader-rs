@@ -173,11 +173,14 @@ impl BlacklistFilter {
             }
         }
 
+        let mut sorted_list = selected_ratings.to_vec();
+        sorted_list.sort();
+
         Ok(Self {
             imageboard,
             auth_tags: auth_tags.clone(),
             gbl_tags,
-            selected_ratings: selected_ratings.to_vec(),
+            selected_ratings: sorted_list,
             disabled,
         })
     }
@@ -191,7 +194,8 @@ impl BlacklistFilter {
 
         let start = Instant::now();
         if !self.selected_ratings.is_empty() {
-            original_list.retain(|c| self.selected_ratings.contains(&c.rating));
+            debug!("Selected ratings: {:?}", self.selected_ratings);
+            original_list.retain(|c| self.selected_ratings.binary_search(&c.rating).is_ok());
 
             let safe_counter = original_size - original_list.len();
             debug!("Removed {} posts with non-selected ratings", safe_counter);
