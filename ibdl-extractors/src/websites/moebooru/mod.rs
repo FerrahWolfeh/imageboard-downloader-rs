@@ -71,6 +71,7 @@ impl Extractor for MoebooruExtractor {
 
         let qw = PostQueue {
             imageboard: ImageBoards::Konachan,
+            client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
         };
@@ -145,6 +146,7 @@ impl Extractor for MoebooruExtractor {
 
         let fin = PostQueue {
             imageboard: ImageBoards::Konachan,
+            client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
         };

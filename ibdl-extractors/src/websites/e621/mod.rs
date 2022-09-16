@@ -85,6 +85,7 @@ impl Extractor for E621Extractor {
 
         let qw = PostQueue {
             imageboard: ImageBoards::E621,
+            client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
         };
@@ -163,6 +164,7 @@ impl Extractor for E621Extractor {
 
         let fin = PostQueue {
             imageboard: ImageBoards::E621,
+            client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
         };

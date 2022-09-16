@@ -78,6 +78,7 @@ impl Extractor for DanbooruExtractor {
 
         let qw = PostQueue {
             imageboard: ImageBoards::Danbooru,
+            client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
         };
@@ -154,6 +155,7 @@ impl Extractor for DanbooruExtractor {
 
         let fin = PostQueue {
             imageboard: ImageBoards::Danbooru,
+            client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
         };

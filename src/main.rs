@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
 
     let (mut post_queue, total_black, client) = search_args(&args).await?;
 
-    post_queue.posts.shrink_to_fit();
+    post_queue.prepare(args.limit);
 
     spinner.clear();
 
@@ -75,7 +75,6 @@ async fn main() -> Result<(), Error> {
         post_queue,
         args.simultaneous_downloads,
         Some(client),
-        args.limit,
         args.cbz,
     );
 

@@ -5,6 +5,7 @@
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
 use ahash::AHashSet;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use std::{cmp::Ordering, ops::Not};
@@ -42,11 +43,24 @@ impl PartialEq for NameType {
 /// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
 #[derive(Debug)]
 pub struct PostQueue {
+    /// The imageboard where the posts come from.
     pub imageboard: ImageBoards,
+    /// The internal `Client` used by the extractor.
+    pub client: Client,
     /// A list containing all `Post`s collected.
     pub posts: Vec<Post>,
     /// The tags used to search the collected posts.
     pub tags: Vec<String>,
+}
+
+impl PostQueue {
+    pub fn prepare(&mut self, limit: Option<u16>) {
+        if let Some(max) = limit {
+            self.posts.truncate(max as usize);
+        } else {
+            self.posts.shrink_to_fit()
+        }
+    }
 }
 
 /// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
