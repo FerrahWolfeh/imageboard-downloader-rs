@@ -236,7 +236,7 @@ impl Queue {
                     Ok::<(), QueueError>(())
                 })
             })
-            .buffer_unordered(self.sim_downloads as usize)
+            .buffer_unordered(self.sim_downloads.into())
             .for_each(|_| async {})
             .await;
 
