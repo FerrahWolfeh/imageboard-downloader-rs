@@ -19,7 +19,6 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 - [x] Global blacklist. [See more](docs/Global_Blacklist.md)
 - [x] Store downloads in `cbz` file. [See more](docs/CBZ.md)
 - [x] Update already downloaded galleries. [See more](docs/Updater.md)
-- [ ] Download user favorites
 
 ## Installation
 
@@ -43,7 +42,7 @@ cargo run --release -- "your_tag" "your_another_tag_(cool)" -o ~/
 
 The final binary will be located at `target/release/imageboard_downloader`
 
-***Windows releases coming soon...***
+***Windows releases coming someday...***
 
 ## Usage
 
@@ -91,10 +90,10 @@ imageboard_downloader -i e621 "ash_(pokemon)" "pikachu" --safe-mode
 
 ***
 
-### Download images from rule34 with 100 simultaneous downloads
+### Download images from rule34 with 20 simultaneous downloads
 
 ```bash
-imageboard_downloader -i rule34 -d 100 "moe"
+imageboard_downloader -i rule34 -d 20 "moe"
 ```
 
 ***
