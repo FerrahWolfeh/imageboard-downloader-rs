@@ -97,7 +97,6 @@ pub struct Queue {
     sim_downloads: u8,
     client: Client,
     cbz: bool,
-    zip_file: Option<Arc<Mutex<ZipWriter<File>>>>,
 }
 
 impl Queue {
@@ -123,7 +122,6 @@ impl Queue {
             imageboard,
             sim_downloads,
             client,
-            zip_file: None,
         }
     }
 
@@ -219,8 +217,8 @@ impl Queue {
 
         debug!("Target file: {}", output_file.display());
 
-        let zf = File::create(&output_file)?;
-        let zip = Arc::new(Mutex::new(ZipWriter::new(zf)));
+        let file = File::create(&output_file)?;
+        let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
         self.write_zip_structure(zip.clone(), &self.list.clone())?;
 
@@ -242,8 +240,7 @@ impl Queue {
             .for_each(|_| async {})
             .await;
 
-        let file = self.zip_file.as_ref().unwrap();
-        let mut mtx = file.lock().unwrap();
+        let mut mtx = zip.lock().unwrap();
 
         mtx.finish()?;
         Ok(())
