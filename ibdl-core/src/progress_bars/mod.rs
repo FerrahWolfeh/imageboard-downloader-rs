@@ -76,6 +76,7 @@ impl ProgressCounter {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(download_progress_style(&template));
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.enable_steady_tick(Duration::from_millis(100));
 
         self.multi.add(bar)
     }
