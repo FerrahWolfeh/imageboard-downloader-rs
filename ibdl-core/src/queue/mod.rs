@@ -1,8 +1,8 @@
-//! Queue used specifically to download, filter and save posts found by an [`Extractor`](crate::imageboards::extractors).
+//! Queue used specifically to download, filter and save posts found by an [`Extractor`](ibdl-extractors::websites).
 //!
 //! # Example usage
 //!
-//! Conveniently using the same example from [here](crate::imageboards::extractors)
+//! Conveniently using the same example from [here](ibdl-extractors::websites)
 //!
 //! ```rust
 //! use imageboard_downloader::*;

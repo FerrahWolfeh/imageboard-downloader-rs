@@ -17,6 +17,7 @@ use self::rating::Rating;
 pub mod error;
 pub mod rating;
 
+/// Special enum to simplify the selection of the output file name when downloading a [`Post`]
 #[derive(Debug, Clone, Copy)]
 pub enum NameType {
     ID,
@@ -40,7 +41,7 @@ impl PartialEq for NameType {
     }
 }
 
-/// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](crate::imageboards::extractors::Auth).
+/// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](ibdl-extractors::websites::Auth).
 #[derive(Debug)]
 pub struct PostQueue {
     /// The imageboard where the posts come from.

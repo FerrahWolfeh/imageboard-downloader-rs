@@ -10,7 +10,7 @@ use std::{
 
 const PROGRESS_CHARS: &str = "━━";
 
-pub struct BarTemplates {
+struct BarTemplates {
     pub main: &'static str,
     pub download: &'static str,
 }
@@ -54,6 +54,9 @@ pub struct ProgressCounter {
 }
 
 impl ProgressCounter {
+    /// Initialize the main progress bar and the stat counters.
+    ///
+    /// The style that the main progress bar will use is based on the predefined styles for each variant of the ['ImageBoards' enum](ibdl_common::ImageBoards)
     pub fn initialize(len: u64, imageboard: ImageBoards) -> Arc<Self> {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(master_progress_style(&template));
@@ -72,6 +75,25 @@ impl ProgressCounter {
         })
     }
 
+    /// About the same as `initialize`, but accepts predefined styles instead.
+    pub fn initialize_custom_style(len: u64, style: ProgressStyle) -> Arc<Self> {
+        let bar = ProgressBar::new(len).with_style(style);
+        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.enable_steady_tick(Duration::from_millis(100));
+
+        // Initialize the bars
+        let multi = Arc::new(MultiProgress::new());
+        let main = Arc::new(multi.add(bar));
+
+        Arc::new(Self {
+            main,
+            multi,
+            total_mtx: Arc::new(Mutex::new(0)),
+            downloaded_mtx: Arc::new(Mutex::new(0)),
+        })
+    }
+
+    /// Adds a download bar under the main progress bar. Will use the predefined style present in the ['ImageBoards' enum](ibdl_common::ImageBoards)
     pub fn add_download_bar(&self, len: u64, imageboard: ImageBoards) -> ProgressBar {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(download_progress_style(&template));
@@ -80,9 +102,18 @@ impl ProgressCounter {
 
         self.multi.add(bar)
     }
+
+    /// Adds a download bar under the main progress bar, with a custom style.
+    pub fn add_download_custom_style(&self, len: u64, style: ProgressStyle) -> ProgressBar {
+        let bar = ProgressBar::new(len).with_style(style);
+        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.enable_steady_tick(Duration::from_millis(100));
+
+        self.multi.add(bar)
+    }
 }
 
-pub fn master_progress_style(templates: &BarTemplates) -> ProgressStyle {
+fn master_progress_style(templates: &BarTemplates) -> ProgressStyle {
     ProgressStyle::default_bar()
         .template(templates.main)
         .unwrap()
@@ -103,7 +134,7 @@ pub fn master_progress_style(templates: &BarTemplates) -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
 }
 
-pub fn download_progress_style(templates: &BarTemplates) -> ProgressStyle {
+fn download_progress_style(templates: &BarTemplates) -> ProgressStyle {
     ProgressStyle::default_bar()
         .template(templates.download)
         .unwrap()
