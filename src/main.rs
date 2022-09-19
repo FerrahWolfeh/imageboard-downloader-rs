@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
 
     let post_list = post_queue.posts.clone();
 
-    let mut qw = Queue::new(
+    let qw = Queue::new(
         args.imageboard,
         post_queue,
         args.simultaneous_downloads,

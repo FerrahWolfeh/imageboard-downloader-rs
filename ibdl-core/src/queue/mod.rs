@@ -61,7 +61,6 @@ use md5::compute;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;
-use std::mem::take;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -163,20 +162,18 @@ impl Queue {
 
     /// Starts the download of all posts collected inside a [`PostQueue`]
     pub async fn download(
-        &mut self,
+        self,
         output_dir: PathBuf,
         name_type: NameType,
     ) -> Result<u64, QueueError> {
-        let list = take(&mut self.list);
-
         let st = self.tags.join(" ");
 
-        let counters = ProgressCounter::initialize(list.len().try_into()?, self.imageboard);
+        let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
 
         let output_place = self.create_out(output_dir, &st).await?;
 
         if self.cbz {
-            self.cbz_path(output_place, list, counters.clone(), name_type)
+            self.cbz_path(output_place, counters.clone(), name_type)
                 .await?;
 
             counters.main.finish_and_clear();
@@ -184,9 +181,9 @@ impl Queue {
             return Ok(*counters.downloaded_mtx.lock().unwrap());
         }
 
-        debug!("Fetching {} posts", list.len());
+        debug!("Fetching {} posts", self.list.len());
 
-        futures::stream::iter(list)
+        futures::stream::iter(self.list)
             .map(|d| {
                 let cli = self.client.clone();
                 let output = output_place.join(d.file_name(name_type));
@@ -214,7 +211,6 @@ impl Queue {
     async fn cbz_path(
         &self,
         path: PathBuf,
-        list: Vec<Post>,
         counters: Arc<ProgressCounter>,
         name_type: NameType,
     ) -> Result<(), QueueError> {
@@ -226,11 +222,11 @@ impl Queue {
         let zf = File::create(&output_file)?;
         let zip = Arc::new(Mutex::new(ZipWriter::new(zf)));
 
-        self.write_zip_structure(zip.clone(), &list.clone())?;
+        self.write_zip_structure(zip.clone(), &self.list.clone())?;
 
-        debug!("Fetching {} posts", list.len());
+        debug!("Fetching {} posts", self.list.len());
 
-        futures::stream::iter(list)
+        futures::stream::iter(self.list.clone())
             .map(|d| {
                 let cli = self.client.clone();
                 let variant = self.imageboard;
