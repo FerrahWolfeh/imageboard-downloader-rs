@@ -58,6 +58,7 @@ use ibdl_common::post::{NameType, Post, PostQueue};
 use ibdl_common::reqwest::Client;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;
 use std::mem::take;
@@ -78,6 +79,16 @@ use self::summary::SummaryFile;
 
 mod error;
 pub mod summary;
+
+macro_rules! finish_and_increment {
+    ($x:expr) => {{
+        $x.main.inc(1);
+        let mut down_count = $x.downloaded_mtx.lock().unwrap();
+        let mut total_count = $x.total_mtx.lock().unwrap();
+        *total_count += 1;
+        *down_count += 1;
+    }};
+}
 
 /// Struct where all the downloading and filtering will take place
 pub struct Queue {
@@ -160,22 +171,17 @@ impl Queue {
 
         let st = self.tags.join(" ");
 
-        let counters = ProgressCounter::initialize(list.len() as u64, self.imageboard);
+        let counters = ProgressCounter::initialize(list.len().try_into()?, self.imageboard);
 
         let output_place = self.create_out(output_dir, &st).await?;
 
         if self.cbz {
-            let output_file = output_place.join(PathBuf::from(format!("{}.cbz", st)));
+            self.cbz_path(output_place, list, counters.clone(), name_type)
+                .await?;
 
-            debug!("Target file: {}", output_file.display());
+            counters.main.finish_and_clear();
 
-            let zf = File::create(&output_file)?;
-            let zip = Some(Arc::new(Mutex::new(ZipWriter::new(zf))));
-            self.zip_file = Some(zip.unwrap());
-
-            let zf = self.zip_file.clone().unwrap();
-
-            self.write_zip_structure(zf, &list.clone())?;
+            return Ok(*counters.downloaded_mtx.lock().unwrap());
         }
 
         debug!("Fetching {} posts", list.len());
@@ -186,31 +192,65 @@ impl Queue {
                 let output = output_place.join(d.file_name(name_type));
                 let variant = self.imageboard;
                 let counters = counters.clone();
-                let zip = self.zip_file.clone();
 
                 task::spawn(async move {
                     if !Self::check_file_exists(&d, &output, counters.clone(), name_type).await? {
-                        Self::fetch(cli, variant, d, counters, &output, zip).await?;
+                        Self::fetch(cli, variant, d, counters, &output).await?;
                     }
                     Ok::<(), QueueError>(())
                 })
             })
             .buffer_unordered(self.sim_downloads as usize)
-            .collect::<Vec<_>>()
+            .for_each(|_| async {})
             .await;
-
-        if self.cbz {
-            let file = self.zip_file.as_ref().unwrap();
-            let mut mtx = file.lock().unwrap();
-
-            mtx.finish()?;
-        }
 
         counters.main.finish_and_clear();
 
-        let tot = counters.downloaded_mtx.lock().unwrap();
+        let tot = *counters.downloaded_mtx.lock().unwrap();
 
-        Ok(*tot)
+        Ok(tot)
+    }
+
+    async fn cbz_path(
+        &self,
+        path: PathBuf,
+        list: Vec<Post>,
+        counters: Arc<ProgressCounter>,
+        name_type: NameType,
+    ) -> Result<(), QueueError> {
+        let st = self.tags.join(" ");
+        let output_file = path.join(PathBuf::from(format!("{}.cbz", st)));
+
+        debug!("Target file: {}", output_file.display());
+
+        let zf = File::create(&output_file)?;
+        let zip = Arc::new(Mutex::new(ZipWriter::new(zf)));
+
+        self.write_zip_structure(zip.clone(), &list.clone())?;
+
+        debug!("Fetching {} posts", list.len());
+
+        futures::stream::iter(list)
+            .map(|d| {
+                let cli = self.client.clone();
+                let variant = self.imageboard;
+                let counters = counters.clone();
+                let zip = zip.clone();
+
+                task::spawn(async move {
+                    Self::fetch_cbz(cli, variant, name_type, d, counters, zip).await?;
+                    Ok::<(), QueueError>(())
+                })
+            })
+            .buffer_unordered(self.sim_downloads as usize)
+            .for_each(|_| async {})
+            .await;
+
+        let file = self.zip_file.as_ref().unwrap();
+        let mut mtx = file.lock().unwrap();
+
+        mtx.finish()?;
+        Ok(())
     }
 
     fn write_zip_structure(
@@ -337,13 +377,90 @@ impl Queue {
         }
     }
 
+    async fn fetch_cbz(
+        client: Client,
+        variant: ImageBoards,
+        name_type: NameType,
+        post: Post,
+        counters: Arc<ProgressCounter>,
+        zip: Arc<Mutex<ZipWriter<File>>>,
+    ) -> Result<(), PostError> {
+        let filename = post.file_name(name_type);
+        debug!("Fetching {}", &post.url);
+        let res = client.get(&post.url).send().await?;
+
+        if res.status().is_client_error() {
+            counters.multi.println(format!(
+                "{} {}{}",
+                "Image source returned status".bold().red(),
+                res.status().as_str().bold().red(),
+                ". Skipping download.".bold().red()
+            ))?;
+            counters.main.inc(1);
+            return Err(PostError::RemoteFileNotFound);
+        }
+
+        let size = res.content_length().unwrap_or_default();
+
+        let pb = counters.add_download_bar(size, variant);
+
+        // Download the file chunk by chunk.
+        debug!("Retrieving chunks for {}", &filename);
+        let mut stream = res.bytes_stream();
+
+        let buf_size: usize = size.try_into()?;
+
+        let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
+
+        let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+
+        while let Some(item) = stream.next().await {
+            // Retrieve chunk.
+            let chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => {
+                    return Err(PostError::ChunkDownloadFail {
+                        message: e.to_string(),
+                    })
+                }
+            };
+            pb.inc(chunk.len().try_into()?);
+
+            // Write to file.
+            AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
+        }
+
+        spawn_blocking(move || -> Result<(), PostError> {
+            let mut un_mut = zip.lock().unwrap();
+
+            debug!("Writing {} to cbz file", filename);
+            match un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options) {
+                Ok(_) => {}
+                Err(error) => {
+                    return Err(PostError::ZipFileWriteError {
+                        message: error.to_string(),
+                    })
+                }
+            };
+
+            un_mut.write_all(&fvec)?;
+            Ok(())
+        })
+        .await??;
+
+        pb.finish_and_clear();
+
+        finish_and_increment!(counters);
+
+        Ok(())
+    }
+
     async fn fetch(
         client: Client,
         variant: ImageBoards,
         post: Post,
         counters: Arc<ProgressCounter>,
         output: &Path,
-        zip: Option<Arc<Mutex<ZipWriter<File>>>>,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
@@ -369,93 +486,36 @@ impl Queue {
 
         let buf_size: usize = size.try_into()?;
 
-        if let Some(zf) = zip {
-            let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
+        debug!("Creating {:?}", &output);
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(output)
+            .await?;
 
-            let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+        let mut bw = BufWriter::with_capacity(buf_size, file);
 
-            let arr = Arc::new(post);
+        while let Some(item) = stream.next().await {
+            // Retrieve chunk.
+            let mut chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => {
+                    return Err(PostError::ChunkDownloadFail {
+                        message: e.to_string(),
+                    })
+                }
+            };
+            pb.inc(chunk.len().try_into()?);
 
-            while let Some(item) = stream.next().await {
-                // Retrieve chunk.
-                let chunk = match item {
-                    Ok(chunk) => chunk,
-                    Err(e) => {
-                        return Err(PostError::ChunkDownloadFail {
-                            message: e.to_string(),
-                        })
-                    }
-                };
-                pb.inc(chunk.len().try_into()?);
-
-                // Write to file.
-                AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
-            }
-
-            let data = arr.clone();
-
-            let file_name = output.file_stem().unwrap().to_str().unwrap().to_string();
-
-            spawn_blocking(move || -> Result<(), PostError> {
-                let mut un_mut = zf.lock().unwrap();
-
-                debug!("Writing {}.{} to cbz file", file_name, data.extension);
-                match un_mut.start_file(
-                    format!(
-                        "{}/{}.{}",
-                        data.rating.to_string(),
-                        file_name,
-                        data.extension
-                    ),
-                    options,
-                ) {
-                    Ok(_) => {}
-                    Err(error) => {
-                        return Err(PostError::ZipFileWriteError {
-                            message: error.to_string(),
-                        })
-                    }
-                };
-
-                un_mut.write_all(&fvec)?;
-                Ok(())
-            })
-            .await??;
-        } else {
-            debug!("Creating {:?}", &output);
-            let file = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(output)
-                .await?;
-
-            let mut bw = BufWriter::with_capacity(size.try_into()?, file);
-
-            while let Some(item) = stream.next().await {
-                // Retrieve chunk.
-                let mut chunk = match item {
-                    Ok(chunk) => chunk,
-                    Err(e) => {
-                        return Err(PostError::ChunkDownloadFail {
-                            message: e.to_string(),
-                        })
-                    }
-                };
-                pb.inc(chunk.len().try_into()?);
-
-                // Write to file.
-                bw.write_all_buf(&mut chunk).await?;
-            }
-            bw.flush().await?;
+            // Write to file.
+            bw.write_all_buf(&mut chunk).await?;
         }
+        bw.flush().await?;
 
         pb.finish_and_clear();
 
-        counters.main.inc(1);
-        let mut down_count = counters.downloaded_mtx.lock().unwrap();
-        let mut total_count = counters.total_mtx.lock().unwrap();
-        *total_count += 1;
-        *down_count += 1;
+        finish_and_increment!(counters);
+
         Ok(())
     }
 }
