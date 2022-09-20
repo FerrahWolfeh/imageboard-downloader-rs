@@ -35,12 +35,6 @@ impl Not for NameType {
     }
 }
 
-impl PartialEq for NameType {
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
-    }
-}
-
 /// Queue that combines all posts collected, with which tags and with a user-defined blacklist in case an Extractor implements [Auth](ibdl-extractors::websites::Auth).
 #[derive(Debug)]
 pub struct PostQueue {
