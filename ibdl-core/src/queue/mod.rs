@@ -126,7 +126,7 @@ impl Queue {
     }
 
     async fn create_out(&self, dir: PathBuf, st: &String) -> Result<PathBuf, QueueError> {
-        let st = if st.contains("fav:") {
+        let dirname = if st.contains("fav:") {
             String::from("Favorites")
         } else {
             st.to_owned()
@@ -148,7 +148,7 @@ impl Queue {
         let output_dir = dir.join(PathBuf::from(format!(
             "{}/{}",
             self.imageboard.to_string(),
-            st
+            dirname
         )));
 
         debug!("Target dir: {}", output_dir.display());
