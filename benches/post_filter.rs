@@ -1,5 +1,5 @@
+use ahash::AHashSet;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use ibdl_common::ahash::AHashSet;
 use ibdl_common::post::{rating::Rating, Post};
 use rand::{
     distributions::{Alphanumeric, DistString},
@@ -175,7 +175,7 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
 
         let ext = EXTENSIONS.choose(&mut rng).unwrap().to_string();
 
-        let tags: AHashSet<String> = TAGS
+        let tags: Vec<String> = TAGS
             .choose_multiple(&mut rng, rn)
             .map(|t| t.to_string())
             .collect();

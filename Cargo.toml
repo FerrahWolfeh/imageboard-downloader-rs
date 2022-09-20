@@ -27,10 +27,15 @@ ibdl-common = { path = "./ibdl-common" }
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"]}
+ahash = { version = "0.8.0", features = ["serde"] }
 rand = "0.8.5"
 
 [[bench]]
 name = "post_filter"
+harness = false
+
+[[bench]]
+name = "post_mapper"
 harness = false
 
 [profile.release]
