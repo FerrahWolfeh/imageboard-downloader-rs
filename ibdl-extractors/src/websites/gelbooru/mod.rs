@@ -199,7 +199,7 @@ impl Extractor for GelbooruExtractor {
                         tags.insert(f.to_string());
                     });
 
-                    let rating = Rating::from_str(f["rating"].as_str().unwrap());
+                    let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
 
                     let file = f["image"].as_str().unwrap();
 
@@ -257,7 +257,7 @@ impl Extractor for GelbooruExtractor {
                         url: url.clone(),
                         extension: extract_ext_from_url!(url),
                         tags,
-                        rating: Rating::from_str(post["rating"].as_str().unwrap()),
+                        rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
                     }
                 })
                 .collect();

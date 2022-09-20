@@ -192,7 +192,7 @@ impl Extractor for MoebooruExtractor {
                     md5: c.md5.clone().unwrap(),
                     extension: extract_ext_from_url!(url),
                     tags,
-                    rating: Rating::from_str(&c.rating),
+                    rating: Rating::from_rating_str(&c.rating),
                 }
             })
             .collect();

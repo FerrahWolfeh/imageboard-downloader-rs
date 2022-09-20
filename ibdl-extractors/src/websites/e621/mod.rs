@@ -220,7 +220,7 @@ impl Extractor for E621Extractor {
                     md5: c.file.md5.clone().unwrap(),
                     extension: c.file.ext.unwrap(),
                     tags: tag_list,
-                    rating: Rating::from_str(&c.rating),
+                    rating: Rating::from_rating_str(&c.rating),
                 }
             })
             .collect();

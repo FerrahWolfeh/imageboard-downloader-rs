@@ -206,7 +206,7 @@ impl Extractor for DanbooruExtractor {
             let rating = if rt == "s" {
                 Rating::Questionable
             } else {
-                Rating::from_str(rt)
+                Rating::from_rating_str(rt)
             };
 
             let unit = Post {

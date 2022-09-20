@@ -42,9 +42,7 @@ impl ToString for Rating {
 #[allow(clippy::should_implement_trait)]
 impl Rating {
     /// Guess the variant according to the rating tag present in the post
-    ///
-    /// Not to be confused with the method of `FromStr`, since this method never errors.
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_rating_str(s: &str) -> Self {
         match s {
             "s" | "g" | "safe" | "sensitive" | "general" => Self::Safe,
             "q" | "questionable" => Self::Questionable,
