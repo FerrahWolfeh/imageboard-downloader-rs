@@ -9,7 +9,6 @@ use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::serde_json::Value;
 use ibdl_common::{
-    ahash::AHashSet,
     auth::{auth_prompt, ImageboardConfig},
     client, join_tags,
     log::debug,
@@ -198,10 +197,10 @@ impl Extractor for DanbooruExtractor {
 
         batch.par_bridge().for_each(|c| {
             let tag_list_iter = c["tag_string"].as_str().unwrap().split(' ');
-            let mut tag_list = AHashSet::with_capacity(tag_list_iter.size_hint().0);
+            let mut tag_list = Vec::with_capacity(tag_list_iter.size_hint().0);
 
             tag_list_iter.for_each(|i| {
-                tag_list.insert(i.to_string());
+                tag_list.push(i.to_string());
             });
 
             let rt = c["rating"].as_str().unwrap();

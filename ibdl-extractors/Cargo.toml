@@ -12,3 +12,8 @@ thiserror-impl = "1.0.32"
 async-trait = "0.1.57"
 rayon = "1.5.3"
 toml = "0.5.9"
+
+
+[dependencies.ahash]
+version = "0.8.0"
+features = ["serde"]

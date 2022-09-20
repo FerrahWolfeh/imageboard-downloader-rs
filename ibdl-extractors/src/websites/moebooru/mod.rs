@@ -1,6 +1,5 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
 use async_trait::async_trait;
-use ibdl_common::ahash::AHashSet;
 use ibdl_common::reqwest::Client;
 use ibdl_common::{
     client, extract_ext_from_url, join_tags,
@@ -88,7 +87,7 @@ impl Extractor for MoebooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Konachan,
-            &AHashSet::default(),
+            &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
         )
@@ -183,10 +182,10 @@ impl Extractor for MoebooruExtractor {
 
             let tag_iter = c.tags.split(' ');
 
-            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+            let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|i| {
-                tags.insert(i.to_string());
+                tags.push(i.to_string());
             });
 
             let unit = Post {

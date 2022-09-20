@@ -29,7 +29,7 @@
 //!
 //! With this, the user can input all tags that they do not want to download. In case a post has
 //! any of the tags set in the blacklist, it will be removed from the download queue.
-use ibdl_common::ahash::AHashSet;
+use ahash::AHashSet;
 use ibdl_common::directories::ProjectDirs;
 use ibdl_common::log::debug;
 use ibdl_common::post::rating::Rating;
@@ -65,13 +65,13 @@ konachan = []
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
 struct BlacklistCategories {
-    global: AHashSet<String>,
-    danbooru: AHashSet<String>,
-    e621: AHashSet<String>,
-    realbooru: AHashSet<String>,
-    rule34: AHashSet<String>,
-    gelbooru: AHashSet<String>,
-    konachan: AHashSet<String>,
+    global: Vec<String>,
+    danbooru: Vec<String>,
+    e621: Vec<String>,
+    realbooru: Vec<String>,
+    rule34: Vec<String>,
+    gelbooru: Vec<String>,
+    konachan: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -126,12 +126,14 @@ pub struct BlacklistFilter {
 impl BlacklistFilter {
     pub async fn init(
         imageboard: ImageBoards,
-        auth_tags: &AHashSet<String>,
+        auth_tags: &[String],
         selected_ratings: &[Rating],
         disabled: bool,
     ) -> Result<Self, ExtractorError> {
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
         if !disabled {
+            gbl_tags.extend(auth_tags.iter().cloned());
+
             let gbl = GlobalBlacklist::get().await?;
 
             if let Some(tags) = gbl.blacklist {
@@ -155,8 +157,6 @@ impl BlacklistFilter {
                     gbl_tags.extend(special_tags);
                 }
             }
-
-            gbl_tags.extend(auth_tags.clone());
         }
 
         let mut sorted_list = selected_ratings.to_vec();

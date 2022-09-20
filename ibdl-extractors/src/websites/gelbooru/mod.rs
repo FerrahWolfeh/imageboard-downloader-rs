@@ -7,7 +7,6 @@
 //!
 
 use async_trait::async_trait;
-use ibdl_common::ahash::AHashSet;
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::Value;
 use ibdl_common::tokio::time::{sleep, Instant};
@@ -99,7 +98,7 @@ impl Extractor for GelbooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             self.active_imageboard,
-            &AHashSet::default(),
+            &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
         )
@@ -251,10 +250,10 @@ impl GelbooruExtractor {
         post_iter.par_bridge().for_each(|f| {
             let tag_iter = f["tags"].as_str().unwrap().split(' ');
 
-            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+            let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|f| {
-                tags.insert(f.to_string());
+                tags.push(f.to_string());
             });
 
             let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
@@ -309,10 +308,10 @@ impl GelbooruExtractor {
             let url = post["file_url"].as_str().unwrap().to_string();
             let tag_iter = post["tags"].as_str().unwrap().split(' ');
 
-            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+            let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|i| {
-                tags.insert(i.to_string());
+                tags.push(i.to_string());
             });
 
             let unit = Post {

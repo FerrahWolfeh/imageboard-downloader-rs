@@ -1,7 +1,6 @@
 use std::{fs::create_dir_all, io, path::PathBuf};
 
 // Public Exports
-pub use ahash;
 pub use bincode;
 use bincode::deserialize;
 pub use clap;

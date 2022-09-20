@@ -1,5 +1,4 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
-use ahash::AHashSet;
 use bincode::serialize;
 use colored::Colorize;
 use log::debug;
@@ -54,7 +53,7 @@ pub struct ImageboardConfig {
 pub struct UserData {
     pub id: u64,
     pub name: String,
-    pub blacklisted_tags: AHashSet<String>,
+    pub blacklisted_tags: Vec<String>,
 }
 
 impl Default for ImageboardConfig {
@@ -66,7 +65,7 @@ impl Default for ImageboardConfig {
             user_data: UserData {
                 id: 0,
                 name: "".to_string(),
-                blacklisted_tags: AHashSet::new(),
+                blacklisted_tags: Vec::new(),
             },
         }
     }
@@ -82,7 +81,7 @@ impl ImageboardConfig {
             user_data: UserData {
                 id: 0,
                 name: "".to_string(),
-                blacklisted_tags: AHashSet::new(),
+                blacklisted_tags: Vec::new(),
             },
         }
     }
@@ -126,7 +125,7 @@ impl ImageboardConfig {
 
             for i in tag_list.lines() {
                 if !i.contains("//") {
-                    self.user_data.blacklisted_tags.insert(i.to_string());
+                    self.user_data.blacklisted_tags.push(i.to_string());
                 }
             }
 

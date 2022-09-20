@@ -4,7 +4,6 @@
 //! A [`Post` struct](Post) is a generic representation of an imageboard post.
 //!
 //! Most imageboard APIs have a common set of info from the files we want to download.
-use ahash::AHashSet;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -81,7 +80,7 @@ pub struct Post {
     /// Set of tags associated with the post.
     ///
     /// Used to exclude posts according to a blacklist
-    pub tags: AHashSet<String>,
+    pub tags: Vec<String>,
 }
 
 impl Ord for Post {

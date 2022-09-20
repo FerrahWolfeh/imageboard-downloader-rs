@@ -5,7 +5,6 @@
 //! - Native blacklist (defined in user profile page)
 //!
 use async_trait::async_trait;
-use ibdl_common::ahash::AHashSet;
 use ibdl_common::reqwest::Client;
 use ibdl_common::{
     auth::{auth_prompt, ImageboardConfig},
@@ -207,7 +206,7 @@ impl Extractor for E621Extractor {
                 + c.tags.meta.len()
                 + c.tags.species.len();
 
-            let mut tag_list = AHashSet::with_capacity(full_size);
+            let mut tag_list = Vec::with_capacity(full_size);
             tag_list.extend(c.tags.character.into_iter());
             tag_list.extend(c.tags.artist.into_iter());
             tag_list.extend(c.tags.general.into_iter());
