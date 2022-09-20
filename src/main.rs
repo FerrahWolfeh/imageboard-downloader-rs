@@ -39,6 +39,12 @@ async fn main() -> Result<(), Error> {
 
     spinner.clear();
 
+    let dirname = if args.tags.join(" ").contains("fav:") {
+        String::from("Favorites")
+    } else {
+        args.tags.join(" ")
+    };
+
     let place = match &args.output {
         None => std::env::current_dir()?,
         Some(dir) => dir.to_path_buf(),
@@ -47,7 +53,7 @@ async fn main() -> Result<(), Error> {
     let tgs = place.join(Path::new(&format!(
         "{}/{}/{}",
         args.imageboard.to_string(),
-        &args.tags.join(" "),
+        dirname,
         ".00_download_summary.bin"
     )));
 
