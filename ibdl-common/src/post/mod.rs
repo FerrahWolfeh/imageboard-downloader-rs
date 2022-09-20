@@ -18,7 +18,7 @@ pub mod error;
 pub mod rating;
 
 /// Special enum to simplify the selection of the output file name when downloading a [`Post`]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameType {
     ID,
     MD5,
