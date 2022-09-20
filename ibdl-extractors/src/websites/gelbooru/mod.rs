@@ -17,7 +17,9 @@ use ibdl_common::{
     post::{rating::Rating, Post, PostQueue},
     ImageBoards,
 };
+use rayon::prelude::*;
 use std::fmt::Display;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
@@ -186,85 +188,13 @@ impl Extractor for GelbooruExtractor {
             .await?;
 
         if let Some(arr) = items.as_array() {
-            let start = Instant::now();
-            let posts: Vec<Post> = arr
-                .iter()
-                .filter(|f| f["hash"].as_str().is_some())
-                .map(|f| {
-                    let tag_iter = f["tags"].as_str().unwrap().split(' ');
-
-                    let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
-
-                    tag_iter.for_each(|f| {
-                        tags.insert(f.to_string());
-                    });
-
-                    let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
-
-                    let file = f["image"].as_str().unwrap();
-
-                    let md5 = f["hash"].as_str().unwrap().to_string();
-
-                    let ext = extract_ext_from_url!(file);
-
-                    let drop_url = if self.active_imageboard == ImageBoards::Rule34 {
-                        f["file_url"].as_str().unwrap().to_string()
-                    } else {
-                        format!(
-                            "https://realbooru.com/images/{}/{}.{}",
-                            f["directory"].as_str().unwrap(),
-                            &md5,
-                            &ext
-                        )
-                    };
-
-                    Post {
-                        id: f["id"].as_u64().unwrap(),
-                        url: drop_url,
-                        md5,
-                        extension: extract_ext_from_url!(file),
-                        rating,
-                        tags,
-                    }
-                })
-                .collect();
-            let end = Instant::now();
-
-            debug!("List size: {}", posts.len());
-            debug!("Post mapping took {:?}", end - start);
+            let posts = self.gelbooru_old_path(arr);
 
             return Ok(posts);
         }
 
         if let Some(it) = items["post"].as_array() {
-            let start = Instant::now();
-            let posts: Vec<Post> = it
-                .iter()
-                .filter(|i| i["file_url"].as_str().is_some())
-                .map(|post| {
-                    let url = post["file_url"].as_str().unwrap().to_string();
-                    let tag_iter = post["tags"].as_str().unwrap().split(' ');
-
-                    let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
-
-                    tag_iter.for_each(|i| {
-                        tags.insert(i.to_string());
-                    });
-
-                    Post {
-                        id: post["id"].as_u64().unwrap(),
-                        md5: post["md5"].as_str().unwrap().to_string(),
-                        url: url.clone(),
-                        extension: extract_ext_from_url!(url),
-                        tags,
-                        rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
-                    }
-                })
-                .collect();
-            let end = Instant::now();
-
-            debug!("List size: {}", posts.len());
-            debug!("Post mapping took {:?}", end - start);
+            let posts = Self::gelbooru_new_path(it);
 
             return Ok(posts);
         }
@@ -308,5 +238,103 @@ impl MultiWebsite for GelbooruExtractor {
             total_removed: self.total_removed,
             download_ratings: self.download_ratings,
         })
+    }
+}
+
+impl GelbooruExtractor {
+    fn gelbooru_old_path(&self, list: &[Value]) -> Vec<Post> {
+        let start = Instant::now();
+        let post_iter = list.iter().filter(|f| f["hash"].as_str().is_some());
+
+        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+
+        post_iter.par_bridge().for_each(|f| {
+            let tag_iter = f["tags"].as_str().unwrap().split(' ');
+
+            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+            tag_iter.for_each(|f| {
+                tags.insert(f.to_string());
+            });
+
+            let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
+
+            let file = f["image"].as_str().unwrap();
+
+            let md5 = f["hash"].as_str().unwrap().to_string();
+
+            let ext = extract_ext_from_url!(file);
+
+            let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
+                format!(
+                    "https://realbooru.com/images/{}/{}.{}",
+                    f["directory"].as_str().unwrap(),
+                    &md5,
+                    &ext
+                )
+            } else {
+                f["file_url"].as_str().unwrap().to_string()
+            };
+
+            let unit = Post {
+                id: f["id"].as_u64().unwrap(),
+                url: drop_url,
+                md5,
+                extension: extract_ext_from_url!(file),
+                rating,
+                tags,
+            };
+
+            post_mtx.lock().unwrap().push(unit);
+        });
+
+        let end = Instant::now();
+
+        let posts = post_mtx.lock().unwrap().clone();
+        drop(post_mtx);
+
+        debug!("List size: {}", posts.len());
+        debug!("Post mapping took {:?}", end - start);
+
+        posts
+    }
+
+    fn gelbooru_new_path(list: &[Value]) -> Vec<Post> {
+        let start = Instant::now();
+        let post_iter = list.iter().filter(|i| i["file_url"].as_str().is_some());
+
+        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+
+        post_iter.par_bridge().for_each(|post| {
+            let url = post["file_url"].as_str().unwrap().to_string();
+            let tag_iter = post["tags"].as_str().unwrap().split(' ');
+
+            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+            tag_iter.for_each(|i| {
+                tags.insert(i.to_string());
+            });
+
+            let unit = Post {
+                id: post["id"].as_u64().unwrap(),
+                md5: post["md5"].as_str().unwrap().to_string(),
+                url: url.clone(),
+                extension: extract_ext_from_url!(url),
+                tags,
+                rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
+            };
+
+            post_mtx.lock().unwrap().push(unit);
+        });
+
+        let end = Instant::now();
+
+        let posts = post_mtx.lock().unwrap().clone();
+        drop(post_mtx);
+
+        debug!("List size: {}", posts.len());
+        debug!("Post mapping took {:?}", end - start);
+
+        posts
     }
 }

@@ -14,7 +14,9 @@ use ibdl_common::{
     post::{rating::Rating, Post, PostQueue},
     tokio, ImageBoards,
 };
+use rayon::prelude::*;
 use std::fmt::Display;
+use std::sync::Mutex;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
@@ -192,43 +194,48 @@ impl Extractor for E621Extractor {
         let items = req.send().await?.json::<E621TopLevel>().await?;
 
         let start_point = Instant::now();
-        let post_list: Vec<Post> = items
-            .posts
-            .into_iter()
-            .filter(|c| c.file.url.is_some())
-            .map(|c| {
-                let full_size = c.tags.artist.len()
-                    + c.tags.character.len()
-                    + c.tags.general.len()
-                    + c.tags.copyright.len()
-                    + c.tags.lore.len()
-                    + c.tags.meta.len()
-                    + c.tags.species.len();
+        let post_iter = items.posts.into_iter().filter(|c| c.file.url.is_some());
 
-                let mut tag_list = AHashSet::with_capacity(full_size);
-                tag_list.extend(c.tags.character.into_iter());
-                tag_list.extend(c.tags.artist.into_iter());
-                tag_list.extend(c.tags.general.into_iter());
-                tag_list.extend(c.tags.copyright.into_iter());
-                tag_list.extend(c.tags.lore.into_iter());
-                tag_list.extend(c.tags.meta.into_iter());
-                tag_list.extend(c.tags.species.into_iter());
+        let post_list: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-                Post {
-                    id: c.id.unwrap(),
-                    url: c.file.url.clone().unwrap(),
-                    md5: c.file.md5.clone().unwrap(),
-                    extension: c.file.ext.unwrap(),
-                    tags: tag_list,
-                    rating: Rating::from_rating_str(&c.rating),
-                }
-            })
-            .collect();
+        post_iter.par_bridge().for_each(|c| {
+            let full_size = c.tags.artist.len()
+                + c.tags.character.len()
+                + c.tags.general.len()
+                + c.tags.copyright.len()
+                + c.tags.lore.len()
+                + c.tags.meta.len()
+                + c.tags.species.len();
+
+            let mut tag_list = AHashSet::with_capacity(full_size);
+            tag_list.extend(c.tags.character.into_iter());
+            tag_list.extend(c.tags.artist.into_iter());
+            tag_list.extend(c.tags.general.into_iter());
+            tag_list.extend(c.tags.copyright.into_iter());
+            tag_list.extend(c.tags.lore.into_iter());
+            tag_list.extend(c.tags.meta.into_iter());
+            tag_list.extend(c.tags.species.into_iter());
+
+            let unit = Post {
+                id: c.id.unwrap(),
+                url: c.file.url.clone().unwrap(),
+                md5: c.file.md5.clone().unwrap(),
+                extension: c.file.ext.unwrap(),
+                tags: tag_list,
+                rating: Rating::from_rating_str(&c.rating),
+            };
+
+            post_list.lock().unwrap().push(unit);
+        });
+
         let end_point = Instant::now();
 
-        debug!("List size: {}", post_list.len());
+        let pl = post_list.lock().unwrap().clone();
+        drop(post_list);
+
+        debug!("List size: {}", pl.len());
         debug!("Post mapping took {:?}", end_point - start_point);
-        Ok(post_list)
+        Ok(pl)
     }
 
     fn client(self) -> Client {

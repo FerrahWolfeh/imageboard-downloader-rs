@@ -9,7 +9,9 @@ use ibdl_common::{
     tokio::time::Instant,
     ImageBoards,
 };
+use rayon::prelude::*;
 use std::fmt::Display;
+use std::sync::Mutex;
 
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::moebooru::models::KonachanPost,
@@ -172,31 +174,36 @@ impl Extractor for MoebooruExtractor {
             .await?;
 
         let start = Instant::now();
-        let post_list: Vec<Post> = items
-            .iter()
-            .filter(|c| c.file_url.is_some())
-            .map(|c| {
-                let url = c.file_url.clone().unwrap();
+        let post_iter = items.iter().filter(|c| c.file_url.is_some());
 
-                let tag_iter = c.tags.split(' ');
+        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-                let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+        post_iter.par_bridge().for_each(|c| {
+            let url = c.file_url.clone().unwrap();
 
-                tag_iter.for_each(|i| {
-                    tags.insert(i.to_string());
-                });
+            let tag_iter = c.tags.split(' ');
 
-                Post {
-                    id: c.id.unwrap(),
-                    url: url.clone(),
-                    md5: c.md5.clone().unwrap(),
-                    extension: extract_ext_from_url!(url),
-                    tags,
-                    rating: Rating::from_rating_str(&c.rating),
-                }
-            })
-            .collect();
+            let mut tags = AHashSet::with_capacity(tag_iter.size_hint().0);
+
+            tag_iter.for_each(|i| {
+                tags.insert(i.to_string());
+            });
+
+            let unit = Post {
+                id: c.id.unwrap(),
+                url: url.clone(),
+                md5: c.md5.clone().unwrap(),
+                extension: extract_ext_from_url!(url),
+                tags,
+                rating: Rating::from_rating_str(&c.rating),
+            };
+
+            post_mtx.lock().unwrap().push(unit);
+        });
         let end = Instant::now();
+
+        let post_list = post_mtx.lock().unwrap().clone();
+        drop(post_mtx);
 
         debug!("List size: {}", post_list.len());
         debug!("Post mapping took {:?}", end - start);

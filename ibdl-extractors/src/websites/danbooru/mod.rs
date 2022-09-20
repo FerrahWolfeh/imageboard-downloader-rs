@@ -18,7 +18,9 @@ use ibdl_common::{
     tokio::time::Instant,
     ImageBoards,
 };
+use rayon::prelude::*;
 use std::fmt::Display;
+use std::sync::Mutex;
 
 /// Main object to download posts
 #[derive(Debug)]
@@ -192,9 +194,9 @@ impl Extractor for DanbooruExtractor {
             .iter()
             .filter(|c| c["file_url"].as_str().is_some());
 
-        let mut posts: Vec<Post> = Vec::with_capacity(batch.size_hint().0);
+        let posts: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(batch.size_hint().0));
 
-        for c in batch {
+        batch.par_bridge().for_each(|c| {
             let tag_list_iter = c["tag_string"].as_str().unwrap().split(' ');
             let mut tag_list = AHashSet::with_capacity(tag_list_iter.size_hint().0);
 
@@ -218,13 +220,16 @@ impl Extractor for DanbooruExtractor {
                 rating,
             };
 
-            posts.push(unit);
-        }
+            posts.lock().unwrap().push(unit);
+        });
         let end_iter = Instant::now();
 
-        debug!("List size: {}", posts.len());
+        let mtx = posts.lock().unwrap().clone();
+        drop(posts);
+
+        debug!("List size: {}", mtx.len());
         debug!("Post mapping took {:?}", end_iter - start_point);
-        Ok(posts)
+        Ok(mtx)
     }
 
     fn client(self) -> Client {
