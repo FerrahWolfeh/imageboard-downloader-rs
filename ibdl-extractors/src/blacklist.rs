@@ -66,21 +66,21 @@ konachan = []
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
-pub struct BlacklistCategories {
-    pub global: AHashSet<String>,
-    pub danbooru: AHashSet<String>,
-    pub e621: AHashSet<String>,
-    pub realbooru: AHashSet<String>,
-    pub rule34: AHashSet<String>,
-    pub gelbooru: AHashSet<String>,
-    pub konachan: AHashSet<String>,
+struct BlacklistCategories {
+    global: AHashSet<String>,
+    danbooru: AHashSet<String>,
+    e621: AHashSet<String>,
+    realbooru: AHashSet<String>,
+    rule34: AHashSet<String>,
+    gelbooru: AHashSet<String>,
+    konachan: AHashSet<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
-    pub blacklist: Option<BlacklistCategories>,
+    blacklist: Option<BlacklistCategories>,
 }
 
 impl GlobalBlacklist {
