@@ -126,6 +126,12 @@ impl Queue {
     }
 
     async fn create_out(&self, dir: PathBuf, st: &String) -> Result<PathBuf, QueueError> {
+        let st = if st.contains("fav:") {
+            String::from("Favorites")
+        } else {
+            st.to_owned()
+        };
+
         if self.cbz {
             let output_file = dir.join(PathBuf::from(self.imageboard.to_string()));
 
