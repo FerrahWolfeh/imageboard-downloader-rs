@@ -29,9 +29,6 @@
 //!
 //! With this, the user can input all tags that they do not want to download. In case a post has
 //! any of the tags set in the blacklist, it will be removed from the download queue.
-use std::path::Path;
-
-use cfg_if::cfg_if;
 use ibdl_common::ahash::AHashSet;
 use ibdl_common::directories::ProjectDirs;
 use ibdl_common::log::debug;
@@ -42,11 +39,12 @@ use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
 use ibdl_common::tokio::io::AsyncWriteExt;
 use ibdl_common::tokio::time::Instant;
 use ibdl_common::ImageBoards;
+use std::path::Path;
 use toml::from_str;
 
 use super::error::ExtractorError;
 
-const BF_INIT_TEXT: &[u8; 275] = br#"[blacklist]
+const BF_INIT_TEXT: &str = r#"[blacklist]
 global = [] # Place in this array all the tags that will be excluded from all imageboards
 
 # Place in the following all the tags that will be excluded from specific imageboards 
@@ -99,7 +97,10 @@ impl GlobalBlacklist {
 
         if !dir.exists() {
             debug!("Creating blacklist file");
-            File::create(&dir).await?.write_all(BF_INIT_TEXT).await?;
+            File::create(&dir)
+                .await?
+                .write_all(BF_INIT_TEXT.as_bytes())
+                .await?;
         }
 
         let gbl_string = read_to_string(&dir).await?;
@@ -117,8 +118,6 @@ impl GlobalBlacklist {
 }
 
 pub struct BlacklistFilter {
-    imageboard: ImageBoards,
-    auth_tags: AHashSet<String>,
     gbl_tags: AHashSet<String>,
     selected_ratings: Vec<Rating>,
     disabled: bool,
@@ -133,52 +132,37 @@ impl BlacklistFilter {
     ) -> Result<Self, ExtractorError> {
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
         if !disabled {
-            cfg_if! {
-                if #[cfg(feature = "global_blacklist")] {
-                    let gbl = GlobalBlacklist::get().await?;
+            let gbl = GlobalBlacklist::get().await?;
 
-                    if let Some(tags) = gbl.blacklist {
-                        if tags.global.is_empty() {
-                            debug!("Global blacklist is empty");
-                        } else {
-                            gbl_tags.extend(tags.global);
-                        }
+            if let Some(tags) = gbl.blacklist {
+                if tags.global.is_empty() {
+                    debug!("Global blacklist is empty");
+                } else {
+                    gbl_tags.extend(tags.global);
+                }
 
-                        let special_tags = match imageboard {
-                                ImageBoards::Danbooru => {
-                                    tags.danbooru
-                                }
-                                ImageBoards::E621 => {
-                                    tags.e621
-                                }
-                                ImageBoards::Rule34 => {
-                                    tags.rule34
-                                }
-                                ImageBoards::Gelbooru => {
-                                    tags.gelbooru
-                                }
-                                ImageBoards::Realbooru => {
-                                    tags.realbooru
-                                }
-                                ImageBoards::Konachan => {
-                                    tags.konachan
-                                }
-                            };
+                let special_tags = match imageboard {
+                    ImageBoards::Danbooru => tags.danbooru,
+                    ImageBoards::E621 => tags.e621,
+                    ImageBoards::Rule34 => tags.rule34,
+                    ImageBoards::Gelbooru => tags.gelbooru,
+                    ImageBoards::Realbooru => tags.realbooru,
+                    ImageBoards::Konachan => tags.konachan,
+                };
 
-                            if !special_tags.is_empty() {
-                                gbl_tags.extend(special_tags);
-                            }
-                    }
+                if !special_tags.is_empty() {
+                    debug!("{} blacklist: {:?}", imageboard.to_string(), &special_tags);
+                    gbl_tags.extend(special_tags);
                 }
             }
+
+            gbl_tags.extend(auth_tags.clone());
         }
 
         let mut sorted_list = selected_ratings.to_vec();
         sorted_list.sort();
 
         Ok(Self {
-            imageboard,
-            auth_tags: auth_tags.clone(),
             gbl_tags,
             selected_ratings: sorted_list,
             disabled,
@@ -203,32 +187,15 @@ impl BlacklistFilter {
             removed += safe_counter as u64;
         }
 
-        if !self.disabled {
-            if !self.auth_tags.is_empty()
-                && matches!(self.imageboard, ImageBoards::Danbooru | ImageBoards::E621)
-            {
-                let secondary_sz = original_list.len();
-                original_list.retain(|c| !c.tags.iter().any(|s| self.auth_tags.contains(s)));
+        if !self.disabled && !self.gbl_tags.is_empty() {
+            let fsize = original_list.len();
+            debug!("Removing posts with tags {:?}", self.gbl_tags);
 
-                let bp = secondary_sz - original_list.len();
-                debug!("User blacklist removed {} posts", bp);
-                removed += bp as u64;
-            }
+            original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
 
-            cfg_if! {
-                if #[cfg(feature = "global_blacklist")] {
-                    if !self.gbl_tags.is_empty() {
-                        let fsize = original_list.len();
-                        debug!("Removing posts with tags {:?}", self.gbl_tags);
-
-                        original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
-
-                        let bp = fsize - original_list.len();
-                        debug!("Global blacklist removed {} posts", bp);
-                        removed += bp as u64;
-                    }
-                }
-            }
+            let bp = fsize - original_list.len();
+            debug!("Blacklist removed {} posts", bp);
+            removed += bp as u64;
         }
 
         let end = Instant::now();

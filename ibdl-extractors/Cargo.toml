@@ -7,16 +7,8 @@ edition = "2021"
 
 [dependencies]
 ibdl-common = { path = "../ibdl-common" }
-cfg-if = "1.0.0"
 thiserror = "1.0.32"
 thiserror-impl = "1.0.32"
 async-trait = "0.1.57"
 rayon = "1.5.3"
-
-[features]
-default = ["global_blacklist"]
-global_blacklist = ["toml"]
-
-[dependencies.toml]
-version = "0.5.9"
-optional = true
+toml = "0.5.9"
