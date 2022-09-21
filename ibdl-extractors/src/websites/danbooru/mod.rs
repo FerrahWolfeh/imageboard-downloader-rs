@@ -188,7 +188,7 @@ impl Extractor for DanbooruExtractor {
 
         let start_point = Instant::now();
 
-        let mtx = self.map_posts(post_array);
+        let mtx = self.map_posts(post_array)?;
 
         let end_iter = Instant::now();
 
@@ -197,7 +197,7 @@ impl Extractor for DanbooruExtractor {
         Ok(mtx)
     }
 
-    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let parsed_json: Value = serde_json::from_str(raw_json.as_str()).unwrap();
 
         let batch = parsed_json
@@ -237,7 +237,7 @@ impl Extractor for DanbooruExtractor {
 
         let mtx = posts.lock().unwrap().clone();
         drop(posts);
-        mtx
+        Ok(mtx)
     }
 
     fn client(self) -> Client {

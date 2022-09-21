@@ -108,7 +108,7 @@ pub trait Extractor {
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError>;
 
     /// This is a separate lower level function to map posts by feeding a custom JSON object obtained through other means.
-    fn map_posts(&self, raw_json: String) -> Vec<Post>;
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError>;
 
     /// Consumes `self` and returns the used client for external use.
     fn client(self) -> Client;

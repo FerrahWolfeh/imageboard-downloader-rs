@@ -195,7 +195,7 @@ impl Extractor for E621Extractor {
 
         let start_point = Instant::now();
 
-        let pl = self.map_posts(items);
+        let pl = self.map_posts(items)?;
 
         let end_point = Instant::now();
 
@@ -204,7 +204,7 @@ impl Extractor for E621Extractor {
         Ok(pl)
     }
 
-    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
 
         let post_iter = items.posts.into_iter().filter(|c| c.file.url.is_some());
@@ -242,7 +242,7 @@ impl Extractor for E621Extractor {
         });
         let pl = post_list.lock().unwrap().clone();
         drop(post_list);
-        pl
+        Ok(pl)
     }
 
     fn client(self) -> Client {

@@ -175,7 +175,7 @@ impl Extractor for MoebooruExtractor {
 
         let start = Instant::now();
 
-        let post_list = self.map_posts(items);
+        let post_list = self.map_posts(items)?;
 
         let end = Instant::now();
 
@@ -185,7 +185,7 @@ impl Extractor for MoebooruExtractor {
         Ok(post_list)
     }
 
-    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let items = serde_json::from_str::<Vec<KonachanPost>>(raw_json.as_str()).unwrap();
 
         let post_iter = items.iter().filter(|c| c.file_url.is_some());
@@ -217,7 +217,7 @@ impl Extractor for MoebooruExtractor {
 
         let post_list = post_mtx.lock().unwrap().clone();
         drop(post_mtx);
-        post_list
+        Ok(post_list)
     }
 
     fn client(self) -> Client {

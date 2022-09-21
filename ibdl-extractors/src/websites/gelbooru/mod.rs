@@ -186,27 +186,24 @@ impl Extractor for GelbooruExtractor {
             .text()
             .await?;
 
-        return Ok(self.map_posts(items));
-
-        #[allow(unreachable_code)] // for now...
-        Err(ExtractorError::InvalidServerResponse)
+        Ok(self.map_posts(items)?)
     }
 
-    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let items = serde_json::from_str::<Value>(raw_json.as_str()).unwrap();
 
         if let Some(arr) = items.as_array() {
             let posts = self.gelbooru_old_path(arr);
 
-            return posts;
+            return Ok(posts);
         }
 
         if let Some(it) = items["post"].as_array() {
             let posts = Self::gelbooru_new_path(it);
 
-            return posts;
+            return Ok(posts);
         }
-        vec![]
+        Err(ExtractorError::PostMapFailure)
     }
 
     fn client(self) -> Client {
