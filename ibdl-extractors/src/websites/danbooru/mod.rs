@@ -203,7 +203,7 @@ impl Extractor for DanbooruExtractor {
         let batch = parsed_json
             .as_array()
             .unwrap()
-            .into_iter()
+            .iter()
             .filter(|c| c["file_url"].as_str().is_some());
 
         let posts: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(batch.size_hint().0));
