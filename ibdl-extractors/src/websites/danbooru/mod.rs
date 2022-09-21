@@ -7,7 +7,7 @@
 use super::{Auth, Extractor};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
-use ibdl_common::serde_json::Value;
+use ibdl_common::serde_json::{self, Value};
 use ibdl_common::{
     auth::{auth_prompt, ImageboardConfig},
     client, join_tags,
@@ -184,13 +184,26 @@ impl Extractor for DanbooruExtractor {
                 .query(&[("page", page), ("limit", 200)])
         };
 
-        let post_array = req.send().await?.json::<Value>().await?;
+        let post_array = req.send().await?.text().await?;
 
         let start_point = Instant::now();
-        let batch = post_array
+
+        let mtx = self.map_posts(post_array);
+
+        let end_iter = Instant::now();
+
+        debug!("List size: {}", mtx.len());
+        debug!("Post mapping took {:?}", end_iter - start_point);
+        Ok(mtx)
+    }
+
+    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+        let parsed_json: Value = serde_json::from_str(raw_json.as_str()).unwrap();
+
+        let batch = parsed_json
             .as_array()
             .unwrap()
-            .iter()
+            .into_iter()
             .filter(|c| c["file_url"].as_str().is_some());
 
         let posts: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(batch.size_hint().0));
@@ -221,14 +234,10 @@ impl Extractor for DanbooruExtractor {
 
             posts.lock().unwrap().push(unit);
         });
-        let end_iter = Instant::now();
 
         let mtx = posts.lock().unwrap().clone();
         drop(posts);
-
-        debug!("List size: {}", mtx.len());
-        debug!("Post mapping took {:?}", end_iter - start_point);
-        Ok(mtx)
+        mtx
     }
 
     fn client(self) -> Client {

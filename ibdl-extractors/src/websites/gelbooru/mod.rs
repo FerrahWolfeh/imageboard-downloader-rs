@@ -8,7 +8,7 @@
 
 use async_trait::async_trait;
 use ibdl_common::reqwest::Client;
-use ibdl_common::serde_json::Value;
+use ibdl_common::serde_json::{self, Value};
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
     client, extract_ext_from_url, join_tags,
@@ -177,28 +177,36 @@ impl Extractor for GelbooruExtractor {
             &self.tag_string
         );
 
-        let items = &self
+        let items = self
             .client
             .get(&url)
             .query(&[("pid", page), ("limit", 1000)])
             .send()
             .await?
-            .json::<Value>()
+            .text()
             .await?;
+
+        return Ok(self.map_posts(items));
+
+        #[allow(unreachable_code)] // for now...
+        Err(ExtractorError::InvalidServerResponse)
+    }
+
+    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+        let items = serde_json::from_str::<Value>(raw_json.as_str()).unwrap();
 
         if let Some(arr) = items.as_array() {
             let posts = self.gelbooru_old_path(arr);
 
-            return Ok(posts);
+            return posts;
         }
 
         if let Some(it) = items["post"].as_array() {
             let posts = Self::gelbooru_new_path(it);
 
-            return Ok(posts);
+            return posts;
         }
-
-        Err(ExtractorError::InvalidServerResponse)
+        vec![]
     }
 
     fn client(self) -> Client {

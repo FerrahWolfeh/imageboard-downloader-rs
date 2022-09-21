@@ -6,6 +6,7 @@
 //!
 use async_trait::async_trait;
 use ibdl_common::reqwest::Client;
+use ibdl_common::serde_json;
 use ibdl_common::{
     auth::{auth_prompt, ImageboardConfig},
     client, join_tags,
@@ -190,9 +191,22 @@ impl Extractor for E621Extractor {
                 .query(&[("page", page), ("limit", 320)])
         };
 
-        let items = req.send().await?.json::<E621TopLevel>().await?;
+        let items = req.send().await?.text().await?;
 
         let start_point = Instant::now();
+
+        let pl = self.map_posts(items);
+
+        let end_point = Instant::now();
+
+        debug!("List size: {}", pl.len());
+        debug!("Post mapping took {:?}", end_point - start_point);
+        Ok(pl)
+    }
+
+    fn map_posts(&self, raw_json: String) -> Vec<Post> {
+        let items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
+
         let post_iter = items.posts.into_iter().filter(|c| c.file.url.is_some());
 
         let post_list: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
@@ -226,15 +240,9 @@ impl Extractor for E621Extractor {
 
             post_list.lock().unwrap().push(unit);
         });
-
-        let end_point = Instant::now();
-
         let pl = post_list.lock().unwrap().clone();
         drop(post_list);
-
-        debug!("List size: {}", pl.len());
-        debug!("Post mapping took {:?}", end_point - start_point);
-        Ok(pl)
+        pl
     }
 
     fn client(self) -> Client {
