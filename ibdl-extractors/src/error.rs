@@ -27,6 +27,9 @@ pub enum ExtractorError {
         source: tokio::io::Error,
     },
 
+    #[error("Failed to map posts")]
+    PostMapFailure,
+
     #[error("Failed to decode blacklist.toml in {path}")]
     BlacklistDecodeError { path: String },
 

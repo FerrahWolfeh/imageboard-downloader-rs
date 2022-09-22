@@ -5,6 +5,7 @@ use ibdl_common::{
     client, extract_ext_from_url, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
+    serde_json,
     tokio::time::Instant,
     ImageBoards,
 };
@@ -163,16 +164,30 @@ impl Extractor for MoebooruExtractor {
             &self.tag_string
         );
 
-        let items = &self
+        let items = self
             .client
             .get(&url)
             .query(&[("page", page), ("limit", 100)])
             .send()
             .await?
-            .json::<Vec<KonachanPost>>()
+            .text()
             .await?;
 
         let start = Instant::now();
+
+        let post_list = self.map_posts(items)?;
+
+        let end = Instant::now();
+
+        debug!("List size: {}", post_list.len());
+        debug!("Post mapping took {:?}", end - start);
+
+        Ok(post_list)
+    }
+
+    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
+        let items = serde_json::from_str::<Vec<KonachanPost>>(raw_json.as_str()).unwrap();
+
         let post_iter = items.iter().filter(|c| c.file_url.is_some());
 
         let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
@@ -199,14 +214,9 @@ impl Extractor for MoebooruExtractor {
 
             post_mtx.lock().unwrap().push(unit);
         });
-        let end = Instant::now();
 
         let post_list = post_mtx.lock().unwrap().clone();
         drop(post_mtx);
-
-        debug!("List size: {}", post_list.len());
-        debug!("Post mapping took {:?}", end - start);
-
         Ok(post_list)
     }
 
