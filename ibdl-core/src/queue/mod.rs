@@ -125,17 +125,9 @@ impl Queue {
         }
     }
 
-    async fn create_out(&self, dir: PathBuf, st: &str) -> Result<PathBuf, QueueError> {
-        let dirname = if st.contains("fav:") {
-            String::from("Favorites")
-        } else if cfg!(windows) {
-            st.replace(':', "_")
-        } else {
-            String::from(st)
-        };
-
+    async fn create_out(&self, dir: PathBuf) -> Result<PathBuf, QueueError> {
         if self.cbz {
-            let output_file = dir.join(PathBuf::from(self.imageboard.to_string()));
+            let output_file = dir.parent().unwrap().to_path_buf();
 
             match create_dir_all(&output_file).await {
                 Ok(_) => (),
@@ -147,14 +139,9 @@ impl Queue {
             };
             return Ok(output_file);
         }
-        let output_dir = dir.join(PathBuf::from(format!(
-            "{}/{}",
-            self.imageboard.to_string(),
-            dirname
-        )));
 
-        debug!("Target dir: {}", output_dir.display());
-        match create_dir_all(&output_dir).await {
+        debug!("Target dir: {}", dir.display());
+        match create_dir_all(&dir).await {
             Ok(_) => (),
             Err(error) => {
                 return Err(QueueError::DirCreationError {
@@ -163,7 +150,7 @@ impl Queue {
             }
         };
 
-        Ok(output_dir)
+        Ok(dir)
     }
 
     /// Starts the download of all posts collected inside a [`PostQueue`]
@@ -172,11 +159,9 @@ impl Queue {
         output_dir: PathBuf,
         name_type: NameType,
     ) -> Result<u64, QueueError> {
-        let st = self.tags.join(" ");
-
         let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
 
-        let output_place = self.create_out(output_dir, &st).await?;
+        let output_place = self.create_out(output_dir).await?;
 
         if self.cbz {
             self.cbz_path(output_place, counters.clone(), name_type)
@@ -220,21 +205,9 @@ impl Queue {
         counters: Arc<ProgressCounter>,
         name_type: NameType,
     ) -> Result<(), QueueError> {
-        let st = self.tags.join(" ");
+        debug!("Target file: {}", path.display());
 
-        let st = if st.contains("fav:") {
-            String::from("Favorites")
-        } else if cfg!(windows) {
-            st.replace(':', "_")
-        } else {
-            st
-        };
-
-        let output_file = path.join(PathBuf::from(format!("{}.cbz", st)));
-
-        debug!("Target file: {}", output_file.display());
-
-        let file = File::create(&output_file)?;
+        let file = File::create(&path)?;
         let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
         self.write_zip_structure(zip.clone(), &self.list.clone(), name_type)?;

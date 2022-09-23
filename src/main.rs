@@ -6,6 +6,7 @@ use ibdl_common::post::PostQueue;
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio;
 use ibdl_common::{clap::Parser, cli::Cli, post::NameType, ImageBoards};
+use ibdl_core::generate_output_path;
 use ibdl_core::queue::summary::SummaryType;
 use ibdl_core::queue::{summary::SummaryFile, Queue};
 use ibdl_extractors::websites::{
@@ -40,28 +41,17 @@ async fn main() -> Result<(), Error> {
 
     spinner.clear();
 
-    let dirname = if args.tags.join(" ").contains("fav:") {
-        String::from("Favorites")
-    } else if cfg!(windows) {
-        args.tags.join(" ").replace(':', "_")
-    } else {
-        args.tags.join(" ")
-    };
-
     let place = match &args.output {
         None => std::env::current_dir()?,
         Some(dir) => dir.to_path_buf(),
     };
 
-    let tgs = place.join(Path::new(&format!(
-        "{}/{}/{}",
-        args.imageboard.to_string(),
-        dirname,
-        ".00_download_summary.bin"
-    )));
+    let dirname = generate_output_path(place, args.imageboard, &args.tags, args.cbz);
 
-    if args.update && tgs.exists() {
-        let summary_file = SummaryFile::read_summary(&tgs, SummaryType::ZSTDBincode).await;
+    let summary_path = dirname.join(Path::new(".00_download_summary.bin"));
+
+    if args.update && summary_path.exists() {
+        let summary_file = SummaryFile::read_summary(&summary_path, SummaryType::ZSTDBincode).await;
         if let Ok(post) = summary_file {
             debug!("Latest post found: {}", post.last_downloaded);
             post_queue.posts.retain(|c| c.id > post.last_downloaded);
@@ -69,7 +59,7 @@ async fn main() -> Result<(), Error> {
             nt = post.name_mode;
         } else {
             debug!("Summary file is corrupted, ignoring...");
-            remove_file(&tgs).await?;
+            remove_file(&summary_path).await?;
         }
     }
 
@@ -88,7 +78,7 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    let total_down = qw.download(place, nt).await?;
+    let total_down = qw.download(dirname, nt).await?;
 
     if !args.cbz {
         let summary = SummaryFile::new(
@@ -98,7 +88,7 @@ async fn main() -> Result<(), Error> {
             nt,
             SummaryType::ZSTDBincode,
         );
-        summary.write_summary(&tgs).await?;
+        summary.write_summary(&summary_path).await?;
     }
 
     print_results(total_down, total_black);
