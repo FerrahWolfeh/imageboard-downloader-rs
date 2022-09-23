@@ -77,17 +77,17 @@ impl ImageBoards {
         ua
     }
 
-    /// Exclusive to ```ImageBoards::Danbooru```.
-    ///
-    /// Will return ```Some``` with the endpoint for the total post count with given tags. In case it's used with another variant, it returns ```None```.
-    ///
-    /// The ```safe``` bool will determine if the endpoint directs to ```https://danbooru.donmai.us``` or ```https://safebooru.donmai.us```.
     #[inline]
-    pub fn post_count_url(self) -> Option<&'static str> {
-        match self {
-            ImageBoards::Danbooru => Some("https://danbooru.donmai.us/counts/posts.json"),
-            _ => None,
-        }
+    pub fn extractor_user_agent(self) -> String {
+        let app_name = "Rust Imageboard Post Extractor";
+        let variant = match self {
+            ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
+            ImageBoards::E621 => " (by e621 user FerrahWolfeh)",
+            _ => "",
+        };
+        let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
+        debug!("Using user-agent: {}", ua);
+        ua
     }
 
     /// Returns the endpoint for the post list with their respective tags.
@@ -107,12 +107,6 @@ impl ImageBoards {
                 "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             }
         }
-    }
-
-    /// Returns `true` if the imageboard has a user-defined blacklist and thus, authentication support.
-    #[inline]
-    pub fn has_native_blacklist(self) -> bool {
-        matches!(self, Self::Danbooru | Self::E621)
     }
 
     /// Returns max number of posts per page a imageboard can have
