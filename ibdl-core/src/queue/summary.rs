@@ -1,6 +1,6 @@
 use ibdl_common::{
     bincode::{deserialize, serialize},
-    post::Post,
+    post::{NameType, Post},
     serde_json::{from_slice, to_string_pretty},
     tokio,
     zstd::{decode_all, encode_all},
@@ -27,6 +27,7 @@ use super::error::QueueError;
 #[serde(crate = "self::serde")]
 pub struct SummaryFile {
     pub imageboard: ImageBoards,
+    pub name_mode: NameType,
     pub tags: Vec<String>,
     #[serde(with = "ts_seconds")]
     pub last_updated: DateTime<Utc>,
@@ -35,11 +36,17 @@ pub struct SummaryFile {
 }
 
 impl SummaryFile {
-    pub fn new(imageboard: ImageBoards, tags: &[String], posts: &[Post]) -> Self {
+    pub fn new(
+        imageboard: ImageBoards,
+        tags: &[String],
+        posts: &[Post],
+        name_mode: NameType,
+    ) -> Self {
         let last_down = posts.first().unwrap().clone();
 
         Self {
             imageboard,
+            name_mode,
             tags: tags.to_vec(),
             last_updated: Utc::now(),
             last_downloaded: last_down.id,

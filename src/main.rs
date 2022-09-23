@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
         spinoff::Streams::Stderr,
     );
 
-    let nt = if args.save_file_as_id {
+    let mut nt = if args.save_file_as_id {
         NameType::ID
     } else {
         NameType::MD5
@@ -63,6 +63,7 @@ async fn main() -> Result<(), Error> {
             debug!("Latest post found: {}", post.last_downloaded);
             post_queue.posts.retain(|c| c.id > post.last_downloaded);
             post_queue.posts.shrink_to_fit();
+            nt = post.name_mode;
         } else {
             debug!("Summary file is corrupted, ignoring...");
             remove_file(&tgs).await?;
@@ -87,7 +88,7 @@ async fn main() -> Result<(), Error> {
     let total_down = qw.download(place, nt).await?;
 
     if !args.cbz {
-        let summary = SummaryFile::new(args.imageboard, &args.tags, &post_list);
+        let summary = SummaryFile::new(args.imageboard, &args.tags, &post_list, nt);
         summary.write_summary(&tgs).await?;
     }
 

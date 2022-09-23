@@ -226,7 +226,7 @@ impl Queue {
         let file = File::create(&output_file)?;
         let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
-        self.write_zip_structure(zip.clone(), &self.list.clone())?;
+        self.write_zip_structure(zip.clone(), &self.list.clone(), name_type)?;
 
         debug!("Fetching {} posts", self.list.len());
 
@@ -256,8 +256,9 @@ impl Queue {
         &self,
         zip: Arc<Mutex<ZipWriter<File>>>,
         posts: &[Post],
+        name_type: NameType,
     ) -> Result<(), QueueError> {
-        let ap = SummaryFile::new(self.imageboard, &self.tags, posts).to_json()?;
+        let ap = SummaryFile::new(self.imageboard, &self.tags, posts, name_type).to_json()?;
 
         let mut z_1 = zip.lock().unwrap();
 
