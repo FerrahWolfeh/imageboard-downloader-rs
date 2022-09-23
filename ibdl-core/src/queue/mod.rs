@@ -125,12 +125,8 @@ impl Queue {
         }
     }
 
-    async fn create_out(&self, dir: PathBuf, st: &String) -> Result<PathBuf, QueueError> {
-        let dirname = if st.contains("fav:") {
-            String::from("Favorites")
-        } else {
-            st.to_owned()
-        };
+    async fn create_out(&self, dir: PathBuf, st: &str) -> Result<PathBuf, QueueError> {
+        let dirname = if st.contains("fav:") { "Favorites" } else { st };
 
         if self.cbz {
             let output_file = dir.join(PathBuf::from(self.imageboard.to_string()));
@@ -219,6 +215,11 @@ impl Queue {
         name_type: NameType,
     ) -> Result<(), QueueError> {
         let st = self.tags.join(" ");
+        let st = if st.contains("fav:") {
+            "Favorites"
+        } else {
+            &st
+        };
         let output_file = path.join(PathBuf::from(format!("{}.cbz", st)));
 
         debug!("Target file: {}", output_file.display());
