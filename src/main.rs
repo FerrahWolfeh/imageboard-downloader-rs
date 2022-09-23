@@ -42,6 +42,8 @@ async fn main() -> Result<(), Error> {
 
     let dirname = if args.tags.join(" ").contains("fav:") {
         String::from("Favorites")
+    } else if cfg!(windows) {
+        args.tags.join(" ").replace(':', "_")
     } else {
         args.tags.join(" ")
     };
