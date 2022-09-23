@@ -1,3 +1,7 @@
+use super::error::QueueError;
+use chrono::{serde::ts_seconds, DateTime, Utc};
+use ibdl_common::serde::{self, Deserialize, Serialize};
+use ibdl_common::serde_json::from_str;
 use ibdl_common::{
     bincode::{deserialize, serialize},
     post::{NameType, Post},
@@ -16,44 +20,83 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     task::spawn_blocking,
 };
-
-use chrono::{serde::ts_seconds, DateTime, Utc};
-use ibdl_common::serde::{self, Deserialize, Serialize};
 use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
-use super::error::QueueError;
+/// The download summary can be saved in two formats:
+/// - As a ZSTD-compressed bincode file
+/// - As a generic JSON file.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "self::serde")]
+pub enum SummaryType {
+    ZSTDBincode,
+    JSON,
+}
 
+/// The generic information of a [Post](ibdl_common::post) along with the name of the file saved in the output directory.
+#[derive(Debug, Serialize, Deserialize, Eq, PartialOrd, Ord)]
+#[serde(crate = "self::serde")]
+pub struct PostInfo {
+    pub saved_as: String,
+    pub post: Post,
+}
+
+impl PartialEq for PostInfo {
+    fn eq(&self, other: &PostInfo) -> bool {
+        self.post.id == other.post.id
+    }
+}
+
+/// The final summary file. It containes common information for the user to read and the necessary data to filter posts in certain occasions.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
 pub struct SummaryFile {
+    pub file_mode: SummaryType,
     pub imageboard: ImageBoards,
     pub name_mode: NameType,
     pub tags: Vec<String>,
     #[serde(with = "ts_seconds")]
     pub last_updated: DateTime<Utc>,
     pub last_downloaded: u64,
-    pub posts: Vec<Post>,
+    pub posts: Vec<PostInfo>,
 }
 
 impl SummaryFile {
+    /// Create a [SummaryFile] from the supplied information about all downloaded posts.
     pub fn new(
         imageboard: ImageBoards,
         tags: &[String],
         posts: &[Post],
         name_mode: NameType,
+        file_mode: SummaryType,
     ) -> Self {
         let last_down = posts.first().unwrap().clone();
 
+        let mut post_list: Vec<PostInfo> = Vec::with_capacity(posts.len());
+
+        posts.iter().for_each(|post| {
+            let info = PostInfo {
+                saved_as: post.file_name(name_mode),
+                post: post.clone(),
+            };
+
+            post_list.push(info);
+        });
+
+        post_list.sort();
+        post_list.reverse();
+
         Self {
+            file_mode,
             imageboard,
             name_mode,
             tags: tags.to_vec(),
             last_updated: Utc::now(),
             last_downloaded: last_down.id,
-            posts: posts.to_vec(),
+            posts: post_list,
         }
     }
 
+    /// Writes this struct as a summary file inside a supplied zip file.
     pub fn write_zip_summary(&self, zip: &mut ZipWriter<File>) -> Result<(), QueueError> {
         let serialized = self.to_json()?;
 
@@ -68,6 +111,7 @@ impl SummaryFile {
         Ok(())
     }
 
+    /// Writes this struct as a summary file in the given [Path].
     pub async fn write_summary(&self, path: &Path) -> Result<(), QueueError> {
         let mut dsum = AsyncFile::create(path).await?;
 
@@ -78,13 +122,23 @@ impl SummaryFile {
         Ok(())
     }
 
-    pub async fn read_summary(path: &Path) -> Result<Self, QueueError> {
+    /// Read the summary file from the supplied [Path].
+    pub async fn read_summary(path: &Path, summary_type: SummaryType) -> Result<Self, QueueError> {
         let mut raw_data: Vec<u8> = vec![];
         let mut dsum = AsyncFile::open(path).await?;
 
         dsum.read_to_end(&mut raw_data).await?;
 
-        match deserialize::<Self>(&decode_all(&*raw_data)?) {
+        match summary_type {
+            SummaryType::ZSTDBincode => Ok(Self::from_bincode(&raw_data)?),
+            SummaryType::JSON => Ok(Self::from_json_slice(&raw_data)?),
+        }
+    }
+
+    /// Read the bincode summary and decode it into a [SummaryFile]
+    #[inline]
+    pub fn from_bincode(slice: &[u8]) -> Result<Self, QueueError> {
+        match deserialize::<Self>(&decode_all(slice)?) {
             Ok(summary) => Ok(summary),
             Err(err) => Err(QueueError::SummaryDeserializeFail {
                 error: err.to_string(),
@@ -92,7 +146,32 @@ impl SummaryFile {
         }
     }
 
-    pub async fn read_zip_summary(path: &Path) -> Result<Self, QueueError> {
+    /// Read the summary as a raw JSON slice from and decode it into a [SummaryFile]
+    #[inline]
+    pub fn from_json_slice(slice: &[u8]) -> Result<Self, QueueError> {
+        match from_slice::<SummaryFile>(slice) {
+            Ok(sum) => Ok(sum),
+            Err(error) => Err(QueueError::SummaryDeserializeFail {
+                error: error.to_string(),
+            }),
+        }
+    }
+
+    /// Read the summary as a raw JSON string and decode it into a [SummaryFile]
+    #[inline]
+    pub fn from_json_str(text: &str) -> Result<Self, QueueError> {
+        match from_str::<SummaryFile>(text) {
+            Ok(sum) => Ok(sum),
+            Err(error) => Err(QueueError::SummaryDeserializeFail {
+                error: error.to_string(),
+            }),
+        }
+    }
+
+    pub async fn read_zip_summary(
+        path: &Path,
+        summary_type: SummaryType,
+    ) -> Result<Self, QueueError> {
         let path = path.to_path_buf();
         spawn_blocking(move || -> Result<Self, QueueError> {
             let file = File::open(&path)?;
@@ -110,11 +189,9 @@ impl SummaryFile {
 
             raw_bytes.read_to_end(&mut summary_slice)?;
 
-            match from_slice::<SummaryFile>(&summary_slice) {
-                Ok(sum) => Ok(sum),
-                Err(error) => Err(QueueError::SummaryDeserializeFail {
-                    error: error.to_string(),
-                }),
+            match summary_type {
+                SummaryType::ZSTDBincode => Ok(Self::from_bincode(&summary_slice)?),
+                SummaryType::JSON => Ok(Self::from_json_slice(&summary_slice)?),
             }
         })
         .await

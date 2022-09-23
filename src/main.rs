@@ -6,6 +6,7 @@ use ibdl_common::post::PostQueue;
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio;
 use ibdl_common::{clap::Parser, cli::Cli, post::NameType, ImageBoards};
+use ibdl_core::queue::summary::SummaryType;
 use ibdl_core::queue::{summary::SummaryFile, Queue};
 use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
@@ -58,7 +59,7 @@ async fn main() -> Result<(), Error> {
     )));
 
     if args.update && tgs.exists() {
-        let summary_file = SummaryFile::read_summary(&tgs).await;
+        let summary_file = SummaryFile::read_summary(&tgs, SummaryType::ZSTDBincode).await;
         if let Ok(post) = summary_file {
             debug!("Latest post found: {}", post.last_downloaded);
             post_queue.posts.retain(|c| c.id > post.last_downloaded);
@@ -88,7 +89,13 @@ async fn main() -> Result<(), Error> {
     let total_down = qw.download(place, nt).await?;
 
     if !args.cbz {
-        let summary = SummaryFile::new(args.imageboard, &args.tags, &post_list, nt);
+        let summary = SummaryFile::new(
+            args.imageboard,
+            &args.tags,
+            &post_list,
+            nt,
+            SummaryType::ZSTDBincode,
+        );
         summary.write_summary(&tgs).await?;
     }
 

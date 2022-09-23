@@ -74,7 +74,7 @@ use zip::ZipWriter;
 use crate::progress_bars::ProgressCounter;
 
 use self::error::QueueError;
-use self::summary::SummaryFile;
+use self::summary::{SummaryFile, SummaryType};
 
 mod error;
 pub mod summary;
@@ -259,7 +259,14 @@ impl Queue {
         posts: &[Post],
         name_type: NameType,
     ) -> Result<(), QueueError> {
-        let ap = SummaryFile::new(self.imageboard, &self.tags, posts, name_type).to_json()?;
+        let ap = SummaryFile::new(
+            self.imageboard,
+            &self.tags,
+            posts,
+            name_type,
+            SummaryType::JSON,
+        )
+        .to_json()?;
 
         let mut z_1 = zip.lock().unwrap();
 

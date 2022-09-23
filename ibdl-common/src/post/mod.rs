@@ -104,6 +104,7 @@ impl PartialEq for Post {
 impl Eq for Post {}
 
 impl Post {
+    /// Get the final file name of the post for saving.
     #[inline]
     pub fn file_name(&self, name_type: NameType) -> String {
         let name = match name_type {
