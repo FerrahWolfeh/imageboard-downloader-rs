@@ -125,7 +125,7 @@ impl Queue {
         }
     }
 
-    async fn create_out(&self, dir: PathBuf) -> Result<PathBuf, QueueError> {
+    async fn create_out(&self, dir: &Path) -> Result<(), QueueError> {
         if self.cbz {
             let output_file = dir.parent().unwrap().to_path_buf();
 
@@ -137,7 +137,7 @@ impl Queue {
                     })
                 }
             };
-            return Ok(output_file);
+            return Ok(());
         }
 
         debug!("Target dir: {}", dir.display());
@@ -150,7 +150,7 @@ impl Queue {
             }
         };
 
-        Ok(dir)
+        Ok(())
     }
 
     /// Starts the download of all posts collected inside a [`PostQueue`]
@@ -161,10 +161,10 @@ impl Queue {
     ) -> Result<u64, QueueError> {
         let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
 
-        let output_place = self.create_out(output_dir).await?;
+        self.create_out(&output_dir).await?;
 
         if self.cbz {
-            self.cbz_path(output_place, counters.clone(), name_type)
+            self.cbz_path(output_dir, counters.clone(), name_type)
                 .await?;
 
             counters.main.finish_and_clear();
@@ -177,7 +177,7 @@ impl Queue {
         futures::stream::iter(self.list)
             .map(|d| {
                 let cli = self.client.clone();
-                let output = output_place.join(d.file_name(name_type));
+                let output = output_dir.join(d.file_name(name_type));
                 let variant = self.imageboard;
                 let counters = counters.clone();
 
