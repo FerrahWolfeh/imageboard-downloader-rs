@@ -2,10 +2,12 @@ use anyhow::Error;
 use ibdl_common::colored::Colorize;
 use ibdl_common::log::debug;
 use ibdl_common::post::rating::Rating;
-use ibdl_common::post::PostQueue;
+use ibdl_common::post::{NameType, PostQueue};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio;
-use ibdl_common::{clap::Parser, cli::Cli, post::NameType, ImageBoards};
+use ibdl_common::ImageBoards;
+use ibdl_core::clap::Parser;
+use ibdl_core::cli::Cli;
 use ibdl_core::generate_output_path;
 use ibdl_core::queue::summary::SummaryType;
 use ibdl_core::queue::{summary::SummaryFile, Queue};
@@ -46,7 +48,7 @@ async fn main() -> Result<(), Error> {
         Some(dir) => dir.to_path_buf(),
     };
 
-    let dirname = generate_output_path(place, args.imageboard, &args.tags, args.cbz);
+    let dirname = generate_output_path(place, *args.imageboard, &args.tags, args.cbz);
 
     let summary_path = dirname.join(Path::new(".00_download_summary.bin"));
 
@@ -71,7 +73,7 @@ async fn main() -> Result<(), Error> {
     let post_list = post_queue.posts.clone();
 
     let qw = Queue::new(
-        args.imageboard,
+        *args.imageboard,
         post_queue,
         args.simultaneous_downloads,
         Some(client),
@@ -82,7 +84,7 @@ async fn main() -> Result<(), Error> {
 
     if !args.cbz {
         let summary = SummaryFile::new(
-            args.imageboard,
+            *args.imageboard,
             &args.tags,
             &post_list,
             nt,
@@ -128,10 +130,12 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
             ]
         }
     } else {
-        args.rating.clone()
+        let mut ratings = vec![];
+        args.rating.iter().for_each(|item| ratings.push(item.inner));
+        ratings
     };
 
-    match args.imageboard {
+    match *args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
             unit.auth(args.auth).await?;
@@ -152,7 +156,7 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
             let mut unit = GelbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist)
-                .set_imageboard(args.imageboard)?;
+                .set_imageboard(*args.imageboard)?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

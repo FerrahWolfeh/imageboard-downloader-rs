@@ -7,10 +7,9 @@
 //! * `Questionable` or `Sensitive`: Posts that involve nude/semi-nude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
 //! * `Explicit`: Posts that are explicity pornographic or have other sensitive content such as gore, etc.
 //!
-use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rating {
     /// Represents posts that are don't involve nothing suggestive or sensitive.
     Safe,

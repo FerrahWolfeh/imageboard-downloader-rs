@@ -3,7 +3,6 @@ use std::{fs::create_dir_all, io, path::PathBuf};
 // Public Exports
 pub use bincode;
 use bincode::deserialize;
-pub use clap;
 pub use colored;
 pub use directories;
 pub use log;
@@ -15,8 +14,6 @@ pub use zstd;
 
 use auth::{AuthError, ImageboardConfig};
 
-use clap::ValueEnum;
-
 use directories::ProjectDirs;
 
 use log::{debug, error, warn};
@@ -26,12 +23,11 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::{read, remove_file};
 
 pub mod auth;
-pub mod cli;
 pub mod macros;
 pub mod post;
 
 /// All currently supported imageboards and their underlying attributes
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImageBoards {
     /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
     Danbooru,

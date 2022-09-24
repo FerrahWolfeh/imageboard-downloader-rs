@@ -1,9 +1,10 @@
 // 20002709
+use ibdl_common::ImageBoards;
 use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::{post::rating::Rating, ImageBoards};
+use crate::{ImageBoardArg, RatingArg};
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -13,8 +14,8 @@ pub struct Cli {
     pub tags: Vec<String>,
 
     /// Specify which website to download from
-    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoards::Danbooru)]
-    pub imageboard: ImageBoards,
+    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoardArg { inner: ImageBoards::Danbooru })]
+    pub imageboard: ImageBoardArg,
 
     /// Where to save downloaded files
     #[clap(
@@ -111,5 +112,5 @@ pub struct Cli {
         help_heading = "GENERAL",
         conflicts_with("safe-mode")
     )]
-    pub rating: Vec<Rating>,
+    pub rating: Vec<RatingArg>,
 }
