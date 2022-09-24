@@ -1,7 +1,7 @@
-use std::ops::Deref;
 pub use clap;
 use clap::ValueEnum;
 use ibdl_common::{post::rating::Rating, ImageBoards};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 pub mod cli;
@@ -9,34 +9,22 @@ pub mod progress_bars;
 pub mod queue;
 
 #[derive(Debug, Clone, Copy)]
-pub struct ImageBoardArg {
-    pub inner: ImageBoards,
-}
+pub struct ImageBoardArg(ImageBoards);
 
 #[derive(Debug, Clone, Copy)]
-pub struct RatingArg {
-    pub inner: Rating,
-}
+pub struct RatingArg(pub Rating);
 
 impl ValueEnum for RatingArg {
     fn value_variants<'a>() -> &'a [Self] {
         &[
-            Self {
-                inner: Rating::Safe,
-            },
-            Self {
-                inner: Rating::Questionable,
-            },
-            Self {
-                inner: Rating::Explicit,
-            },
-            Self {
-                inner: Rating::Unknown,
-            },
+            Self(Rating::Safe),
+            Self(Rating::Questionable),
+            Self(Rating::Explicit),
+            Self(Rating::Unknown),
         ]
     }
     fn to_possible_value<'a>(&self) -> ::std::option::Option<clap::PossibleValue<'a>> {
-        match self.inner {
+        match self.0 {
             Rating::Safe => {
                 Some(clap::PossibleValue::new("safe").help(
                     "Represents posts that are don't involve nothing suggestive or sensitive",
@@ -60,36 +48,24 @@ impl Deref for RatingArg {
     type Target = Rating;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.0
     }
 }
 
 impl ValueEnum for ImageBoardArg {
     fn value_variants<'a>() -> &'a [Self] {
         &[
-            Self {
-                inner: ImageBoards::Danbooru,
-            },
-            Self {
-                inner: ImageBoards::E621,
-            },
-            Self {
-                inner: ImageBoards::Rule34,
-            },
-            Self {
-                inner: ImageBoards::Gelbooru,
-            },
-            Self {
-                inner: ImageBoards::Realbooru,
-            },
-            Self {
-                inner: ImageBoards::Realbooru,
-            },
+            Self(ImageBoards::Danbooru),
+            Self(ImageBoards::E621),
+            Self(ImageBoards::Rule34),
+            Self(ImageBoards::Gelbooru),
+            Self(ImageBoards::Realbooru),
+            Self(ImageBoards::Konachan),
         ]
     }
 
     fn to_possible_value<'a>(&self) -> ::std::option::Option<clap::PossibleValue<'a>> {
-        match self.inner {
+        match self.0 {
             ImageBoards::Danbooru => {
                 Some(
                     clap::PossibleValue::new("danbooru")
@@ -140,7 +116,7 @@ impl Deref for ImageBoardArg {
     type Target = ImageBoards;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.0
     }
 }
 

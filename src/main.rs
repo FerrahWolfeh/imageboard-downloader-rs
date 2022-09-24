@@ -131,7 +131,7 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
         }
     } else {
         let mut ratings = vec![];
-        args.rating.iter().for_each(|item| ratings.push(item.inner));
+        args.rating.iter().for_each(|item| ratings.push(item.0));
         ratings
     };
 

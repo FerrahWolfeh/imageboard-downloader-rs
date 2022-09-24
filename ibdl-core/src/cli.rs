@@ -14,7 +14,7 @@ pub struct Cli {
     pub tags: Vec<String>,
 
     /// Specify which website to download from
-    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoardArg { inner: ImageBoards::Danbooru })]
+    #[clap(short, long, arg_enum, ignore_case = true, default_value_t = ImageBoardArg(ImageBoards::Danbooru))]
     pub imageboard: ImageBoardArg,
 
     /// Where to save downloaded files
