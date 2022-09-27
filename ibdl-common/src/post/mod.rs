@@ -58,7 +58,7 @@ impl PostQueue {
 }
 
 /// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Post {
     /// ID number of the post given by the imageboard
     pub id: u64,
@@ -100,8 +100,6 @@ impl PartialEq for Post {
         self.id == other.id
     }
 }
-
-impl Eq for Post {}
 
 impl Post {
     /// Get the final file name of the post for saving.
