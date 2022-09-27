@@ -49,6 +49,7 @@
 //!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
+use futures::stream::iter;
 use futures::StreamExt;
 use ibdl_common::colored::Colorize;
 use ibdl_common::log::debug;
@@ -174,7 +175,7 @@ impl Queue {
 
         debug!("Fetching {} posts", self.list.len());
 
-        futures::stream::iter(self.list)
+        iter(self.list)
             .map(|d| {
                 let cli = self.client.clone();
                 let output = output_dir.join(d.file_name(name_type));
@@ -214,7 +215,7 @@ impl Queue {
 
         debug!("Fetching {} posts", self.list.len());
 
-        futures::stream::iter(self.list.clone())
+        iter(self.list.clone())
             .map(|d| {
                 let cli = self.client.clone();
                 let variant = self.imageboard;

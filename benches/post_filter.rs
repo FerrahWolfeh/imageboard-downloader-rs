@@ -180,14 +180,14 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
             .map(|t| t.to_string())
             .collect();
 
-        let rating = RATINGS.choose(&mut rng).unwrap();
+        let rating = *RATINGS.choose(&mut rng).unwrap();
 
         let pst = Post {
             id,
             url: "".to_string(),
             md5,
             extension: ext,
-            rating: rating.clone(),
+            rating,
             tags,
         };
 
