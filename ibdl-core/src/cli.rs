@@ -113,4 +113,8 @@ pub struct Cli {
         conflicts_with("safe-mode")
     )]
     pub rating: Vec<RatingArg>,
+
+    /// Do not download posts with an unknown rating
+    #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
+    pub ignore_unknown: bool,
 }

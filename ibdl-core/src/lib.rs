@@ -20,7 +20,6 @@ impl ValueEnum for RatingArg {
             Self(Rating::Safe),
             Self(Rating::Questionable),
             Self(Rating::Explicit),
-            Self(Rating::Unknown),
         ]
     }
     fn to_possible_value<'a>(&self) -> ::std::option::Option<clap::PossibleValue<'a>> {
@@ -36,10 +35,7 @@ impl ValueEnum for RatingArg {
             Rating::Explicit => Some(clap::PossibleValue::new("explicit").help(
                 "Represents posts that have explicit elements of pornography, gore, death, etc",
             )),
-            Rating::Unknown => Some(
-                clap::PossibleValue::new("unknown")
-                    .help("Represents a failure to parse the `rating` tag into one of the above"),
-            ),
+            _ => None,
         }
     }
 }

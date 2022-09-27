@@ -254,10 +254,17 @@ impl Queue {
 
         let mut z_1 = zip.lock().unwrap();
 
+        posts
+            .iter()
+            .any(|post| post.rating == Rating::Unknown)
+            .then(|| -> Result<(), QueueError> {
+                z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
+                Ok(())
+            });
+
         z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
         z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
         z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
-        z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
 
         z_1.start_file(
             "00_summary.json",

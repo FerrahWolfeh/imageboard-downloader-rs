@@ -39,13 +39,19 @@ async fn main() -> Result<(), Error> {
 
     let (mut post_queue, total_black, client) = search_args(&args).await?;
 
+    if post_queue.posts.is_empty() {
+        println!("{}", "No posts left to download!".bold());
+        spinner.clear();
+        return Ok(());
+    }
+
     post_queue.prepare(args.limit);
 
     spinner.clear();
 
     let place = match &args.output {
         None => std::env::current_dir()?,
-        Some(dir) => dir.to_path_buf(),
+        Some(dir) => dir.to_owned(),
     };
 
     let dirname = generate_output_path(place, *args.imageboard, &args.tags, args.cbz);
@@ -63,11 +69,6 @@ async fn main() -> Result<(), Error> {
             debug!("Summary file is corrupted, ignoring...");
             remove_file(&summary_path).await?;
         }
-    }
-
-    if post_queue.posts.is_empty() {
-        println!("{}", "No posts left to download!".bold());
-        return Ok(());
     }
 
     let post_list = post_queue.posts.clone();
@@ -118,22 +119,22 @@ fn print_results(total_down: u64, total_black: u64) {
 }
 
 async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
-    let ratings = if args.rating.is_empty() {
+    let mut ratings: Vec<Rating> = Vec::with_capacity(4);
+    if args.rating.is_empty() {
         if args.safe_mode {
-            vec![Rating::Safe, Rating::Unknown]
+            ratings.push(Rating::Safe);
         } else {
-            vec![
-                Rating::Safe,
-                Rating::Questionable,
-                Rating::Explicit,
-                Rating::Unknown,
-            ]
+            ratings.push(Rating::Safe);
+            ratings.push(Rating::Questionable);
+            ratings.push(Rating::Explicit)
         }
     } else {
-        let mut ratings = vec![];
         args.rating.iter().for_each(|item| ratings.push(item.0));
-        ratings
     };
+
+    if !args.ignore_unknown {
+        ratings.push(Rating::Unknown);
+    }
 
     match *args.imageboard {
         ImageBoards::Danbooru => {
