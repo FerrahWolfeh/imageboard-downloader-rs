@@ -173,7 +173,7 @@ impl Extractor for GelbooruExtractor {
         let url = format!(
             "{}&tags={}",
             self.active_imageboard.post_url(),
-            &self.tag_string
+            self.tag_string
         );
 
         let items = self
