@@ -17,31 +17,55 @@ static TEST_JSON_RB: &str = include_str!("../assets/sample_post_lists/test_list_
 
 fn post_mapper_e621(c: &mut Criterion) {
     c.bench_function("Map 200 E621 posts", |b| {
-        let ee = E621Extractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = E621Extractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_E621.to_string())))
     });
     c.bench_function("Map 200 Danbooru posts", |b| {
-        let ee = DanbooruExtractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = DanbooruExtractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_DANBOORU.to_string())))
     });
     c.bench_function("Map 200 Konachan posts", |b| {
-        let ee = MoebooruExtractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = MoebooruExtractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_KONACHAN.to_string())))
     });
     c.bench_function("Map 200 Rule34 posts", |b| {
-        let ee = GelbooruExtractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = GelbooruExtractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         let ab = ee.set_imageboard(ibdl_common::ImageBoards::Rule34).unwrap();
         b.iter(|| ab.map_posts(black_box(TEST_JSON_R34.to_string())))
     });
     c.bench_function("Map 200 Gelbooru posts", |b| {
-        let ee = GelbooruExtractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = GelbooruExtractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Gelbooru)
             .unwrap();
         b.iter(|| ab.map_posts(black_box(TEST_JSON_GB.to_string())))
     });
     c.bench_function("Map 200 Realbooru posts", |b| {
-        let ee = GelbooruExtractor::new(&["bb"], &[Rating::Safe, Rating::Questionable], false);
+        let ee = GelbooruExtractor::new(
+            black_box(&["bb"]),
+            &[Rating::Safe, Rating::Questionable],
+            false,
+        );
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Realbooru)
             .unwrap();
