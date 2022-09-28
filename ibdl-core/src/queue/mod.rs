@@ -286,38 +286,32 @@ impl Queue {
         let id_name = post.file_name(NameType::ID);
         let md5_name = post.file_name(NameType::MD5);
 
-        let (name, inv_name) = match name_type {
-            NameType::ID => (&id_name, &md5_name),
-            NameType::MD5 => (&md5_name, &id_name),
-        };
+        let name = post.file_name(name_type);
 
         let raw_path = output.parent().unwrap();
 
-        let mut file_is_same = false;
-
-        let actual = if output.exists() {
+        let (actual, file_is_same) = if output.exists() {
             debug!("File {} found.", &name);
-            output.to_path_buf()
+            (output.to_path_buf(), false)
         } else if name_type == NameType::ID {
             debug!("File {} not found.", &name);
             debug!("Trying possibly matching file: {}", &md5_name);
-            file_is_same = true;
-            raw_path.join(Path::new(&md5_name))
+            (raw_path.join(Path::new(&md5_name)), true)
         } else {
             debug!("File {} not found.", &name);
             debug!("Trying possibly matching file: {}", &id_name);
-            file_is_same = true;
-            raw_path.join(Path::new(&id_name))
+            (raw_path.join(Path::new(&id_name)), true)
         };
 
         if actual.exists() {
-            debug!("Checking MD5 sum of {}.", inv_name);
+            debug!(
+                "Found file {}",
+                actual.file_name().unwrap().to_str().unwrap()
+            );
             let file_digest = compute(read(&actual).await?);
             let hash = format!("{:x}", file_digest);
             if hash == post.md5 {
-                debug!("MD5 matches. File is OK.");
                 if file_is_same {
-                    debug!("Found similar file in directory, renaming.");
                     match counters.multi.println(format!(
                         "{} {} {}",
                         "A file similar to".bold().green(),
@@ -340,7 +334,6 @@ impl Queue {
                     *counters.total_mtx.lock().unwrap() += 1;
                     return Ok(true);
                 }
-                debug!("Skipping download.");
                 match counters.multi.println(format!(
                     "{} {} {}",
                     "File".bold().green(),
@@ -359,9 +352,6 @@ impl Queue {
                 *counters.total_mtx.lock().unwrap() += 1;
                 return Ok(true);
             }
-
-            debug!("MD5 doesn't match, File might be corrupted\nExpected: {}, got: {}\nRemoving file...", post.md5, hash);
-
             remove_file(&actual).await?;
             counters.multi.println(format!(
                 "{} {} {}",
@@ -480,7 +470,6 @@ impl Queue {
         let pb = counters.add_download_bar(size, variant);
 
         // Download the file chunk by chunk.
-        debug!("Retrieving chunks...");
         let mut stream = res.bytes_stream();
 
         let buf_size: usize = size.try_into()?;
