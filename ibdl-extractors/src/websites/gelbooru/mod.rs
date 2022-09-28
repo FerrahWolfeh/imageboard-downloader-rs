@@ -16,7 +16,6 @@ use ibdl_common::{
     post::{rating::Rating, Post, PostQueue},
     ImageBoards,
 };
-use rayon::prelude::*;
 use std::fmt::Display;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -252,7 +251,7 @@ impl GelbooruExtractor {
 
         let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-        post_iter.par_bridge().for_each(|f| {
+        post_iter.for_each(|f| {
             let tag_iter = f["tags"].as_str().unwrap().split(' ');
 
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
@@ -309,7 +308,7 @@ impl GelbooruExtractor {
 
         let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-        post_iter.par_bridge().for_each(|post| {
+        post_iter.for_each(|post| {
             let url = post["file_url"].as_str().unwrap().to_string();
             let tag_iter = post["tags"].as_str().unwrap().split(' ');
 

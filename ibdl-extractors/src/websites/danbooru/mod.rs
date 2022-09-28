@@ -4,10 +4,12 @@
 //! - Authentication
 //! - Native blacklist (defined in user profile page)
 //!
+use self::models::DanbooruPost;
+
 use super::{Auth, Extractor};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
-use ibdl_common::serde_json::{self, Value};
+use ibdl_common::serde_json;
 use ibdl_common::{
     auth::{auth_prompt, ImageboardConfig},
     client, join_tags,
@@ -17,9 +19,10 @@ use ibdl_common::{
     tokio::time::Instant,
     ImageBoards,
 };
-use rayon::prelude::*;
 use std::fmt::Display;
 use std::sync::Mutex;
+
+mod models;
 
 /// Main object to download posts
 #[derive(Debug)]
@@ -198,36 +201,34 @@ impl Extractor for DanbooruExtractor {
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let parsed_json: Value = serde_json::from_str(raw_json.as_str()).unwrap();
+        let parsed_json: Vec<DanbooruPost> =
+            serde_json::from_str::<Vec<DanbooruPost>>(raw_json.as_str()).unwrap();
 
-        let batch = parsed_json
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|c| c["file_url"].as_str().is_some());
+        let batch = parsed_json.into_iter().filter(|c| c.file_url.is_some());
 
         let posts: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(batch.size_hint().0));
 
-        batch.par_bridge().for_each(|c| {
-            let tag_list_iter = c["tag_string"].as_str().unwrap().split(' ');
+        batch.for_each(|c| {
+            let tags = c.tag_string.unwrap();
+            let tag_list_iter = tags.split(' ');
             let mut tag_list = Vec::with_capacity(tag_list_iter.size_hint().0);
 
             tag_list_iter.for_each(|i| {
                 tag_list.push(i.to_string());
             });
 
-            let rt = c["rating"].as_str().unwrap();
+            let rt = c.rating.unwrap();
             let rating = if rt == "s" {
                 Rating::Questionable
             } else {
-                Rating::from_rating_str(rt)
+                Rating::from_rating_str(&rt)
             };
 
             let unit = Post {
-                id: c["id"].as_u64().unwrap(),
-                md5: c["md5"].as_str().unwrap().to_string(),
-                url: c["file_url"].as_str().unwrap().to_string(),
-                extension: c["file_ext"].as_str().unwrap().to_string(),
+                id: c.id.unwrap(),
+                md5: c.md5.unwrap(),
+                url: c.file_url.unwrap(),
+                extension: c.file_ext.unwrap(),
                 tags: tag_list,
                 rating,
             };

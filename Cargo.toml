@@ -39,14 +39,14 @@ name = "post_mapper"
 harness = false
 
 [profile.release]
-lto = "thin"
+#lto = "thin"
 opt-level = 3
 strip = true
 debug = false
 
 [profile.opttest]
 inherits = "release"
-lto = false
+#lto = false
 opt-level = 3
 strip = false
 debug = true

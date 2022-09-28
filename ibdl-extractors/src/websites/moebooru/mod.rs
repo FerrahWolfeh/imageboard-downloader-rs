@@ -9,7 +9,6 @@ use ibdl_common::{
     tokio::time::Instant,
     ImageBoards,
 };
-use rayon::prelude::*;
 use std::fmt::Display;
 use std::sync::Mutex;
 
@@ -192,7 +191,7 @@ impl Extractor for MoebooruExtractor {
 
         let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-        post_iter.par_bridge().for_each(|c| {
+        post_iter.for_each(|c| {
             let url = c.file_url.clone().unwrap();
 
             let tag_iter = c.tags.split(' ');

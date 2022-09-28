@@ -14,7 +14,6 @@ use ibdl_common::{
     post::{rating::Rating, Post, PostQueue},
     tokio, ImageBoards,
 };
-use rayon::prelude::*;
 use std::fmt::Display;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -205,35 +204,58 @@ impl Extractor for E621Extractor {
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
+        let mut items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
 
-        let post_iter = items.posts.into_iter().filter(|c| c.file.url.is_some());
+        let post_iter = items.posts.iter_mut().filter(|c| c.file.url.is_some());
 
         let post_list: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
 
-        post_iter.par_bridge().for_each(|c| {
-            let full_size = c.tags.artist.len()
-                + c.tags.character.len()
-                + c.tags.general.len()
-                + c.tags.copyright.len()
-                + c.tags.lore.len()
-                + c.tags.meta.len()
-                + c.tags.species.len();
+        post_iter.for_each(|c| {
+            let tag_array = [
+                c.tags.artist.len(),
+                c.tags.character.len(),
+                c.tags.general.len(),
+                c.tags.copyright.len(),
+                c.tags.lore.len(),
+                c.tags.meta.len(),
+                c.tags.species.len(),
+            ];
+
+            let chunks = tag_array.chunks_exact(4);
+            let remainder = chunks.remainder();
+
+            let sum = chunks.fold([0usize; 4], |mut acc, chunk| {
+                let chunk: [usize; 4] = chunk.try_into().unwrap();
+                for i in 0..4 {
+                    acc[i] += chunk[i];
+                }
+                acc
+            });
+
+            let remainder: usize = remainder.iter().copied().sum();
+
+            let mut reduced: usize = 0;
+            for i in sum {
+                reduced += i;
+            }
+            let full_size = reduced + remainder;
+
+            //let full_size = tag_array.iter().sum();
 
             let mut tag_list = Vec::with_capacity(full_size);
-            tag_list.extend(c.tags.character.into_iter());
-            tag_list.extend(c.tags.artist.into_iter());
-            tag_list.extend(c.tags.general.into_iter());
-            tag_list.extend(c.tags.copyright.into_iter());
-            tag_list.extend(c.tags.lore.into_iter());
-            tag_list.extend(c.tags.meta.into_iter());
-            tag_list.extend(c.tags.species.into_iter());
+            tag_list.append(&mut c.tags.character);
+            tag_list.append(&mut c.tags.artist);
+            tag_list.append(&mut c.tags.general);
+            tag_list.append(&mut c.tags.copyright);
+            tag_list.append(&mut c.tags.lore);
+            tag_list.append(&mut c.tags.meta);
+            tag_list.append(&mut c.tags.species);
 
             let unit = Post {
                 id: c.id.unwrap(),
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
-                extension: c.file.ext.unwrap(),
+                extension: c.file.ext.clone().unwrap(),
                 tags: tag_list,
                 rating: Rating::from_rating_str(&c.rating),
             };
