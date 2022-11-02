@@ -4,7 +4,10 @@ use indicatif::{
 };
 use std::{
     fmt::Write,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, AtomicUsize},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -47,8 +50,8 @@ impl Default for BarTemplates {
 /// The main usage for this is to pass references of the counters across multiple threads while downloading.
 #[derive(Clone)]
 pub struct ProgressCounter {
-    pub total_mtx: Arc<Mutex<usize>>,
-    pub downloaded_mtx: Arc<Mutex<u64>>,
+    pub total_mtx: Arc<AtomicUsize>,
+    pub downloaded_mtx: Arc<AtomicU64>,
     pub main: Arc<ProgressBar>,
     pub multi: Arc<MultiProgress>,
 }
@@ -70,8 +73,8 @@ impl ProgressCounter {
         Arc::new(Self {
             main,
             multi,
-            total_mtx: Arc::new(Mutex::new(0)),
-            downloaded_mtx: Arc::new(Mutex::new(0)),
+            total_mtx: Default::default(),
+            downloaded_mtx: Default::default(),
         })
     }
 
@@ -88,8 +91,8 @@ impl ProgressCounter {
         Arc::new(Self {
             main,
             multi,
-            total_mtx: Arc::new(Mutex::new(0)),
-            downloaded_mtx: Arc::new(Mutex::new(0)),
+            total_mtx: Default::default(),
+            downloaded_mtx: Default::default(),
         })
     }
 

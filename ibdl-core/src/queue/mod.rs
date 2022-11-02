@@ -63,6 +63,7 @@ use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
@@ -83,10 +84,8 @@ pub mod summary;
 macro_rules! finish_and_increment {
     ($x:expr) => {{
         $x.main.inc(1);
-        let mut down_count = $x.downloaded_mtx.lock().unwrap();
-        let mut total_count = $x.total_mtx.lock().unwrap();
-        *total_count += 1;
-        *down_count += 1;
+        $x.downloaded_mtx.fetch_add(1, Ordering::SeqCst);
+        $x.total_mtx.fetch_add(1, Ordering::SeqCst);
     }};
 }
 
@@ -170,7 +169,7 @@ impl Queue {
 
             counters.main.finish_and_clear();
 
-            return Ok(*counters.downloaded_mtx.lock().unwrap());
+            return Ok(counters.downloaded_mtx.load(Ordering::SeqCst));
         }
 
         debug!("Fetching {} posts", self.list.len());
@@ -195,7 +194,7 @@ impl Queue {
 
         counters.main.finish_and_clear();
 
-        let tot = *counters.downloaded_mtx.lock().unwrap();
+        let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
 
         Ok(tot)
     }
@@ -331,7 +330,7 @@ impl Queue {
                     };
 
                     counters.main.inc(1);
-                    *counters.total_mtx.lock().unwrap() += 1;
+                    counters.total_mtx.fetch_add(1, Ordering::SeqCst);
                     return Ok(true);
                 }
                 match counters.multi.println(format!(
@@ -349,7 +348,7 @@ impl Queue {
                 };
 
                 counters.main.inc(1);
-                *counters.total_mtx.lock().unwrap() += 1;
+                counters.total_mtx.fetch_add(1, Ordering::SeqCst);
                 return Ok(true);
             }
             remove_file(&actual).await?;
