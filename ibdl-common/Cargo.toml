@@ -2,6 +2,10 @@
 name = "ibdl-common"
 version = "1.2.0"
 edition = "2021"
+description = "Common functions and data structs for parsing and downloading posts from imageboards"
+license = "MIT"
+repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
+documentation = "https://docs.rs/ibdl-common"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

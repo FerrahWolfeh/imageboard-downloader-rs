@@ -2,11 +2,15 @@
 name = "ibdl-extractors"
 version = "1.2.0"
 edition = "2021"
+description = "Imageboard post extractors used in imageboard_downloader"
+license = "MIT"
+repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
+documentation = "https://docs.rs/ibdl-extractors"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ibdl-common = { path = "../ibdl-common" }
+ibdl-common = { version = "1.2.0", path = "../ibdl-common" }
 thiserror = "1.0.32"
 thiserror-impl = "1.0.32"
 async-trait = "0.1.57"
