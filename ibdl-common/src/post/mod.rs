@@ -112,4 +112,12 @@ impl Post {
 
         format!("{}.{}", name, self.extension)
     }
+
+    #[inline]
+    pub fn name(&self, name_type: NameType) -> String {
+        match name_type {
+            NameType::ID => self.id.to_string(),
+            NameType::MD5 => self.md5.to_string(),
+        }
+    }
 }

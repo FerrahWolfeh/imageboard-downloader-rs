@@ -117,4 +117,14 @@ pub struct Cli {
     /// Do not download posts with an unknown rating
     #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
     pub ignore_unknown: bool,
+
+    /// Write tags in a txt file next to the downloaded image (for Stable Diffusion training)
+    #[clap(
+        long,
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE",
+        conflicts_with("cbz")
+    )]
+    pub annotate: bool,
 }

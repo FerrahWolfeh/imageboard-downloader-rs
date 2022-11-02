@@ -81,7 +81,7 @@ async fn main() -> Result<(), Error> {
         args.cbz,
     );
 
-    let total_down = qw.download(dirname, nt).await?;
+    let total_down = qw.download(dirname, nt, args.annotate).await?;
 
     if !args.cbz {
         let summary = SummaryFile::new(

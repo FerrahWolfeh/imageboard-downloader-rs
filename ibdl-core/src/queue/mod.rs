@@ -158,6 +158,7 @@ impl Queue {
         self,
         output_dir: PathBuf,
         name_type: NameType,
+        annotate: bool,
     ) -> Result<u64, QueueError> {
         let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
 
@@ -177,13 +178,16 @@ impl Queue {
         iter(self.list)
             .map(|d| {
                 let cli = self.client.clone();
-                let output = output_dir.join(d.file_name(name_type));
+                let output = output_dir.clone();
+                let file_path = output_dir.join(d.file_name(name_type));
                 let variant = self.imageboard;
                 let counters = counters.clone();
 
                 task::spawn(async move {
-                    if !Self::check_file_exists(&d, &output, counters.clone(), name_type).await? {
-                        Self::fetch(cli, variant, d, counters, &output).await?;
+                    if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type).await?
+                    {
+                        Self::fetch(cli, variant, &d, counters, &output, name_type, annotate)
+                            .await?;
                     }
                     Ok::<(), QueueError>(())
                 })
@@ -446,9 +450,11 @@ impl Queue {
     async fn fetch(
         client: Client,
         variant: ImageBoards,
-        post: Post,
+        post: &Post,
         counters: Arc<ProgressCounter>,
         output: &Path,
+        name_type: NameType,
+        annotate: bool,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
@@ -473,11 +479,13 @@ impl Queue {
 
         let buf_size: usize = size.try_into()?;
 
+        let out = output.join(post.file_name(name_type));
+
         debug!("Creating {:?}", &output);
         let file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(output)
+            .open(out)
             .await?;
 
         let mut bw = BufWriter::with_capacity(buf_size, file);
@@ -498,6 +506,21 @@ impl Queue {
             bw.write_all_buf(&mut chunk).await?;
         }
         bw.flush().await?;
+
+        if annotate {
+            let mut prompt_file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(output.join(format!("{}.txt", post.name(name_type))))
+                .await?;
+
+            let prompt = post.tags.join(", ");
+
+            let f1 = prompt.replace('_', " ");
+            let f2 = f1.replace('(', "\\(");
+            let final_prompt = f2.replace(')', "\\)");
+            prompt_file.write_all(final_prompt.as_bytes()).await?;
+        }
 
         pb.finish_and_clear();
 
