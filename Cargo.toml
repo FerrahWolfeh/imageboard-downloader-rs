@@ -21,9 +21,9 @@ include = ["**/*.rs", "Cargo.toml"]
 env_logger = "0.9.0"
 anyhow = "1.0.60"
 spinoff = "0.5.4"
-ibdl-core = { path = "./ibdl-core" }
-ibdl-extractors = { path =  "./ibdl-extractors" }
-ibdl-common = { path = "./ibdl-common" }
+ibdl-core = { version = "1.2.0", path = "./ibdl-core" }
+ibdl-extractors = { version = "1.2.0", path =  "./ibdl-extractors" }
+ibdl-common = { version = "1.2.0", path = "./ibdl-common" }
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"]}
