@@ -18,12 +18,12 @@ include = ["**/*.rs", "Cargo.toml"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-env_logger = "0.9.0"
+env_logger = "0.10.0"
 anyhow = "1.0.60"
 spinoff = "0.5.4"
-ibdl-core = { version = "1.2.0", path = "./ibdl-core" }
-ibdl-extractors = { version = "1.2.0", path =  "./ibdl-extractors" }
-ibdl-common = { version = "1.2.0", path = "./ibdl-common" }
+ibdl-core = { version = "1.2.1", path = "./ibdl-core" }
+ibdl-extractors = { version = "1.2.1", path =  "./ibdl-extractors" }
+ibdl-common = { version = "1.2.2", path = "./ibdl-common" }
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"]}

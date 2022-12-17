@@ -1,6 +1,6 @@
 [package]
 name = "ibdl-core"
-version = "1.2.0"
+version = "1.2.1"
 edition = "2021"
 description = "Main download infrastructure for imageboard_downloader"
 license = "MIT"
@@ -12,21 +12,21 @@ documentation = "https://docs.rs/ibdl-core"
 [dependencies]
 indicatif = "0.17.0"
 ibdl-common = { version = "1.2.0", path = "../ibdl-common" }
-thiserror = "1.0.32"
-thiserror-impl = "1.0.32"
-bytes = "1.2.1"
-futures = "0.3.21"
+thiserror = "1.0.37"
+thiserror-impl = "1.0.37"
+bytes = "1.3.0"
+futures = "0.3.25"
 md5 = "0.7.0"
 
 [dependencies.chrono]
-version = "0.4.22"
+version = "0.4.23"
 features = ["serde"]
 
 [dependencies.clap]
-version = "3.2.16"
+version = "4.0.29"
 features = ["derive", "cargo"]
 
 [dependencies.zip]
-version = "0.6.2"
+version = "0.6.3"
 default-features = false
 features = ["deflate", "time"]

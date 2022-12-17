@@ -9,9 +9,11 @@ pub mod progress_bars;
 pub mod queue;
 
 #[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
 pub struct ImageBoardArg(ImageBoards);
 
 #[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
 pub struct RatingArg(pub Rating);
 
 impl ValueEnum for RatingArg {
@@ -22,17 +24,17 @@ impl ValueEnum for RatingArg {
             Self(Rating::Explicit),
         ]
     }
-    fn to_possible_value<'a>(&self) -> ::std::option::Option<clap::PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
         match self.0 {
             Rating::Safe => {
-                Some(clap::PossibleValue::new("safe").help(
+                Some(clap::builder::PossibleValue::new("safe").help(
                     "Represents posts that are don't involve nothing suggestive or sensitive",
                 ))
             }
-            Rating::Questionable => Some(clap::PossibleValue::new("questionable").help(
+            Rating::Questionable => Some(clap::builder::PossibleValue::new("questionable").help(
                 "Represents posts that have some degree of nudity or sexually suggestive elements",
             )),
-            Rating::Explicit => Some(clap::PossibleValue::new("explicit").help(
+            Rating::Explicit => Some(clap::builder::PossibleValue::new("explicit").help(
                 "Represents posts that have explicit elements of pornography, gore, death, etc",
             )),
             _ => None,
@@ -60,11 +62,11 @@ impl ValueEnum for ImageBoardArg {
         ]
     }
 
-    fn to_possible_value<'a>(&self) -> ::std::option::Option<clap::PossibleValue<'a>> {
+    fn to_possible_value(&self) -> ::std::option::Option<clap::builder::PossibleValue> {
         match self.0 {
             ImageBoards::Danbooru => {
                 Some(
-                    clap::PossibleValue::new("danbooru")
+                    clap::builder::PossibleValue::new("danbooru")
                         .help(
                             "Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```",
                         ),
@@ -72,7 +74,7 @@ impl ValueEnum for ImageBoardArg {
             }
             ImageBoards::E621 => {
                 Some(
-                    clap::PossibleValue::new("e621")
+                    clap::builder::PossibleValue::new("e621")
                         .help(
                             "Represents the website ```https://e621.net``` or it's safe variant ```https://e926.net```",
                         ),
@@ -80,19 +82,19 @@ impl ValueEnum for ImageBoardArg {
             }
             ImageBoards::Rule34 => {
                 Some(
-                    clap::PossibleValue::new("rule34")
+                    clap::builder::PossibleValue::new("rule34")
                         .help("Represents the website ```https://rule34.xxx```"),
                 )
             }
             ImageBoards::Realbooru => {
                 Some(
-                    clap::PossibleValue::new("realbooru")
+                    clap::builder::PossibleValue::new("realbooru")
                         .help("Represents the website ```http://realbooru.com```"),
                 )
             }
             ImageBoards::Konachan => {
                 Some(
-                    clap::PossibleValue::new("konachan")
+                    clap::builder::PossibleValue::new("konachan")
                         .help(
                             "Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```",
                         ),
@@ -100,7 +102,7 @@ impl ValueEnum for ImageBoardArg {
             }
             ImageBoards::Gelbooru => {
                 Some(
-                    clap::PossibleValue::new("gelbooru")
+                    clap::builder::PossibleValue::new("gelbooru")
                         .help("Represents the website ```https://gelbooru.com```"),
                 )
             }

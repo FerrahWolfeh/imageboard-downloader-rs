@@ -63,7 +63,7 @@ impl ProgressCounter {
     pub fn initialize(len: u64, imageboard: ImageBoards) -> Arc<Self> {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(master_progress_style(&template));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.set_draw_target(ProgressDrawTarget::stderr());
         bar.enable_steady_tick(Duration::from_millis(100));
 
         // Initialize the bars
@@ -100,8 +100,7 @@ impl ProgressCounter {
     pub fn add_download_bar(&self, len: u64, imageboard: ImageBoards) -> ProgressBar {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(download_progress_style(&template));
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
+        bar.set_draw_target(ProgressDrawTarget::stderr());
 
         self.multi.add(bar)
     }
@@ -109,8 +108,7 @@ impl ProgressCounter {
     /// Adds a download bar under the main progress bar, with a custom style.
     pub fn add_download_custom_style(&self, len: u64, style: ProgressStyle) -> ProgressBar {
         let bar = ProgressBar::new(len).with_style(style);
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-        bar.enable_steady_tick(Duration::from_millis(100));
+        bar.set_draw_target(ProgressDrawTarget::stderr());
 
         self.multi.add(bar)
     }
