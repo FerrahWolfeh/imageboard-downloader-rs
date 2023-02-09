@@ -232,7 +232,7 @@ impl Extractor for E621Extractor {
                 acc
             });
 
-            let remainder: usize = remainder.iter().copied().sum();
+            let remainder: usize = remainder.into_iter().sum();
 
             let mut reduced: usize = 0;
             for i in sum {
