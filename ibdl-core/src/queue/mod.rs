@@ -517,9 +517,9 @@ impl Queue {
             let prompt = post.tags.join(", ");
 
             let f1 = prompt.replace('_', " ");
-            let f2 = f1.replace('(', "\\(");
-            let final_prompt = f2.replace(')', "\\)");
-            prompt_file.write_all(final_prompt.as_bytes()).await?;
+            //let f2 = f1.replace('(', "\\(");
+            //let final_prompt = f2.replace(')', "\\)");
+            prompt_file.write_all(f1.as_bytes()).await?;
         }
 
         pb.finish_and_clear();
