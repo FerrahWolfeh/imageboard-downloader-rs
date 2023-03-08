@@ -120,7 +120,7 @@ impl Deref for ImageBoardArg {
 
 #[inline]
 pub fn generate_output_path(
-    main_path: PathBuf,
+    main_path: &Path,
     imageboard: ImageBoards,
     tags: &[String],
     cbz_mode: bool,
@@ -140,4 +140,14 @@ pub fn generate_output_path(
         return pbuf.join(Path::new(&format!("{}.cbz", tag_path_string)));
     }
     pbuf.join(Path::new(&tag_path_string))
+}
+
+/// This function creates the destination directory without creating additional ones related to
+/// the selected imageboard or tags used.
+#[inline]
+pub fn generate_output_path_precise(main_path: &Path, cbz_mode: bool) -> PathBuf {
+    if cbz_mode {
+        return PathBuf::from(&format!("{}.cbz", main_path.display()));
+    }
+    main_path.to_path_buf()
 }

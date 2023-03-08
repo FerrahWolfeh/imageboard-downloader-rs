@@ -18,8 +18,23 @@ pub struct Cli {
     pub imageboard: ImageBoardArg,
 
     /// Where to save downloaded files
-    #[clap(short, long, value_name = "PATH", help_heading = "SAVE")]
+    #[clap(
+        short,
+        long,
+        value_name = "PATH",
+        help_heading = "SAVE",
+        conflicts_with("precise_output")
+    )]
     pub output: Option<PathBuf>,
+
+    /// Use this option to save files directly to the specified directory whithout creating additional dirs
+    #[clap(
+        short = 'O',
+        value_name = "PATH",
+        help_heading = "SAVE",
+        conflicts_with("output")
+    )]
+    pub precise_output: Option<PathBuf>,
 
     /// Number of simultaneous downloads
     ///
@@ -104,7 +119,7 @@ pub struct Cli {
         long,
         value_parser,
         help_heading = "GENERAL",
-        conflicts_with("safe-mode")
+        conflicts_with("safe_mode")
     )]
     pub rating: Vec<RatingArg>,
 

@@ -8,9 +8,9 @@ use ibdl_common::tokio;
 use ibdl_common::ImageBoards;
 use ibdl_core::clap::Parser;
 use ibdl_core::cli::Cli;
-use ibdl_core::generate_output_path;
 use ibdl_core::queue::summary::SummaryType;
 use ibdl_core::queue::{summary::SummaryFile, Queue};
+use ibdl_core::{generate_output_path, generate_output_path_precise};
 use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor, Auth, Extractor, MultiWebsite,
@@ -49,12 +49,23 @@ async fn main() -> Result<(), Error> {
 
     spinner.clear();
 
-    let place = match &args.output {
-        None => std::env::current_dir()?,
-        Some(dir) => dir.to_owned(),
+    let raw_save_path = if let Some(path) = &args.output {
+        path.to_owned()
+    } else if let Some(precise_path) = &args.precise_output {
+        precise_path.to_owned()
+    } else {
+        std::env::current_dir()?
     };
 
-    let dirname = generate_output_path(place, *args.imageboard, &args.tags, args.cbz);
+    let dirname = if args.output.is_some() {
+        assert_eq!(args.precise_output, None);
+        generate_output_path(&raw_save_path, *args.imageboard, &args.tags, args.cbz)
+    } else if args.precise_output.is_some() {
+        assert_eq!(args.output, None);
+        generate_output_path_precise(&raw_save_path, args.cbz)
+    } else {
+        raw_save_path.to_path_buf()
+    };
 
     let summary_path = dirname.join(Path::new(".00_download_summary.bin"));
 
