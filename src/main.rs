@@ -15,7 +15,7 @@ use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor, Auth, Extractor, MultiWebsite,
 };
-use spinoff::{Color, Spinner, Spinners};
+use spinoff::{spinners, Color, Spinner};
 use std::path::Path;
 use tokio::fs::remove_file;
 
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
     env_logger::builder().format_timestamp(None).init();
 
     let spinner = Spinner::new_with_stream(
-        Spinners::SimpleDotsScrolling,
+        spinners::SimpleDotsScrolling,
         "Scanning for posts, please wait".bold().to_string(),
         Color::Blue,
         spinoff::Streams::Stderr,

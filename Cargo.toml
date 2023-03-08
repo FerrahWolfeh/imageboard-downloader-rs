@@ -20,7 +20,7 @@ include = ["**/*.rs", "Cargo.toml"]
 [dependencies]
 env_logger = "0.10.0"
 anyhow = "1.0.60"
-spinoff = "0.5.4"
+spinoff = "0.7.0"
 ibdl-core = { version = "1.2.1", path = "./ibdl-core" }
 ibdl-extractors = { version = "1.2.1", path =  "./ibdl-extractors" }
 ibdl-common = { version = "1.2.2", path = "./ibdl-common" }

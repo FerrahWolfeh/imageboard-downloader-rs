@@ -15,7 +15,7 @@ thiserror = "1.0.37"
 thiserror-impl = "1.0.37"
 async-trait = "0.1.59"
 rayon = "1.6.1"
-toml = "0.5.10"
+toml = "0.7.2"
 
 
 [dependencies.ahash]
