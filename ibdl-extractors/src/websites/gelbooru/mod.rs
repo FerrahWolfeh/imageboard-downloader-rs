@@ -205,12 +205,22 @@ impl Extractor for GelbooruExtractor {
         Err(ExtractorError::PostMapFailure)
     }
 
-    fn client(self) -> Client {
-        self.client
+    fn client(&self) -> Client {
+        self.client.clone()
     }
 
     fn total_removed(&self) -> u64 {
         self.total_removed
+    }
+
+    fn imageboard(&self) -> ImageBoards {
+        self.active_imageboard
+    }
+}
+
+impl From<GelbooruExtractor> for ImageBoards {
+    fn from(_val: GelbooruExtractor) -> Self {
+        ImageBoards::Gelbooru
     }
 }
 

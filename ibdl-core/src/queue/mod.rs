@@ -52,7 +52,6 @@
 use futures::stream::iter;
 use futures::StreamExt;
 use ibdl_common::log::debug;
-use ibdl_common::owo_colors::OwoColorize;
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::{NameType, Post, PostQueue};
@@ -62,6 +61,7 @@ use ibdl_common::tokio::sync::mpsc::UnboundedReceiver;
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
+use owo_colors::OwoColorize;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;

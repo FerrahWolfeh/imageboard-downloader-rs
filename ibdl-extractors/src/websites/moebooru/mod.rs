@@ -219,11 +219,21 @@ impl Extractor for MoebooruExtractor {
         Ok(post_list)
     }
 
-    fn client(self) -> Client {
-        self.client
+    fn client(&self) -> Client {
+        self.client.clone()
     }
 
     fn total_removed(&self) -> u64 {
         self.total_removed
+    }
+
+    fn imageboard(&self) -> ImageBoards {
+        ImageBoards::Konachan
+    }
+}
+
+impl From<MoebooruExtractor> for ImageBoards {
+    fn from(_val: MoebooruExtractor) -> Self {
+        ImageBoards::Konachan
     }
 }

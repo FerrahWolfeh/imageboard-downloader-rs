@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json;
 use ibdl_common::{
-    auth::{auth_prompt, ImageboardConfig},
+    auth::ImageboardConfig,
     client, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
@@ -267,28 +267,31 @@ impl Extractor for E621Extractor {
         Ok(pl)
     }
 
-    fn client(self) -> Client {
-        self.client
+    fn client(&self) -> Client {
+        self.client.clone()
     }
 
     fn total_removed(&self) -> u64 {
         self.total_removed
     }
+
+    fn imageboard(&self) -> ImageBoards {
+        ImageBoards::E621
+    }
+}
+
+impl From<E621Extractor> for ImageBoards {
+    fn from(_val: E621Extractor) -> Self {
+        ImageBoards::E621
+    }
 }
 
 #[async_trait]
 impl Auth for E621Extractor {
-    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
-        // Try to authenticate, does nothing if auth flag is not set
-        auth_prompt(prompt, ImageBoards::E621, &self.client).await?;
+    async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
+        self.auth = config;
+        self.auth_state = true;
 
-        if let Some(creds) = ImageBoards::E621.read_config_from_fs().await? {
-            self.auth = creds;
-            self.auth_state = true;
-            return Ok(());
-        }
-
-        self.auth_state = false;
         Ok(())
     }
 }

@@ -6,9 +6,9 @@ use ibdl_common::{
     ImageBoards,
 };
 use ibdl_core::{cli::Cli, queue::Queue};
-use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Auth, Extractor};
+use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Extractor};
 
-use crate::utils::{convert_rating_list, generate_save_path};
+use crate::utils::{auth_imgboard, convert_rating_list, generate_save_path};
 
 pub async fn async_path(args: &Cli) -> Result<()> {
     let nt = if args.save_file_as_id {
@@ -52,7 +52,7 @@ async fn search_args_async(args: &Cli) -> Result<(impl AsyncFetch, Client)> {
     match *args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
-            unit.auth(args.auth).await?;
+            auth_imgboard(args.auth, &mut unit).await?;
 
             let extractor = unit.clone();
 

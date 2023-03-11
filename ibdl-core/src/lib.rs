@@ -1,6 +1,7 @@
 pub use clap;
 use clap::ValueEnum;
 use ibdl_common::{post::rating::Rating, ImageBoards};
+pub use owo_colors;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 

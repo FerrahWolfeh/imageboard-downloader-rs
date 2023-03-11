@@ -17,11 +17,11 @@ use ibdl_core::{
 };
 use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
-    moebooru::MoebooruExtractor, Auth, Extractor, MultiWebsite,
+    moebooru::MoebooruExtractor, Extractor, MultiWebsite,
 };
 use spinoff::{spinners, Color, Spinner};
 
-use crate::utils::{convert_rating_list, generate_save_path, print_results};
+use crate::utils::{auth_imgboard, convert_rating_list, generate_save_path, print_results};
 
 pub async fn default_path(args: Cli) -> Result<()> {
     let spinner = Spinner::new_with_stream(
@@ -100,7 +100,7 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
     match *args.imageboard {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
-            unit.auth(args.auth).await?;
+            auth_imgboard(args.auth, &mut unit).await?;
 
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -110,7 +110,7 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
         }
         ImageBoards::E621 => {
             let mut unit = E621Extractor::new(&args.tags, &ratings, args.disable_blacklist);
-            unit.auth(args.auth).await?;
+            auth_imgboard(args.auth, &mut unit).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

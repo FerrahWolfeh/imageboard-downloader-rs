@@ -9,6 +9,7 @@ use self::models::DanbooruPost;
 use super::{AsyncFetch, Auth, Extractor};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
+use ibdl_common::serde_json;
 use ibdl_common::{
     auth::ImageboardConfig,
     client, join_tags,
@@ -18,7 +19,6 @@ use ibdl_common::{
     tokio::{spawn, sync::mpsc::UnboundedSender, task::JoinHandle, time::Instant},
     ImageBoards,
 };
-use ibdl_common::{serde_json, tokio};
 use std::fmt::Display;
 use std::sync::Mutex;
 
@@ -327,70 +327,24 @@ impl Extractor for DanbooruExtractor {
         Ok(mtx)
     }
 
-    fn client(self) -> Client {
-        self.client
+    fn client(&self) -> Client {
+        self.client.clone()
     }
 
     fn total_removed(&self) -> u64 {
         self.total_removed
     }
+
+    fn imageboard(&self) -> ImageBoards {
+        ImageBoards::Danbooru
+    }
 }
 
 #[async_trait]
 impl Auth for DanbooruExtractor {
-    async fn auth(&mut self) -> Result<(), ExtractorError> {
-        if let Some(creds) = ImageBoards::Danbooru.read_config_from_fs().await? {
-            self.auth = creds;
-            self.auth_state = true;
-            return Ok(());
-        }
-
-        self.auth_state = false;
+    async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
+        self.auth = config;
+        self.auth_state = true;
         Ok(())
     }
-}
-
-#[tokio::test]
-async fn test_async_sender() {
-    use futures::stream::StreamExt;
-    use ibdl_common::tokio::join;
-    use ibdl_common::tokio::sync::mpsc::unbounded_channel;
-    use ibdl_common::tokio::task::spawn;
-    use tokio_stream::wrappers::UnboundedReceiverStream;
-
-    let danbooru_search = DanbooruExtractor::new(
-        &["ookami_mio"],
-        &[
-            Rating::Safe,
-            Rating::Unknown,
-            Rating::Explicit,
-            Rating::Questionable,
-        ],
-        false,
-    );
-
-    let (sender, receiver) = unbounded_channel();
-
-    let fetch_thread = spawn(async move {
-        let mut dbs = danbooru_search;
-
-        dbs.async_fetch(sender, None, Some(1500)).await.unwrap();
-    });
-
-    let download_thread = spawn(async move {
-        let unord_stream = UnboundedReceiverStream::new(receiver);
-        unord_stream
-            .map(|u| {
-                println!("{:#?}", u);
-                tokio::time::sleep(std::time::Duration::from_millis(500))
-            })
-            .buffer_unordered(10)
-            .for_each(|_| async {})
-            .await;
-    });
-
-    let (one, two) = join!(fetch_thread, download_thread);
-
-    assert!(one.is_ok());
-    assert!(two.is_ok());
 }

@@ -112,11 +112,14 @@ pub trait Extractor {
     /// This is a separate lower level function to map posts by feeding a custom JSON object obtained through other means.
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError>;
 
-    /// Consumes `self` and returns the used client for external use.
-    fn client(self) -> Client;
+    /// Returns the used client for external use.
+    fn client(&self) -> Client;
 
     /// Get the total number of removed files by the internal blacklist.
     fn total_removed(&self) -> u64;
+
+    /// Returns the [`ImageBoards`](ibdl_common::ImageBoards) variant for this extractor
+    fn imageboard(&self) -> ImageBoards;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

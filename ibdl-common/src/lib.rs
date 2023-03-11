@@ -5,7 +5,6 @@ pub use bincode;
 use bincode::deserialize;
 pub use directories;
 pub use log;
-pub use owo_colors;
 pub use reqwest;
 pub use serde;
 pub use serde_json;
