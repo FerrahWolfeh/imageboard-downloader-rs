@@ -57,6 +57,9 @@ use ibdl_common::post::error::PostError;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::{NameType, Post, PostQueue};
 use ibdl_common::reqwest::Client;
+use ibdl_common::tokio::spawn;
+use ibdl_common::tokio::sync::mpsc::UnboundedReceiver;
+use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
 use std::convert::TryInto;
@@ -69,6 +72,7 @@ use std::sync::Mutex;
 use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::task::{self, spawn_blocking};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
@@ -123,6 +127,64 @@ impl Queue {
             sim_downloads,
             client,
         }
+    }
+
+    pub async fn setup_async_downloader(
+        self,
+        receiver_channel: UnboundedReceiver<Post>,
+        output_dir: PathBuf,
+        name_type: NameType,
+        annotate: bool,
+    ) -> JoinHandle<Result<u64, QueueError>> {
+        spawn(async move {
+            debug!("Async Downloader thread initialized");
+
+            let counters =
+                ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
+
+            self.create_out(&output_dir).await?;
+
+            if self.cbz {
+                self.cbz_path(output_dir, counters.clone(), name_type)
+                    .await?;
+
+                counters.main.finish_and_clear();
+
+                return Ok(counters.downloaded_mtx.load(Ordering::SeqCst));
+            }
+
+            debug!("Fetching {} posts", self.list.len());
+
+            let channel = UnboundedReceiverStream::new(receiver_channel);
+
+            channel
+                .map(|d| {
+                    let cli = self.client.clone();
+                    let output = output_dir.clone();
+                    let file_path = output_dir.join(d.file_name(name_type));
+                    let variant = self.imageboard;
+                    let counters = counters.clone();
+
+                    task::spawn(async move {
+                        if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type)
+                            .await?
+                        {
+                            Self::fetch(cli, variant, &d, counters, &output, name_type, annotate)
+                                .await?;
+                        }
+                        Ok::<(), QueueError>(())
+                    })
+                })
+                .buffer_unordered(self.sim_downloads as usize)
+                .for_each(|_| async {})
+                .await;
+
+            counters.main.finish_and_clear();
+
+            let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
+
+            Ok(tot)
+        })
     }
 
     async fn create_out(&self, dir: &Path) -> Result<(), QueueError> {

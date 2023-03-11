@@ -24,6 +24,18 @@ async fn main() -> Result<(), Error> {
     let args: Cli = Cli::parse();
     env_logger::builder().format_timestamp(None).init();
 
+    if args.async_download {
+        Ok(())
+    } else {
+        default_path(args).await
+    }
+}
+
+async fn async_path(args: &Cli) -> Result<(), Error> {
+    Ok(())
+}
+
+async fn default_path(args: Cli) -> Result<(), Error> {
     let spinner = Spinner::new_with_stream(
         spinners::SimpleDotsScrolling,
         "Scanning for posts, please wait".bold().to_string(),
@@ -129,6 +141,39 @@ fn print_results(total_down: u64, total_black: u64) {
     }
 }
 
+async fn search_args_async(args: &Cli) -> Result<(impl Extractor, Client), Error> {
+    let mut ratings: Vec<Rating> = Vec::with_capacity(4);
+    if args.rating.is_empty() {
+        if args.safe_mode {
+            ratings.push(Rating::Safe);
+        } else {
+            ratings.push(Rating::Safe);
+            ratings.push(Rating::Questionable);
+            ratings.push(Rating::Explicit)
+        }
+    } else {
+        args.rating.iter().for_each(|item| ratings.push(item.0));
+    };
+
+    if !args.ignore_unknown {
+        ratings.push(Rating::Unknown);
+    }
+
+    match *args.imageboard {
+        ImageBoards::Danbooru => {
+            let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            unit.auth(args.auth).await?;
+
+            let extractor = unit.clone();
+
+            let client = unit.client();
+
+            Ok((extractor, client))
+        }
+        _ => unimplemented!(),
+    }
+}
+
 async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
     let mut ratings: Vec<Rating> = Vec::with_capacity(4);
     if args.rating.is_empty() {
@@ -151,6 +196,7 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client), Error> {
         ImageBoards::Danbooru => {
             let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
             unit.auth(args.auth).await?;
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

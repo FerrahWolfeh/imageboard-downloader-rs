@@ -6,26 +6,26 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor};
+use super::{AsyncFetch, Auth, Extractor};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
-use ibdl_common::serde_json;
 use ibdl_common::{
     auth::{auth_prompt, ImageboardConfig},
     client, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
     reqwest::Client,
-    tokio::time::Instant,
+    tokio::{spawn, sync::mpsc::UnboundedSender, task::JoinHandle, time::Instant},
     ImageBoards,
 };
+use ibdl_common::{serde_json, tokio};
 use std::fmt::Display;
 use std::sync::Mutex;
 
 mod models;
 
 /// Main object to download posts
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DanbooruExtractor {
     client: Client,
     tags: Vec<String>,
@@ -35,6 +35,90 @@ pub struct DanbooruExtractor {
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
+}
+
+#[async_trait]
+impl AsyncFetch for DanbooruExtractor {
+    #[inline]
+    fn setup_fetch_thread(
+        self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+    ) -> JoinHandle<Result<(), ExtractorError>> {
+        spawn(async move {
+            let mut ext = self;
+            ext.async_fetch(sender_channel, start_page, limit).await
+        })
+    }
+
+    async fn async_fetch(
+        &mut self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+    ) -> Result<(), ExtractorError> {
+        let blacklist = BlacklistFilter::init(
+            ImageBoards::Danbooru,
+            &self.auth.user_data.blacklisted_tags,
+            &self.download_ratings,
+            self.disable_blacklist,
+        )
+        .await?;
+
+        let mut total_posts_fetched: u16 = 0;
+
+        let mut page = 1;
+
+        loop {
+            let position = if let Some(n) = start_page {
+                page + n
+            } else {
+                page
+            };
+
+            debug!("Scanning page {}", position);
+
+            let posts = Self::get_post_list(self, position).await?;
+            let size = posts.len();
+
+            if size == 0 {
+                break;
+            }
+
+            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
+                posts
+            } else {
+                posts
+            };
+
+            total_posts_fetched += list.len() as u16;
+
+            for i in list {
+                sender_channel.send(i)?;
+            }
+
+            if let Some(num) = limit {
+                if total_posts_fetched >= num {
+                    break;
+                }
+            }
+
+            if page == 100 {
+                break;
+            }
+
+            page += 1;
+        }
+
+        if total_posts_fetched == 0 {
+            return Err(ExtractorError::ZeroPosts);
+        }
+
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -264,4 +348,49 @@ impl Auth for DanbooruExtractor {
         self.auth_state = false;
         Ok(())
     }
+}
+
+#[tokio::test]
+async fn test_async_sender() {
+    use futures::stream::StreamExt;
+    use ibdl_common::tokio::join;
+    use ibdl_common::tokio::sync::mpsc::unbounded_channel;
+    use ibdl_common::tokio::task::spawn;
+    use tokio_stream::wrappers::UnboundedReceiverStream;
+
+    let danbooru_search = DanbooruExtractor::new(
+        &["ookami_mio"],
+        &[
+            Rating::Safe,
+            Rating::Unknown,
+            Rating::Explicit,
+            Rating::Questionable,
+        ],
+        false,
+    );
+
+    let (sender, receiver) = unbounded_channel();
+
+    let fetch_thread = spawn(async move {
+        let mut dbs = danbooru_search;
+
+        dbs.async_fetch(sender, None, Some(1500)).await.unwrap();
+    });
+
+    let download_thread = spawn(async move {
+        let unord_stream = UnboundedReceiverStream::new(receiver);
+        unord_stream
+            .map(|u| {
+                println!("{:#?}", u);
+                tokio::time::sleep(std::time::Duration::from_millis(500))
+            })
+            .buffer_unordered(10)
+            .for_each(|_| async {})
+            .await;
+    });
+
+    let (one, two) = join!(fetch_thread, download_thread);
+
+    assert!(one.is_ok());
+    assert!(two.is_ok());
 }

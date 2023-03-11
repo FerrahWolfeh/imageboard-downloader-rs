@@ -16,6 +16,8 @@ thiserror-impl = "1.0.37"
 async-trait = "0.1.59"
 rayon = "1.6.1"
 toml = "0.7.2"
+tokio-stream = "0.1.12"
+futures = "0.3.26"
 
 
 [dependencies.ahash]

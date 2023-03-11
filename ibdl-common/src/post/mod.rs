@@ -7,7 +7,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use std::{cmp::Ordering, ops::Not};
+use std::{cmp::Ordering, fmt::Debug, ops::Not};
 
 use crate::ImageBoards;
 
@@ -58,7 +58,7 @@ impl PostQueue {
 }
 
 /// Catchall model for the necessary parts of the imageboard post to properly identify, download and save it.
-#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
+#[derive(Clone, Serialize, Deserialize, Eq)]
 pub struct Post {
     /// ID number of the post given by the imageboard
     pub id: u64,
@@ -81,6 +81,19 @@ pub struct Post {
     ///
     /// Used to exclude posts according to a blacklist
     pub tags: Vec<String>,
+}
+
+impl Debug for Post {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Post")
+            .field("Post ID", &self.id)
+            .field("Download URL", &self.url)
+            .field("MD5 Hash", &self.md5)
+            .field("File Extension", &self.extension)
+            .field("Rating", &self.rating)
+            .field("Tag List", &self.tags)
+            .finish()
+    }
 }
 
 impl Ord for Post {

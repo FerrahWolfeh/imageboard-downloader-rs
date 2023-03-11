@@ -1,8 +1,19 @@
-use ibdl_common::{auth::AuthError, reqwest, tokio};
+use ibdl_common::{
+    auth::AuthError,
+    post::Post,
+    reqwest,
+    tokio::{self, sync::mpsc::error::SendError},
+};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ExtractorError {
+    #[error("Failed to send post through channel")]
+    SyncChannelSendFail(#[from] std::sync::mpsc::SendError<Post>),
+
+    #[error("Failed to send post through channel")]
+    ChannelSendFail(#[from] SendError<Post>),
+
     #[error("Too many tags, got: {current} while this imageboard only supports a max of {max}")]
     TooManyTags { current: usize, max: u64 },
 

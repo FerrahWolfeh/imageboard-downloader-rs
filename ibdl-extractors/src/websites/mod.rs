@@ -70,6 +70,7 @@ use async_trait::async_trait;
 use ibdl_common::{
     post::{rating::Rating, Post, PostQueue},
     reqwest::Client,
+    tokio::{sync::mpsc::UnboundedSender, task::JoinHandle},
     ImageBoards,
 };
 
@@ -132,4 +133,24 @@ pub trait MultiWebsite {
     fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
     where
         Self: std::marker::Sized;
+}
+
+/// Capability for the extractor asynchronously send posts through a [`unbounded_channel`](ibdl_common::tokio::sync::mpsc::unbounded_channel) to another thread.
+#[async_trait]
+pub trait AsyncFetch {
+    /// Simliar to [`full_search`](Extractor::full_search) in functionality, but instead of returning a [`PostQueue`](ibdl_common::post::PostQueue), sends posts asynchronously through a given channel.
+    async fn async_fetch(
+        &mut self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+    ) -> Result<(), ExtractorError>;
+
+    /// High-level convenience thread builder for [`async_fetch`](async_fetch)
+    fn setup_fetch_thread(
+        self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+    ) -> JoinHandle<Result<(), ExtractorError>>;
 }

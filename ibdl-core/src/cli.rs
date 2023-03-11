@@ -79,6 +79,15 @@ pub struct Cli {
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 
+    /// Enable experimental async downloader (currently only available for Danbooru)
+    #[clap(
+        long = "async",
+        value_parser,
+        default_value_t = false,
+        help_heading = "DOWNLOAD"
+    )]
+    pub async_download: bool,
+
     /// Disable blacklist filtering
     #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
     pub disable_blacklist: bool,
