@@ -10,7 +10,7 @@ use super::{AsyncFetch, Auth, Extractor};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::{
-    auth::{auth_prompt, ImageboardConfig},
+    auth::ImageboardConfig,
     client, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
@@ -338,9 +338,7 @@ impl Extractor for DanbooruExtractor {
 
 #[async_trait]
 impl Auth for DanbooruExtractor {
-    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError> {
-        auth_prompt(prompt, ImageBoards::Danbooru, &self.client).await?;
-
+    async fn auth(&mut self) -> Result<(), ExtractorError> {
         if let Some(creds) = ImageBoards::Danbooru.read_config_from_fs().await? {
             self.auth = creds;
             self.auth_state = true;

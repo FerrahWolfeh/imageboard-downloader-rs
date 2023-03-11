@@ -68,6 +68,7 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use ibdl_common::{
+    auth::ImageboardConfig,
     post::{rating::Rating, Post, PostQueue},
     reqwest::Client,
     tokio::{sync::mpsc::UnboundedSender, task::JoinHandle},
@@ -121,10 +122,8 @@ pub trait Extractor {
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist
 #[async_trait]
 pub trait Auth {
-    /// Setting to `true` will prompt the user for username and API key, while setting to `false` will silently try to authenticate.
-    ///
-    /// Does nothing if auth was never configured.
-    async fn auth(&mut self, prompt: bool) -> Result<(), ExtractorError>;
+    /// Authenticates to the imageboard using the supplied [`Config`](ibdl_common::auth::ImageboardConfig)
+    async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError>;
 }
 
 /// Indicates that the extractor is capable of extracting from multiple websites that share a similar API
