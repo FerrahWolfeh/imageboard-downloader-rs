@@ -129,7 +129,7 @@ impl Queue {
         }
     }
 
-    pub async fn setup_async_downloader(
+    pub fn setup_async_downloader(
         self,
         receiver_channel: UnboundedReceiver<Post>,
         output_dir: PathBuf,
@@ -543,7 +543,7 @@ impl Queue {
 
         let out = output.join(post.file_name(name_type));
 
-        debug!("Creating {:?}", &output);
+        debug!("Creating {:?}", &out);
         let file = OpenOptions::new()
             .append(true)
             .create(true)

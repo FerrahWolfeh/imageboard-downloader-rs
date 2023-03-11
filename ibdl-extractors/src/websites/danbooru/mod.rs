@@ -67,6 +67,7 @@ impl AsyncFetch for DanbooruExtractor {
         .await?;
 
         let mut total_posts_fetched: u16 = 0;
+        let mut total_posts_sent: u16 = 0;
 
         let mut page = 1;
 
@@ -97,13 +98,14 @@ impl AsyncFetch for DanbooruExtractor {
             total_posts_fetched += list.len() as u16;
 
             for i in list {
-                sender_channel.send(i)?;
-            }
-
-            if let Some(num) = limit {
-                if total_posts_fetched >= num {
-                    break;
+                if let Some(num) = limit {
+                    if total_posts_sent >= num {
+                        break;
+                    }
                 }
+
+                sender_channel.send(i)?;
+                total_posts_sent += 1;
             }
 
             if page == 100 {
