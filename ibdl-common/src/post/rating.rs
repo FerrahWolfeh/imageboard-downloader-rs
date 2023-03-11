@@ -9,7 +9,9 @@
 //!
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default,
+)]
 pub enum Rating {
     /// Represents posts that are don't involve nothing suggestive or sensitive.
     Safe,
@@ -18,13 +20,8 @@ pub enum Rating {
     /// Represents posts that have explicit elements of pornography, gore, death, etc.
     Explicit,
     /// Represents a failure to parse the `rating` tag into one of the above.
+    #[default]
     Unknown,
-}
-
-impl Default for Rating {
-    fn default() -> Self {
-        Rating::Unknown
-    }
 }
 
 impl ToString for Rating {

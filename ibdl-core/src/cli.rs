@@ -27,7 +27,7 @@ pub struct Cli {
     )]
     pub output: Option<PathBuf>,
 
-    /// Use this option to save files directly to the specified directory whithout creating additional dirs
+    /// Use this option to save files directly to the specified directory without creating additional dirs
     #[clap(
         short = 'O',
         value_name = "PATH",
