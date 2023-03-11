@@ -1,7 +1,7 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use bincode::serialize;
-use colored::Colorize;
 use log::debug;
+use owo_colors::OwoColorize;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};

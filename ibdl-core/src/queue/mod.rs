@@ -51,8 +51,8 @@
 //! ```
 use futures::stream::iter;
 use futures::StreamExt;
-use ibdl_common::colored::Colorize;
 use ibdl_common::log::debug;
+use ibdl_common::owo_colors::OwoColorize;
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::{NameType, Post, PostQueue};

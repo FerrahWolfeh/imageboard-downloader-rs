@@ -3,9 +3,9 @@ use std::{fs::create_dir_all, io, path::PathBuf};
 // Public Exports
 pub use bincode;
 use bincode::deserialize;
-pub use colored;
 pub use directories;
 pub use log;
+pub use owo_colors;
 pub use reqwest;
 pub use serde;
 pub use serde_json;
