@@ -10,7 +10,7 @@ use ibdl_core::{async_queue::Queue, cli::Cli};
 use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Extractor};
 use once_cell::sync::Lazy;
 
-use crate::utils::auth_imgboard;
+use crate::utils::{auth_imgboard, print_results};
 
 static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
 
@@ -41,7 +41,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 
     let (_, results) = join!(ext_thd, asd);
 
-    results??;
+    print_results(results??, 0);
 
     Ok(())
 }
