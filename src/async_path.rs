@@ -2,12 +2,11 @@ use std::sync::{atomic::AtomicU64, Arc};
 
 use color_eyre::eyre::Result;
 use ibdl_common::{
-    post::PostQueue,
     reqwest::Client,
     tokio::{join, sync::mpsc::unbounded_channel},
     ImageBoards,
 };
-use ibdl_core::{cli::Cli, queue::Queue};
+use ibdl_core::{async_queue::Queue, cli::Cli};
 use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Extractor};
 use once_cell::sync::Lazy;
 
@@ -24,12 +23,6 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 
     let qw = Queue::new(
         *args.imageboard,
-        PostQueue {
-            imageboard: *args.imageboard,
-            client: client.clone(),
-            posts: vec![],
-            tags: vec![],
-        },
         args.simultaneous_downloads,
         Some(client),
         args.cbz,

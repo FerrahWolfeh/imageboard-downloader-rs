@@ -1,5 +1,6 @@
 use crate::async_path::async_path;
 use color_eyre::eyre::Result;
+use default_path::default_path;
 use ibdl_common::tokio;
 use ibdl_core::clap::Parser;
 use ibdl_core::cli::Cli;
@@ -14,5 +15,9 @@ async fn main() -> Result<()> {
     env_logger::builder().format_timestamp(None).init();
     color_eyre::install()?;
 
-    async_path(&args).await
+    if args.async_download {
+        async_path(&args).await
+    } else {
+        default_path(args).await
+    }
 }

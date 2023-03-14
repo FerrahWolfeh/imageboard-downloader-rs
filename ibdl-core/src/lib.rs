@@ -5,6 +5,7 @@ pub use owo_colors;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
+pub mod async_queue;
 pub mod cli;
 pub mod progress_bars;
 pub mod queue;
