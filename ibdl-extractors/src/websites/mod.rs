@@ -150,7 +150,7 @@ pub trait AsyncFetch {
         start_page: Option<u16>,
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
-    ) -> Result<(), ExtractorError>;
+    ) -> Result<u64, ExtractorError>;
 
     /// High-level convenience thread builder for [`async_fetch`](async_fetch)
     fn setup_fetch_thread(
@@ -159,5 +159,5 @@ pub trait AsyncFetch {
         start_page: Option<u16>,
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
-    ) -> JoinHandle<Result<(), ExtractorError>>;
+    ) -> JoinHandle<Result<u64, ExtractorError>>;
 }

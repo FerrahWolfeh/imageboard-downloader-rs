@@ -15,8 +15,6 @@ use crate::utils::{auth_imgboard, print_results};
 static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
 
 pub async fn async_path(args: &Cli) -> Result<()> {
-    let nt = args.name_type();
-
     let (ext, client) = search_args_async(args).await?;
 
     let dirname = args.generate_save_path()?;
@@ -36,12 +34,17 @@ pub async fn async_path(args: &Cli) -> Result<()> {
         args.limit,
         Some(POST_COUNTER.clone()),
     );
-    let asd =
-        qw.setup_async_downloader(channel_rx, dirname, nt, args.annotate, POST_COUNTER.clone());
+    let asd = qw.setup_async_downloader(
+        channel_rx,
+        dirname,
+        args.name_type(),
+        args.annotate,
+        POST_COUNTER.clone(),
+    );
 
-    let (_, results) = join!(ext_thd, asd);
+    let (removed, results) = join!(ext_thd, asd);
 
-    print_results(results??, 0);
+    print_results(results??, removed??);
 
     Ok(())
 }

@@ -47,7 +47,7 @@ impl AsyncFetch for DanbooruExtractor {
         start_page: Option<u16>,
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
-    ) -> JoinHandle<Result<(), ExtractorError>> {
+    ) -> JoinHandle<Result<u64, ExtractorError>> {
         spawn(async move {
             let mut ext = self;
             ext.async_fetch(sender_channel, start_page, limit, post_counter)
@@ -61,7 +61,7 @@ impl AsyncFetch for DanbooruExtractor {
         start_page: Option<u16>,
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
-    ) -> Result<(), ExtractorError> {
+    ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
@@ -129,7 +129,7 @@ impl AsyncFetch for DanbooruExtractor {
             page += 1;
         }
 
-        Ok(())
+        Ok(self.total_removed)
     }
 }
 
