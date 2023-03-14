@@ -231,9 +231,3 @@ impl Extractor for MoebooruExtractor {
         ImageBoards::Konachan
     }
 }
-
-impl From<MoebooruExtractor> for ImageBoards {
-    fn from(_val: MoebooruExtractor) -> Self {
-        ImageBoards::Konachan
-    }
-}

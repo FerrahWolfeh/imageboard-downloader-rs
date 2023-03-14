@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use ibdl_common::{
-    post::{NameType, PostQueue},
+    post::PostQueue,
     reqwest::Client,
     tokio::{join, sync::mpsc::unbounded_channel},
     ImageBoards,
@@ -8,18 +8,14 @@ use ibdl_common::{
 use ibdl_core::{cli::Cli, queue::Queue};
 use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Extractor};
 
-use crate::utils::{auth_imgboard, convert_rating_list, generate_save_path};
+use crate::utils::auth_imgboard;
 
 pub async fn async_path(args: &Cli) -> Result<()> {
-    let nt = if args.save_file_as_id {
-        NameType::ID
-    } else {
-        NameType::MD5
-    };
+    let nt = args.name_type();
 
     let (ext, client) = search_args_async(args).await?;
 
-    let dirname = generate_save_path(args)?;
+    let dirname = args.generate_save_path()?;
 
     let qw = Queue::new(
         *args.imageboard,
@@ -47,7 +43,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 }
 
 async fn search_args_async(args: &Cli) -> Result<(impl AsyncFetch, Client)> {
-    let ratings = convert_rating_list(args);
+    let ratings = args.selected_ratings();
 
     match *args.imageboard {
         ImageBoards::Danbooru => {

@@ -2,11 +2,7 @@ use std::path::Path;
 
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use ibdl_common::{
-    log::debug,
-    post::{NameType, PostQueue},
-    reqwest::Client,
-    tokio::fs::remove_file,
-    ImageBoards,
+    log::debug, post::PostQueue, reqwest::Client, tokio::fs::remove_file, ImageBoards,
 };
 use ibdl_core::{
     cli::Cli,
@@ -21,7 +17,7 @@ use ibdl_extractors::websites::{
 };
 use spinoff::{spinners, Color, Spinner};
 
-use crate::utils::{auth_imgboard, convert_rating_list, generate_save_path, print_results};
+use crate::utils::{auth_imgboard, print_results};
 
 pub async fn default_path(args: Cli) -> Result<()> {
     let spinner = Spinner::new_with_stream(
@@ -31,11 +27,7 @@ pub async fn default_path(args: Cli) -> Result<()> {
         spinoff::Streams::Stderr,
     );
 
-    let mut nt = if args.save_file_as_id {
-        NameType::ID
-    } else {
-        NameType::MD5
-    };
+    let mut nt = args.name_type();
 
     let (mut post_queue, total_black, client) = search_args(&args).await?;
 
@@ -49,7 +41,7 @@ pub async fn default_path(args: Cli) -> Result<()> {
 
     spinner.clear();
 
-    let dirname = generate_save_path(&args)?;
+    let dirname = args.generate_save_path()?;
 
     let summary_path = dirname.join(Path::new(".00_download_summary.bin"));
 
@@ -95,7 +87,7 @@ pub async fn default_path(args: Cli) -> Result<()> {
 }
 
 async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
-    let ratings = convert_rating_list(args);
+    let ratings = args.selected_ratings();
 
     match *args.imageboard {
         ImageBoards::Danbooru => {

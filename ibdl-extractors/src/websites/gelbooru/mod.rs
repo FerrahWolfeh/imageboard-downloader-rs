@@ -218,12 +218,6 @@ impl Extractor for GelbooruExtractor {
     }
 }
 
-impl From<GelbooruExtractor> for ImageBoards {
-    fn from(_val: GelbooruExtractor) -> Self {
-        ImageBoards::Gelbooru
-    }
-}
-
 impl MultiWebsite for GelbooruExtractor {
     /// Sets the imageboard to extract posts from
     ///

@@ -1,12 +1,8 @@
-use std::{io, io::Write, path::PathBuf};
+use std::{io, io::Write};
 
 use color_eyre::eyre::Result;
-use ibdl_common::{
-    auth::ImageboardConfig, log::debug, post::rating::Rating, reqwest::Client, ImageBoards,
-};
-use ibdl_core::{
-    cli::Cli, generate_output_path, generate_output_path_precise, owo_colors::OwoColorize,
-};
+use ibdl_common::{auth::ImageboardConfig, log::debug, reqwest::Client, ImageBoards};
+use ibdl_core::owo_colors::OwoColorize;
 use ibdl_extractors::websites::{Auth, Extractor};
 
 pub fn print_results(total_down: u64, total_black: u64) {
@@ -26,49 +22,6 @@ pub fn print_results(total_down: u64, total_black: u64) {
                 .red()
         );
     }
-}
-
-pub fn generate_save_path(args: &Cli) -> Result<PathBuf> {
-    let raw_save_path = if let Some(path) = &args.output {
-        path.to_owned()
-    } else if let Some(precise_path) = &args.precise_output {
-        precise_path.to_owned()
-    } else {
-        std::env::current_dir()?
-    };
-
-    let dirname = if args.output.is_some() {
-        assert_eq!(args.precise_output, None);
-        generate_output_path(&raw_save_path, *args.imageboard, &args.tags, args.cbz)
-    } else if args.precise_output.is_some() {
-        assert_eq!(args.output, None);
-        generate_output_path_precise(&raw_save_path, args.cbz)
-    } else {
-        raw_save_path
-    };
-
-    Ok(dirname)
-}
-
-#[inline]
-pub fn convert_rating_list(args: &Cli) -> Vec<Rating> {
-    let mut ratings: Vec<Rating> = Vec::with_capacity(4);
-    if args.rating.is_empty() {
-        if args.safe_mode {
-            ratings.push(Rating::Safe);
-        } else {
-            ratings.push(Rating::Safe);
-            ratings.push(Rating::Questionable);
-            ratings.push(Rating::Explicit)
-        }
-    } else {
-        args.rating.iter().for_each(|item| ratings.push(item.0));
-    };
-
-    if !args.ignore_unknown {
-        ratings.push(Rating::Unknown);
-    }
-    ratings
 }
 
 pub async fn auth_prompt(auth_state: bool, imageboard: ImageBoards, client: &Client) -> Result<()> {

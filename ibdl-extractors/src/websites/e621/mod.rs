@@ -280,12 +280,6 @@ impl Extractor for E621Extractor {
     }
 }
 
-impl From<E621Extractor> for ImageBoards {
-    fn from(_val: E621Extractor) -> Self {
-        ImageBoards::E621
-    }
-}
-
 #[async_trait]
 impl Auth for E621Extractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {

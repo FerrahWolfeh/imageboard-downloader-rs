@@ -1,10 +1,13 @@
 // 20002709
-use ibdl_common::ImageBoards;
+use ibdl_common::{
+    post::{rating::Rating, NameType},
+    ImageBoards,
+};
 use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::{ImageBoardArg, RatingArg};
+use crate::{generate_output_path, generate_output_path_precise, ImageBoardArg, RatingArg};
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
@@ -145,4 +148,57 @@ pub struct Cli {
         conflicts_with("cbz")
     )]
     pub annotate: bool,
+}
+
+impl Cli {
+    pub fn name_type(&self) -> NameType {
+        if self.save_file_as_id {
+            NameType::ID
+        } else {
+            NameType::MD5
+        }
+    }
+
+    #[inline]
+    pub fn selected_ratings(&self) -> Vec<Rating> {
+        let mut ratings: Vec<Rating> = Vec::with_capacity(4);
+        if self.rating.is_empty() {
+            if self.safe_mode {
+                ratings.push(Rating::Safe);
+            } else {
+                ratings.push(Rating::Safe);
+                ratings.push(Rating::Questionable);
+                ratings.push(Rating::Explicit)
+            }
+        } else {
+            self.rating.iter().for_each(|item| ratings.push(item.0));
+        };
+
+        if !self.ignore_unknown {
+            ratings.push(Rating::Unknown);
+        }
+        ratings
+    }
+
+    pub fn generate_save_path(&self) -> Result<PathBuf, std::io::Error> {
+        let raw_save_path = if let Some(path) = &self.output {
+            path.to_owned()
+        } else if let Some(precise_path) = &self.precise_output {
+            precise_path.to_owned()
+        } else {
+            std::env::current_dir()?
+        };
+
+        let dirname = if self.output.is_some() {
+            assert_eq!(self.precise_output, None);
+            generate_output_path(&raw_save_path, *self.imageboard, &self.tags, self.cbz)
+        } else if self.precise_output.is_some() {
+            assert_eq!(self.output, None);
+            generate_output_path_precise(&raw_save_path, self.cbz)
+        } else {
+            raw_save_path
+        };
+
+        Ok(dirname)
+    }
 }
