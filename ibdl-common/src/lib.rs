@@ -11,7 +11,7 @@ pub use serde_json;
 pub use tokio;
 pub use zstd;
 
-use auth::{AuthError, ImageboardConfig};
+use auth::{Error, ImageboardConfig};
 
 use directories::ProjectDirs;
 
@@ -146,7 +146,7 @@ impl ImageBoards {
     /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
     ///
     /// Returns `None` if the file is corrupted or does not exist.
-    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, AuthError> {
+    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, Error> {
         let cfg_path = Self::auth_cache_dir()?.join(PathBuf::from(self.to_string()));
         if let Ok(config_auth) = read(&cfg_path).await {
             debug!("Authentication cache found");

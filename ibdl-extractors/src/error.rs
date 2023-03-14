@@ -1,5 +1,5 @@
 use ibdl_common::{
-    auth::AuthError,
+    auth::Error,
     post::Post,
     reqwest,
     tokio::{self, sync::mpsc::error::SendError},
@@ -29,7 +29,7 @@ pub enum ExtractorError {
     #[error("Authentication failed. error: {source}")]
     AuthenticationFailure {
         #[from]
-        source: AuthError,
+        source: Error,
     },
 
     #[error("Error while reading Global blacklist file. error: {source}")]

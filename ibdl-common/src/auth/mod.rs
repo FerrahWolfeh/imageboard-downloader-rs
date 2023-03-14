@@ -12,7 +12,7 @@ use tokio::io::AsyncWriteExt;
 use crate::ImageBoards;
 
 #[derive(Error, Debug)]
-pub enum AuthError {
+pub enum Error {
     /// Indicates that login credentials are incorrect.
     #[error("Invalid username or API key")]
     InvalidLogin,
@@ -59,11 +59,11 @@ impl Default for ImageboardConfig {
     fn default() -> Self {
         Self {
             imageboard: ImageBoards::Danbooru,
-            username: "".to_string(),
-            api_key: "".to_string(),
+            username: String::new(),
+            api_key: String::new(),
             user_data: UserData {
                 id: 0,
-                name: "".to_string(),
+                name: String::new(),
                 blacklisted_tags: Vec::new(),
             },
         }
@@ -79,13 +79,13 @@ impl ImageboardConfig {
             api_key,
             user_data: UserData {
                 id: 0,
-                name: "".to_string(),
+                name: String::new(),
                 blacklisted_tags: Vec::new(),
             },
         }
     }
 
-    pub async fn authenticate(&mut self, client: &Client) -> Result<(), AuthError> {
+    pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
         #[derive(Debug, Serialize, Deserialize)]
         struct AuthTest {
             pub success: Option<bool>,
@@ -113,7 +113,7 @@ impl ImageboardConfig {
         debug!("{:?}", req);
 
         if req.success.is_some() {
-            return Err(AuthError::InvalidLogin);
+            return Err(Error::InvalidLogin);
         }
 
         if req.id.is_some() {
@@ -139,7 +139,7 @@ impl ImageboardConfig {
 
     /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
-    async fn write_cache(&self) -> Result<(), AuthError> {
+    async fn write_cache(&self) -> Result<(), Error> {
         let config_path =
             ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.to_string()));
         let mut cfg_cache = OpenOptions::new()
@@ -150,12 +150,9 @@ impl ImageboardConfig {
             .open(&config_path)
             .await?;
 
-        let cfg = match serialize(&self) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(AuthError::ConfigEncodeError),
-        };
+        let Ok(bytes) = serialize(&self) else { return Err(Error::ConfigEncodeError) };
 
-        let compressed_data = zstd::encode_all(cfg.as_slice(), 7)?;
+        let compressed_data = zstd::encode_all(bytes.as_slice(), 7)?;
         cfg_cache.write_all(&compressed_data).await?;
         debug!("Wrote auth cache to {}", &config_path.display());
         Ok(())
