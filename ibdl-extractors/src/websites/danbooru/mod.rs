@@ -66,7 +66,7 @@ impl AsyncFetch for DanbooruExtractor {
         )
         .await?;
 
-        let mut total_posts_fetched: u16 = 0;
+        let mut has_posts: bool = false;
         let mut total_posts_sent: u16 = 0;
 
         let mut page = 1;
@@ -84,6 +84,10 @@ impl AsyncFetch for DanbooruExtractor {
             let size = posts.len();
 
             if size == 0 {
+                if !has_posts {
+                    return Err(ExtractorError::ZeroPosts);
+                }
+
                 break;
             }
 
@@ -95,7 +99,9 @@ impl AsyncFetch for DanbooruExtractor {
                 posts
             };
 
-            total_posts_fetched += list.len() as u16;
+            if !has_posts && !list.is_empty() {
+                has_posts = true;
+            }
 
             for i in list {
                 if let Some(num) = limit {
@@ -113,10 +119,6 @@ impl AsyncFetch for DanbooruExtractor {
             }
 
             page += 1;
-        }
-
-        if total_posts_fetched == 0 {
-            return Err(ExtractorError::ZeroPosts);
         }
 
         Ok(())
