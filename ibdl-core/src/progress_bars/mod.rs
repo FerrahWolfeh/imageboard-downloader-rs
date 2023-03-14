@@ -5,9 +5,10 @@ use indicatif::{
 use std::{
     fmt::Write,
     sync::{
-        atomic::{AtomicU64, AtomicUsize},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc,
     },
+    thread,
     time::Duration,
 };
 
@@ -111,6 +112,14 @@ impl ProgressCounter {
         bar.set_draw_target(ProgressDrawTarget::stderr());
 
         self.multi.add(bar)
+    }
+
+    pub fn init_length_updater(&self, counter: Arc<AtomicU64>) {
+        let cloned_bar = self.main.clone();
+        thread::spawn(move || loop {
+            cloned_bar.set_length(counter.load(Ordering::Relaxed));
+            thread::sleep(Duration::from_millis(1000))
+        });
     }
 }
 
