@@ -1,6 +1,6 @@
 [package]
 name = "ibdl-common"
-version = "1.2.3"
+version = "1.3.0"
 edition = "2021"
 description = "Common functions and data structs for parsing and downloading posts from imageboards"
 license = "MIT"
