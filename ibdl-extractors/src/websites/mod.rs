@@ -64,7 +64,10 @@
 //!```
 //!
 //!
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    sync::{atomic::AtomicU64, Arc},
+};
 
 use async_trait::async_trait;
 use ibdl_common::{
@@ -146,6 +149,7 @@ pub trait AsyncFetch {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
+        post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<(), ExtractorError>;
 
     /// High-level convenience thread builder for [`async_fetch`](async_fetch)
@@ -154,5 +158,6 @@ pub trait AsyncFetch {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
+        post_counter: Option<Arc<AtomicU64>>,
     ) -> JoinHandle<Result<(), ExtractorError>>;
 }

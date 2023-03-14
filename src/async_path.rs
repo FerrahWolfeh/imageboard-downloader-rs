@@ -1,3 +1,5 @@
+use std::sync::{atomic::AtomicU64, Arc};
+
 use color_eyre::eyre::Result;
 use ibdl_common::{
     post::PostQueue,
@@ -7,8 +9,11 @@ use ibdl_common::{
 };
 use ibdl_core::{cli::Cli, queue::Queue};
 use ibdl_extractors::websites::{danbooru::DanbooruExtractor, AsyncFetch, Extractor};
+use once_cell::sync::Lazy;
 
 use crate::utils::auth_imgboard;
+
+static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
 
 pub async fn async_path(args: &Cli) -> Result<()> {
     let nt = args.name_type();
@@ -32,8 +37,14 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 
     let (channel_tx, channel_rx) = unbounded_channel();
 
-    let ext_thd = ext.setup_fetch_thread(channel_tx, args.start_page, args.limit);
-    let asd = qw.setup_async_downloader(channel_rx, dirname, nt, args.annotate);
+    let ext_thd = ext.setup_fetch_thread(
+        channel_tx,
+        args.start_page,
+        args.limit,
+        Some(POST_COUNTER.clone()),
+    );
+    let asd =
+        qw.setup_async_downloader(channel_rx, dirname, nt, args.annotate, POST_COUNTER.clone());
 
     let (_, results) = join!(ext_thd, asd);
 

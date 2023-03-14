@@ -20,7 +20,8 @@ use ibdl_common::{
     ImageBoards,
 };
 use std::fmt::Display;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 mod models;
 
@@ -45,10 +46,12 @@ impl AsyncFetch for DanbooruExtractor {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
+        post_counter: Option<Arc<AtomicU64>>,
     ) -> JoinHandle<Result<(), ExtractorError>> {
         spawn(async move {
             let mut ext = self;
-            ext.async_fetch(sender_channel, start_page, limit).await
+            ext.async_fetch(sender_channel, start_page, limit, post_counter)
+                .await
         })
     }
 
@@ -57,6 +60,7 @@ impl AsyncFetch for DanbooruExtractor {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
+        post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<(), ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
@@ -112,6 +116,10 @@ impl AsyncFetch for DanbooruExtractor {
 
                 sender_channel.send(i)?;
                 total_posts_sent += 1;
+                if let Some(counter) = &post_counter {
+                    let counter = counter;
+                    counter.fetch_add(1, Ordering::Relaxed);
+                }
             }
 
             if page == 100 {

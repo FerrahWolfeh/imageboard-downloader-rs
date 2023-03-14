@@ -66,7 +66,7 @@ use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
@@ -135,12 +135,13 @@ impl Queue {
         output_dir: PathBuf,
         name_type: NameType,
         annotate: bool,
+        post_counter: Arc<AtomicU64>,
     ) -> JoinHandle<Result<u64, QueueError>> {
         spawn(async move {
             debug!("Async Downloader thread initialized");
 
             let counters =
-                ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
+                ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard);
 
             self.create_out(&output_dir).await?;
 
@@ -155,6 +156,8 @@ impl Queue {
 
             debug!("Fetching {} posts", self.list.len());
 
+            let mut update_bar_len = true;
+
             let channel = UnboundedReceiverStream::new(receiver_channel);
 
             channel
@@ -164,6 +167,16 @@ impl Queue {
                     let file_path = output_dir.join(d.file_name(name_type));
                     let variant = self.imageboard;
                     let counters = counters.clone();
+
+                    if update_bar_len {
+                        counters
+                            .main
+                            .set_length(post_counter.load(Ordering::Relaxed));
+                    }
+
+                    if counters.main.length().unwrap() == 0 {
+                        update_bar_len = false
+                    }
 
                     task::spawn(async move {
                         if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type)
