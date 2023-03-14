@@ -1,15 +1,17 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use bincode::serialize;
+use ibdl_common::{bincode, log, reqwest, tokio, zstd};
 use log::debug;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use std::io;
 use std::path::Path;
 use thiserror::Error;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
-use crate::ImageBoards;
+use ibdl_common::ImageBoards;
+
+use ibdl_common::serde::{self, Deserialize, Serialize};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -35,6 +37,7 @@ pub enum Error {
 
 /// Struct that defines all user configuration for a specific imageboard.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(crate = "self::serde")]
 pub struct ImageboardConfig {
     /// Used as a identification tag for handling the cache outside of a imageboard downloader
     /// struct.
@@ -49,6 +52,7 @@ pub struct ImageboardConfig {
 /// It's principally used to filter which posts to download according to the user's blacklist
 /// configured in the imageboard profile settings.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(crate = "self::serde")]
 pub struct UserData {
     pub id: u64,
     pub name: String,
@@ -87,6 +91,7 @@ impl ImageboardConfig {
 
     pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
         #[derive(Debug, Serialize, Deserialize)]
+        #[serde(crate = "self::serde")]
         struct AuthTest {
             pub success: Option<bool>,
             pub id: Option<u64>,

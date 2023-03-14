@@ -1,5 +1,5 @@
+use crate::auth::Error;
 use ibdl_common::{
-    auth::Error,
     post::Post,
     reqwest,
     tokio::{self, sync::mpsc::error::SendError},

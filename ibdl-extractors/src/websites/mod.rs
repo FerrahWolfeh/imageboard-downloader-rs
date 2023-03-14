@@ -69,9 +69,9 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
+use crate::auth::ImageboardConfig;
 use async_trait::async_trait;
 use ibdl_common::{
-    auth::ImageboardConfig,
     post::{rating::Rating, Post, PostQueue},
     reqwest::Client,
     tokio::{sync::mpsc::UnboundedSender, task::JoinHandle},

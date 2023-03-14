@@ -7,11 +7,11 @@
 use self::models::DanbooruPost;
 
 use super::{AsyncFetch, Auth, Extractor};
+use crate::auth::ImageboardConfig;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::serde_json;
 use ibdl_common::{
-    auth::ImageboardConfig,
     client, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},

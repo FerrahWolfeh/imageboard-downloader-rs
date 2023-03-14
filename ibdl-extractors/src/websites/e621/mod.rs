@@ -4,11 +4,11 @@
 //! - Authentication
 //! - Native blacklist (defined in user profile page)
 //!
+use crate::auth::ImageboardConfig;
 use async_trait::async_trait;
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json;
 use ibdl_common::{
-    auth::ImageboardConfig,
     client, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},

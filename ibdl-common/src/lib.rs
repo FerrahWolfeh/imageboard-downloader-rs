@@ -2,7 +2,6 @@ use std::{fs::create_dir_all, io, path::PathBuf};
 
 // Public Exports
 pub use bincode;
-use bincode::deserialize;
 pub use directories;
 pub use log;
 pub use reqwest;
@@ -11,17 +10,12 @@ pub use serde_json;
 pub use tokio;
 pub use zstd;
 
-use auth::{Error, ImageboardConfig};
-
 use directories::ProjectDirs;
 
-use log::{debug, error, warn};
+use log::debug;
 
 use serde::{Deserialize, Serialize};
 
-use tokio::fs::{read, remove_file};
-
-pub mod auth;
 pub mod macros;
 pub mod post;
 
@@ -141,38 +135,5 @@ impl ImageBoards {
         }
 
         Ok(cfold.to_path_buf())
-    }
-
-    /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
-    ///
-    /// Returns `None` if the file is corrupted or does not exist.
-    pub async fn read_config_from_fs(&self) -> Result<Option<ImageboardConfig>, Error> {
-        let cfg_path = Self::auth_cache_dir()?.join(PathBuf::from(self.to_string()));
-        if let Ok(config_auth) = read(&cfg_path).await {
-            debug!("Authentication cache found");
-
-            if let Ok(decompressed) = zstd::decode_all(config_auth.as_slice()) {
-                debug!("Authentication cache decompressed.");
-                return if let Ok(rd) = deserialize::<ImageboardConfig>(&decompressed) {
-                    debug!("Authentication cache decoded.");
-                    debug!("User id: {}", rd.user_data.id);
-                    debug!("Username: {}", rd.user_data.name);
-                    debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
-                    Ok(Some(rd))
-                } else {
-                    warn!(
-                        "{}",
-                        "Auth cache is invalid or empty. Running without authentication"
-                    );
-                    Ok(None)
-                };
-            }
-            debug!("Failed to decompress authentication cache.");
-            debug!("Removing corrupted file");
-            remove_file(cfg_path).await?;
-            error!("{}", "Auth cache is corrupted. Please authenticate again.");
-        };
-        debug!("Running without authentication");
-        Ok(None)
     }
 }
