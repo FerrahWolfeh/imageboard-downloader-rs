@@ -24,6 +24,8 @@ use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
 use super::{Extractor, MultiWebsite};
 
+mod unsync;
+
 pub struct GelbooruExtractor {
     active_imageboard: ImageBoards,
     client: Client,

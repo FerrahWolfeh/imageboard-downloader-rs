@@ -19,6 +19,7 @@ use crate::{
 use super::Extractor;
 
 mod models;
+mod unsync;
 
 pub struct MoebooruExtractor {
     client: Client,

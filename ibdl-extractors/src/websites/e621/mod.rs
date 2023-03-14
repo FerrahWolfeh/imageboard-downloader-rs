@@ -25,7 +25,8 @@ use crate::{
 
 use super::{Auth, Extractor};
 
-pub mod models;
+mod models;
+mod unsync;
 
 //const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
