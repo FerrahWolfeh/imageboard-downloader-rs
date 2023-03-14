@@ -70,7 +70,7 @@ impl ValueEnum for ImageBoardArg {
                 Some(
                     clap::builder::PossibleValue::new("danbooru")
                         .help(
-                            "Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```",
+                            "Represents the website https://danbooru.donmai.us or it's safe variant https://safebooru.donmai.us",
                         ),
                 )
             }
@@ -78,34 +78,34 @@ impl ValueEnum for ImageBoardArg {
                 Some(
                     clap::builder::PossibleValue::new("e621")
                         .help(
-                            "Represents the website ```https://e621.net``` or it's safe variant ```https://e926.net```",
+                            "Represents the website https://e621.net or it's safe variant https://e926.net",
                         ),
                 )
             }
             ImageBoards::Rule34 => {
                 Some(
                     clap::builder::PossibleValue::new("rule34")
-                        .help("Represents the website ```https://rule34.xxx```"),
+                        .help("Represents the website https://rule34.xxx"),
                 )
             }
             ImageBoards::Realbooru => {
                 Some(
                     clap::builder::PossibleValue::new("realbooru")
-                        .help("Represents the website ```http://realbooru.com```"),
+                        .help("Represents the website http://realbooru.com"),
                 )
             }
             ImageBoards::Konachan => {
                 Some(
                     clap::builder::PossibleValue::new("konachan")
                         .help(
-                            "Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```",
+                            "Represents the website https://konachan.com or it's safe variant https://konachan.net",
                         ),
                 )
             }
             ImageBoards::Gelbooru => {
                 Some(
                     clap::builder::PossibleValue::new("gelbooru")
-                        .help("Represents the website ```https://gelbooru.com```"),
+                        .help("Represents the website https://gelbooru.com"),
                 )
             }
         }
