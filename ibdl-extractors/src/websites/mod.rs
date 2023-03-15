@@ -88,6 +88,8 @@ pub mod gelbooru;
 
 pub mod moebooru;
 
+pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
+
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
 pub trait Extractor {

@@ -1,23 +1,19 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{bail, Result};
 use ibdl_common::{
     post::Post,
     reqwest::Client,
     tokio::{
         join,
         sync::mpsc::{unbounded_channel, UnboundedSender},
-        task::JoinHandle,
     },
     ImageBoards,
 };
 use ibdl_core::{async_queue::Queue, cli::Cli};
-use ibdl_extractors::{
-    error::ExtractorError,
-    websites::{
-        danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
-        moebooru::MoebooruExtractor, AsyncFetch, Extractor, MultiWebsite,
-    },
+use ibdl_extractors::websites::{
+    danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
+    moebooru::MoebooruExtractor, AsyncFetch, Extractor, ExtractorThreadHandle, MultiWebsite,
 };
 use once_cell::sync::Lazy;
 
@@ -47,9 +43,9 @@ pub async fn async_path(args: &Cli) -> Result<()> {
         POST_COUNTER.clone(),
     );
 
-    let (removed, results) = join!(ext, asd);
+    let (Ok(removed), Ok(results)) = join!(ext, asd) else {bail!("Failed starting threads!")};
 
-    print_results(results??, removed??);
+    print_results(results?, removed?);
 
     Ok(())
 }
@@ -57,7 +53,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 async fn search_args_async(
     args: &Cli,
     channel_tx: UnboundedSender<Post>,
-) -> Result<(JoinHandle<Result<u64, ExtractorError>>, Client)> {
+) -> Result<(ExtractorThreadHandle, Client)> {
     let ratings = args.selected_ratings();
 
     match *args.imageboard {
