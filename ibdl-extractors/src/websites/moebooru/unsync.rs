@@ -56,14 +56,14 @@ impl AsyncFetch for MoebooruExtractor {
 
         let mut page = 1;
 
+        debug!("Async extractor thread initialized");
+
         loop {
             let position = if let Some(n) = start_page {
                 page + n
             } else {
                 page
             };
-
-            debug!("Scanning page {}", position);
 
             let posts = self.get_post_list(position).await?;
             let size = posts.len();
