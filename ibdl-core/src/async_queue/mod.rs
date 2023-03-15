@@ -97,6 +97,7 @@ pub struct Queue {
     sim_downloads: u8,
     client: Client,
     cbz: bool,
+    name_type: NameType,
     _tags: Vec<String>,
 }
 
@@ -108,6 +109,7 @@ impl Queue {
         sim_downloads: u8,
         custom_client: Option<Client>,
         save_as_cbz: bool,
+        name_type: NameType,
     ) -> Self {
         let client = if let Some(cli) = custom_client {
             cli
@@ -120,17 +122,17 @@ impl Queue {
             imageboard,
             sim_downloads,
             client,
+            name_type,
             _tags: vec![],
         }
     }
 
     pub fn setup_async_downloader(
         self,
-        receiver_channel: UnboundedReceiver<Post>,
         output_dir: PathBuf,
-        name_type: NameType,
         annotate: bool,
         post_counter: Arc<AtomicU64>,
+        channel_rx: UnboundedReceiver<Post>,
     ) -> JoinHandle<Result<u64, QueueError>> {
         spawn(async move {
             debug!("Async Downloader thread initialized");
@@ -140,39 +142,21 @@ impl Queue {
 
             self.create_out(&output_dir).await?;
 
-            // if self.cbz {
-            //     self.cbz_path(output_dir, counters.clone(), name_type)
-            //         .await?;
+            let channel = UnboundedReceiverStream::new(channel_rx);
 
-            //     counters.main.finish_and_clear();
+            if self.cbz {
+                self.cbz_path(output_dir, counters.clone(), channel).await?;
 
-            //     return Ok(counters.downloaded_mtx.load(Ordering::SeqCst));
-            // }
+                counters.main.finish_and_clear();
+
+                let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
+
+                return Ok(tot);
+            }
 
             counters.init_length_updater(post_counter.clone(), 500);
 
-            let channel = UnboundedReceiverStream::new(receiver_channel);
-
-            channel
-                .map(|d| {
-                    let cli = self.client.clone();
-                    let output = output_dir.clone();
-                    let file_path = output_dir.join(d.file_name(name_type));
-                    let variant = self.imageboard;
-                    let counters = counters.clone();
-
-                    task::spawn(async move {
-                        if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type)
-                            .await?
-                        {
-                            Self::fetch(cli, variant, &d, counters, &output, name_type, annotate)
-                                .await?;
-                        }
-                        Ok::<(), QueueError>(())
-                    })
-                })
-                .buffer_unordered(self.sim_downloads as usize)
-                .for_each(|_| async {})
+            self.download_channel(channel, output_dir, counters.clone(), annotate)
                 .await;
 
             counters.main.finish_and_clear();
@@ -181,6 +165,35 @@ impl Queue {
 
             Ok(tot)
         })
+    }
+
+    async fn download_channel(
+        &self,
+        channel: UnboundedReceiverStream<Post>,
+        output_dir: PathBuf,
+        counters: Arc<ProgressCounter>,
+        annotate: bool,
+    ) {
+        channel
+            .map(|d| {
+                let nt = self.name_type;
+
+                let cli = self.client.clone();
+                let output = output_dir.clone();
+                let file_path = output_dir.join(d.file_name(self.name_type));
+                let variant = self.imageboard;
+                let counters = counters.clone();
+
+                task::spawn(async move {
+                    if !Self::check_file_exists(&d, &file_path, counters.clone(), nt).await? {
+                        Self::fetch(cli, variant, &d, counters, &output, nt, annotate).await?;
+                    }
+                    Ok::<(), QueueError>(())
+                })
+            })
+            .buffer_unordered(self.sim_downloads as usize)
+            .for_each(|_| async {})
+            .await
     }
 
     async fn create_out(&self, dir: &Path) -> Result<(), QueueError> {
@@ -211,82 +224,53 @@ impl Queue {
         Ok(())
     }
 
-    // async fn cbz_path(
-    //     &self,
-    //     path: PathBuf,
-    //     counters: Arc<ProgressCounter>,
-    //     name_type: NameType,
-    // ) -> Result<(), QueueError> {
-    //     debug!("Target file: {}", path.display());
+    async fn cbz_path(
+        &self,
+        path: PathBuf,
+        counters: Arc<ProgressCounter>,
+        channel: UnboundedReceiverStream<Post>,
+    ) -> Result<(), QueueError> {
+        debug!("Target file: {}", path.display());
 
-    //     let file = File::create(&path)?;
-    //     let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
+        let file = File::create(&path)?;
+        let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
-    //     self.write_zip_structure(zip.clone(), &self.list.clone(), name_type)?;
+        self.write_zip_structure(zip.clone())?;
 
-    //     debug!("Fetching {} posts", self.list.len());
+        channel
+            .map(|d| {
+                let nt = self.name_type;
 
-    //     iter(self.list.clone())
-    //         .map(|d| {
-    //             let cli = self.client.clone();
-    //             let variant = self.imageboard;
-    //             let counters = counters.clone();
-    //             let zip = zip.clone();
+                let cli = self.client.clone();
+                let zip = zip.clone();
+                let variant = self.imageboard;
+                let counters = counters.clone();
 
-    //             task::spawn(async move {
-    //                 Self::fetch_cbz(cli, variant, name_type, d, counters, zip).await?;
-    //                 Ok::<(), QueueError>(())
-    //             })
-    //         })
-    //         .buffer_unordered(self.sim_downloads.into())
-    //         .for_each(|_| async {})
-    //         .await;
+                task::spawn(async move {
+                    Self::fetch_cbz(cli, variant, nt, d, counters, zip).await?;
 
-    //     let mut mtx = zip.lock().unwrap();
+                    Ok::<(), QueueError>(())
+                })
+            })
+            .buffer_unordered(self.sim_downloads.into())
+            .for_each(|_| async {})
+            .await;
 
-    //     mtx.finish()?;
-    //     Ok(())
-    // }
+        let mut mtx = zip.lock().unwrap();
 
-    // fn write_zip_structure(
-    //     &self,
-    //     zip: Arc<Mutex<ZipWriter<File>>>,
-    //     posts: &[Post],
-    //     name_type: NameType,
-    // ) -> Result<(), QueueError> {
-    //     let ap = SummaryFile::new(
-    //         self.imageboard,
-    //         &self.tags,
-    //         posts,
-    //         name_type,
-    //         SummaryType::JSON,
-    //     )
-    //     .to_json()?;
+        mtx.finish()?;
+        Ok(())
+    }
 
-    //     let mut z_1 = zip.lock().unwrap();
+    fn write_zip_structure(&self, zip: Arc<Mutex<ZipWriter<File>>>) -> Result<(), QueueError> {
+        let mut z_1 = zip.lock().unwrap();
+        z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
+        z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
 
-    //     posts
-    //         .iter()
-    //         .any(|post| post.rating == Rating::Unknown)
-    //         .then(|| -> Result<(), QueueError> {
-    //             z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
-    //             Ok(())
-    //         });
-
-    //     z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
-    //     z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
-    //     z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
-
-    //     z_1.start_file(
-    //         "00_summary.json",
-    //         FileOptions::default()
-    //             .compression_method(CompressionMethod::Deflated)
-    //             .compression_level(Some(9)),
-    //     )?;
-
-    //     z_1.write_all(ap.as_bytes())?;
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     async fn check_file_exists(
         post: &Post,
@@ -377,83 +361,83 @@ impl Queue {
         }
     }
 
-    // async fn fetch_cbz(
-    //     client: Client,
-    //     variant: ImageBoards,
-    //     name_type: NameType,
-    //     post: Post,
-    //     counters: Arc<ProgressCounter>,
-    //     zip: Arc<Mutex<ZipWriter<File>>>,
-    // ) -> Result<(), PostError> {
-    //     let filename = post.file_name(name_type);
-    //     debug!("Fetching {}", &post.url);
-    //     let res = client.get(&post.url).send().await?;
+    async fn fetch_cbz(
+        client: Client,
+        variant: ImageBoards,
+        name_type: NameType,
+        post: Post,
+        counters: Arc<ProgressCounter>,
+        zip: Arc<Mutex<ZipWriter<File>>>,
+    ) -> Result<(), PostError> {
+        let filename = post.file_name(name_type);
+        debug!("Fetching {}", &post.url);
+        let res = client.get(&post.url).send().await?;
 
-    //     if res.status().is_client_error() {
-    //         counters.multi.println(format!(
-    //             "{} {}{}",
-    //             "Image source returned status".bold().red(),
-    //             res.status().as_str().bold().red(),
-    //             ". Skipping download.".bold().red()
-    //         ))?;
-    //         counters.main.inc(1);
-    //         return Err(PostError::RemoteFileNotFound);
-    //     }
+        if res.status().is_client_error() {
+            counters.multi.println(format!(
+                "{} {}{}",
+                "Image source returned status".bold().red(),
+                res.status().as_str().bold().red(),
+                ". Skipping download.".bold().red()
+            ))?;
+            counters.main.inc(1);
+            return Err(PostError::RemoteFileNotFound);
+        }
 
-    //     let size = res.content_length().unwrap_or_default();
+        let size = res.content_length().unwrap_or_default();
 
-    //     let pb = counters.add_download_bar(size, variant);
+        let pb = counters.add_download_bar(size, variant);
 
-    //     // Download the file chunk by chunk.
-    //     debug!("Retrieving chunks for {}", &filename);
-    //     let mut stream = res.bytes_stream();
+        // Download the file chunk by chunk.
+        debug!("Retrieving chunks for {}", &filename);
+        let mut stream = res.bytes_stream();
 
-    //     let buf_size: usize = size.try_into()?;
+        let buf_size: usize = size.try_into()?;
 
-    //     let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
+        let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
 
-    //     let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+        let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 
-    //     while let Some(item) = stream.next().await {
-    //         // Retrieve chunk.
-    //         let chunk = match item {
-    //             Ok(chunk) => chunk,
-    //             Err(e) => {
-    //                 return Err(PostError::ChunkDownloadFail {
-    //                     message: e.to_string(),
-    //                 })
-    //             }
-    //         };
-    //         pb.inc(chunk.len().try_into()?);
+        while let Some(item) = stream.next().await {
+            // Retrieve chunk.
+            let chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => {
+                    return Err(PostError::ChunkDownloadFail {
+                        message: e.to_string(),
+                    })
+                }
+            };
+            pb.inc(chunk.len().try_into()?);
 
-    //         // Write to file.
-    //         AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
-    //     }
+            // Write to file.
+            AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
+        }
 
-    //     spawn_blocking(move || -> Result<(), PostError> {
-    //         let mut un_mut = zip.lock().unwrap();
+        spawn_blocking(move || -> Result<(), PostError> {
+            let mut un_mut = zip.lock().unwrap();
 
-    //         debug!("Writing {} to cbz file", filename);
-    //         match un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options) {
-    //             Ok(_) => {}
-    //             Err(error) => {
-    //                 return Err(PostError::ZipFileWriteError {
-    //                     message: error.to_string(),
-    //                 })
-    //             }
-    //         };
+            debug!("Writing {} to cbz file", filename);
+            match un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options) {
+                Ok(_) => {}
+                Err(error) => {
+                    return Err(PostError::ZipFileWriteError {
+                        message: error.to_string(),
+                    })
+                }
+            };
 
-    //         un_mut.write_all(&fvec)?;
-    //         Ok(())
-    //     })
-    //     .await??;
+            un_mut.write_all(&fvec)?;
+            Ok(())
+        })
+        .await??;
 
-    //     pb.finish_and_clear();
+        pb.finish_and_clear();
 
-    //     finish_and_increment!(counters);
+        finish_and_increment!(counters);
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     async fn fetch(
         client: Client,
