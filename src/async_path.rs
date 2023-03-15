@@ -14,7 +14,10 @@ use ibdl_common::{
 use ibdl_core::{async_queue::Queue, cli::Cli};
 use ibdl_extractors::{
     error::ExtractorError,
-    websites::{danbooru::DanbooruExtractor, e621::E621Extractor, AsyncFetch, Extractor},
+    websites::{
+        danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
+        moebooru::MoebooruExtractor, AsyncFetch, Extractor, MultiWebsite,
+    },
 };
 use once_cell::sync::Lazy;
 
@@ -88,6 +91,32 @@ async fn search_args_async(
 
             Ok((ext_thd, client))
         }
-        _ => unimplemented!(),
+        ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
+            let unit = GelbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist)
+                .set_imageboard(*args.imageboard)?;
+            let client = unit.client();
+
+            let ext_thd = unit.setup_fetch_thread(
+                channel_tx,
+                args.start_page,
+                args.limit,
+                Some(POST_COUNTER.clone()),
+            );
+
+            Ok((ext_thd, client))
+        }
+        ImageBoards::Konachan => {
+            let unit = MoebooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let client = unit.client();
+
+            let ext_thd = unit.setup_fetch_thread(
+                channel_tx,
+                args.start_page,
+                args.limit,
+                Some(POST_COUNTER.clone()),
+            );
+
+            Ok((ext_thd, client))
+        }
     }
 }

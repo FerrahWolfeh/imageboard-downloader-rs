@@ -1,13 +1,16 @@
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
 
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
     post::Post,
-    tokio::{spawn, sync::mpsc::UnboundedSender, task::JoinHandle},
+    tokio::{spawn, sync::mpsc::UnboundedSender, task::JoinHandle, time::sleep},
     ImageBoards,
 };
 
@@ -108,6 +111,10 @@ impl AsyncFetch for E621Extractor {
             }
 
             page += 1;
+
+            //debounce
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
         }
 
         Ok(self.total_removed)
