@@ -35,7 +35,6 @@ impl ToString for Rating {
     }
 }
 
-#[allow(clippy::should_implement_trait)]
 impl Rating {
     /// Guess the variant according to the rating tag present in the post
     pub fn from_rating_str(s: &str) -> Self {
