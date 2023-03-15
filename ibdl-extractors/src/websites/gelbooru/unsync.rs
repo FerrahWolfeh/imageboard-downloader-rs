@@ -107,6 +107,7 @@ impl AsyncFetch for GelbooruExtractor {
 
             if let Some(num) = limit {
                 if total_posts_sent >= num {
+                    debug!("Target post count of {} reached.", num);
                     break;
                 }
             }
@@ -122,6 +123,7 @@ impl AsyncFetch for GelbooruExtractor {
             sleep(Duration::from_millis(500)).await;
         }
 
+        debug!("Terminating thread.");
         Ok(self.total_removed)
     }
 }

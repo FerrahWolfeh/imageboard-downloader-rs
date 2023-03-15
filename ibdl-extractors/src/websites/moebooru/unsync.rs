@@ -105,6 +105,7 @@ impl AsyncFetch for MoebooruExtractor {
 
             if let Some(num) = limit {
                 if total_posts_sent >= num {
+                    debug!("Target post count of {} reached.", num);
                     break;
                 }
             }
@@ -116,6 +117,7 @@ impl AsyncFetch for MoebooruExtractor {
             page += 1;
         }
 
+        debug!("Terminating thread.");
         Ok(self.total_removed)
     }
 }

@@ -105,6 +105,7 @@ impl AsyncFetch for DanbooruExtractor {
 
             if let Some(num) = limit {
                 if total_posts_sent >= num {
+                    debug!("Target post count of {} reached.", num);
                     break;
                 }
             }
@@ -116,7 +117,7 @@ impl AsyncFetch for DanbooruExtractor {
             page += 1;
         }
 
-        debug!("Search finished! Terminating thread.");
+        debug!("Terminating thread.");
         Ok(self.total_removed)
     }
 }
