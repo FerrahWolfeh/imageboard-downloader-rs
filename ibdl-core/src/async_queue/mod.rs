@@ -149,7 +149,7 @@ impl Queue {
             //     return Ok(counters.downloaded_mtx.load(Ordering::SeqCst));
             // }
 
-            let mut update_bar_len = true;
+            counters.init_length_updater(post_counter.clone());
 
             let channel = UnboundedReceiverStream::new(receiver_channel);
 
@@ -160,16 +160,6 @@ impl Queue {
                     let file_path = output_dir.join(d.file_name(name_type));
                     let variant = self.imageboard;
                     let counters = counters.clone();
-
-                    if update_bar_len {
-                        counters
-                            .main
-                            .set_length(post_counter.load(Ordering::Relaxed));
-                    }
-
-                    if counters.main.length().unwrap() == 0 {
-                        update_bar_len = false
-                    }
 
                     task::spawn(async move {
                         if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type)

@@ -118,7 +118,7 @@ impl ProgressCounter {
         let cloned_bar = self.main.clone();
         thread::spawn(move || loop {
             cloned_bar.set_length(counter.load(Ordering::Relaxed));
-            thread::sleep(Duration::from_millis(1000))
+            thread::sleep(Duration::from_millis(1000));
         });
     }
 }
