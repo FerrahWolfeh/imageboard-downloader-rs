@@ -31,6 +31,7 @@ mod unsync;
 //const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
 
 /// Main object to download posts
+#[derive(Clone, Debug)]
 pub struct E621Extractor {
     client: Client,
     tags: Vec<String>,
@@ -123,7 +124,7 @@ impl Extractor for E621Extractor {
                 page
             };
 
-            let posts = Self::get_post_list(self, position).await?;
+            let posts = self.get_post_list(position).await?;
             let size = posts.len();
 
             if size == 0 {
