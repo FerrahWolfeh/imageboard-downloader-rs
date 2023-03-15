@@ -103,6 +103,12 @@ impl AsyncFetch for MoebooruExtractor {
                 }
             }
 
+            if let Some(num) = limit {
+                if total_posts_sent >= num {
+                    break;
+                }
+            }
+
             if page == 100 {
                 break;
             }

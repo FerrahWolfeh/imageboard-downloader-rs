@@ -106,6 +106,12 @@ impl AsyncFetch for E621Extractor {
                 }
             }
 
+            if let Some(num) = limit {
+                if total_posts_sent >= num {
+                    break;
+                }
+            }
+
             if page == 100 {
                 break;
             }
@@ -117,6 +123,7 @@ impl AsyncFetch for E621Extractor {
             sleep(Duration::from_millis(500)).await;
         }
 
+        debug!("Search finished! Terminating thread.");
         Ok(self.total_removed)
     }
 }
