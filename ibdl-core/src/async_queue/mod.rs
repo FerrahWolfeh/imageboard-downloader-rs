@@ -149,7 +149,7 @@ impl Queue {
             //     return Ok(counters.downloaded_mtx.load(Ordering::SeqCst));
             // }
 
-            counters.init_length_updater(post_counter.clone());
+            counters.init_length_updater(post_counter.clone(), 500);
 
             let channel = UnboundedReceiverStream::new(receiver_channel);
 

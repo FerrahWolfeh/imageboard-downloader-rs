@@ -114,11 +114,11 @@ impl ProgressCounter {
         self.multi.add(bar)
     }
 
-    pub fn init_length_updater(&self, counter: Arc<AtomicU64>) {
+    pub fn init_length_updater(&self, counter: Arc<AtomicU64>, interval: u64) {
         let cloned_bar = self.main.clone();
         thread::spawn(move || loop {
             cloned_bar.set_length(counter.load(Ordering::Relaxed));
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_millis(interval));
         });
     }
 }
