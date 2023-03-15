@@ -145,6 +145,8 @@ impl Queue {
             let channel = UnboundedReceiverStream::new(channel_rx);
 
             if self.cbz {
+                counters.init_length_updater(post_counter.clone(), 500);
+
                 self.cbz_path(output_dir, counters.clone(), channel).await?;
 
                 counters.main.finish_and_clear();
