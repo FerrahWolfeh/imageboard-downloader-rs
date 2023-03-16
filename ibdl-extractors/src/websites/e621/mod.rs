@@ -15,7 +15,6 @@ use ibdl_common::{
     tokio, ImageBoards,
 };
 use std::fmt::Display;
-use std::sync::Mutex;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
@@ -23,7 +22,7 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::e621::models::E621TopLevel,
 };
 
-use super::{Auth, Extractor};
+use super::{Auth, Extractor, VIDEO_EXTENSIONS};
 
 mod models;
 mod unsync;
@@ -41,11 +40,17 @@ pub struct E621Extractor {
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
+    map_videos: bool,
 }
 
 #[async_trait]
 impl Extractor for E621Extractor {
-    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
+    fn new<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+    ) -> Self
     where
         S: ToString + Display,
     {
@@ -73,6 +78,7 @@ impl Extractor for E621Extractor {
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
             total_removed: 0,
+            map_videos,
         }
     }
 
@@ -208,9 +214,26 @@ impl Extractor for E621Extractor {
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let mut items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
 
-        let post_iter = items.posts.iter_mut().filter(|c| c.file.url.is_some());
+        let post_iter = items
+            .posts
+            .iter_mut()
+            .filter(|c| c.file.url.is_some())
+            .filter(|post| {
+                let extension = post.file.ext.clone().unwrap();
 
-        let post_list: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+                if !self.map_videos {
+                    for ext in VIDEO_EXTENSIONS {
+                        if extension.ends_with(ext) {
+                            return false;
+                        }
+                    }
+                    true
+                } else {
+                    true
+                }
+            });
+
+        let mut post_list: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|c| {
             let tag_array = [
@@ -262,11 +285,10 @@ impl Extractor for E621Extractor {
                 rating: Rating::from_rating_str(&c.rating),
             };
 
-            post_list.lock().unwrap().push(unit);
+            post_list.push(unit);
         });
-        let pl = post_list.lock().unwrap().clone();
-        drop(post_list);
-        Ok(pl)
+
+        Ok(post_list)
     }
 
     fn client(&self) -> Client {

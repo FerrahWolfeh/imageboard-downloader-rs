@@ -21,6 +21,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_E621.to_string())))
     });
@@ -29,6 +30,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_DANBOORU.to_string())))
     });
@@ -37,6 +39,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         b.iter(|| ee.map_posts(black_box(TEST_JSON_KONACHAN.to_string())))
     });
@@ -45,6 +48,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         let ab = ee.set_imageboard(ibdl_common::ImageBoards::Rule34).unwrap();
         b.iter(|| ab.map_posts(black_box(TEST_JSON_R34.to_string())))
@@ -54,6 +58,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Gelbooru)
@@ -65,6 +70,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
+            true,
         );
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Realbooru)

@@ -76,6 +76,10 @@ pub struct Cli {
     )]
     pub save_file_as_id: bool,
 
+    /// Do not download animated gifs or video files
+    #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
+    pub no_animated: bool,
+
     /// Set a max number of posts to download.
     ///
     /// [max: 65535]

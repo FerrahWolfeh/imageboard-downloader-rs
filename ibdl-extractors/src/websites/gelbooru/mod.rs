@@ -17,9 +17,9 @@ use ibdl_common::{
     ImageBoards,
 };
 use std::fmt::Display;
-use std::sync::Mutex;
 use std::time::Duration;
 
+use crate::websites::VIDEO_EXTENSIONS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
 use super::{Extractor, MultiWebsite};
@@ -34,12 +34,18 @@ pub struct GelbooruExtractor {
     disable_blacklist: bool,
     total_removed: u64,
     download_ratings: Vec<Rating>,
+    map_videos: bool,
 }
 
 #[async_trait]
 impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
-    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
+    fn new<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+    ) -> Self
     where
         S: ToString + Display,
     {
@@ -69,6 +75,7 @@ impl Extractor for GelbooruExtractor {
             disable_blacklist,
             total_removed: 0,
             download_ratings: download_ratings.to_vec(),
+            map_videos,
         }
     }
 
@@ -200,7 +207,7 @@ impl Extractor for GelbooruExtractor {
         }
 
         if let Some(it) = items["post"].as_array() {
-            let posts = Self::gelbooru_new_path(it);
+            let posts = self.gelbooru_new_path(it);
 
             return Ok(posts);
         }
@@ -246,6 +253,7 @@ impl MultiWebsite for GelbooruExtractor {
             disable_blacklist: self.disable_blacklist,
             total_removed: self.total_removed,
             download_ratings: self.download_ratings,
+            map_videos: self.map_videos,
         })
     }
 }
@@ -255,7 +263,7 @@ impl GelbooruExtractor {
         let start = Instant::now();
         let post_iter = list.iter().filter(|f| f["hash"].as_str().is_some());
 
-        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+        let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|f| {
             let tag_iter = f["tags"].as_str().unwrap().split(' ');
@@ -274,6 +282,14 @@ impl GelbooruExtractor {
 
             let ext = extract_ext_from_url!(file);
 
+            if !self.map_videos {
+                for exten in VIDEO_EXTENSIONS {
+                    if ext.ends_with(exten) {
+                        break;
+                    }
+                }
+            }
+
             let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
                 format!(
                     "https://realbooru.com/images/{}/{}.{}",
@@ -289,30 +305,27 @@ impl GelbooruExtractor {
                 id: f["id"].as_u64().unwrap(),
                 url: drop_url,
                 md5,
-                extension: extract_ext_from_url!(file),
+                extension: ext,
                 rating,
                 tags,
             };
 
-            post_mtx.lock().unwrap().push(unit);
+            post_mtx.push(unit);
         });
 
         let end = Instant::now();
 
-        let posts = post_mtx.lock().unwrap().clone();
-        drop(post_mtx);
-
-        debug!("List size: {}", posts.len());
+        debug!("List size: {}", post_mtx.len());
         debug!("Post mapping took {:?}", end - start);
 
-        posts
+        post_mtx
     }
 
-    fn gelbooru_new_path(list: &[Value]) -> Vec<Post> {
+    fn gelbooru_new_path(&self, list: &[Value]) -> Vec<Post> {
         let start = Instant::now();
         let post_iter = list.iter().filter(|i| i["file_url"].as_str().is_some());
 
-        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+        let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|post| {
             let url = post["file_url"].as_str().unwrap().to_string();
@@ -324,26 +337,33 @@ impl GelbooruExtractor {
                 tags.push(i.to_string());
             });
 
+            let extension = extract_ext_from_url!(url);
+
+            if !self.map_videos {
+                for exten in VIDEO_EXTENSIONS {
+                    if extension.ends_with(exten) {
+                        break;
+                    }
+                }
+            }
+
             let unit = Post {
                 id: post["id"].as_u64().unwrap(),
                 md5: post["md5"].as_str().unwrap().to_string(),
-                url: url.clone(),
-                extension: extract_ext_from_url!(url),
+                url,
+                extension,
                 tags,
                 rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
             };
 
-            post_mtx.lock().unwrap().push(unit);
+            post_mtx.push(unit);
         });
 
         let end = Instant::now();
 
-        let posts = post_mtx.lock().unwrap().clone();
-        drop(post_mtx);
-
-        debug!("List size: {}", posts.len());
+        debug!("List size: {}", post_mtx.len());
         debug!("Post mapping took {:?}", end - start);
 
-        posts
+        post_mtx
     }
 }

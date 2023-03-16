@@ -6,7 +6,7 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor};
+use super::{Auth, Extractor, VIDEO_EXTENSIONS};
 use crate::auth::ImageboardConfig;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
@@ -20,7 +20,6 @@ use ibdl_common::{
     ImageBoards,
 };
 use std::fmt::Display;
-use std::sync::Mutex;
 
 mod models;
 mod unsync;
@@ -36,11 +35,17 @@ pub struct DanbooruExtractor {
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
+    map_videos: bool,
 }
 
 #[async_trait]
 impl Extractor for DanbooruExtractor {
-    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
+    fn new<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+    ) -> Self
     where
         S: ToString + Display,
     {
@@ -68,6 +73,7 @@ impl Extractor for DanbooruExtractor {
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
             total_removed: 0,
+            map_videos,
         }
     }
 
@@ -203,20 +209,29 @@ impl Extractor for DanbooruExtractor {
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let parsed_json: Vec<DanbooruPost> =
-            serde_json::from_str::<Vec<DanbooruPost>>(raw_json.as_str()).unwrap();
+            serde_json::from_str::<Vec<DanbooruPost>>(raw_json.as_str())?;
 
-        let batch = parsed_json.into_iter().filter(|c| c.file_url.is_some());
+        let batch = parsed_json
+            .into_iter()
+            .filter(|c| c.file_url.is_some())
+            .filter(|post| {
+                let extension = post.file_ext.clone().unwrap();
 
-        let posts: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(batch.size_hint().0));
-
-        batch.for_each(|c| {
-            let tags = c.tag_string.unwrap();
-            let tag_list_iter = tags.split(' ');
-            let mut tag_list = Vec::with_capacity(tag_list_iter.size_hint().0);
-
-            tag_list_iter.for_each(|i| {
-                tag_list.push(i.to_string());
+                if !self.map_videos {
+                    for ext in VIDEO_EXTENSIONS {
+                        if extension.ends_with(ext) {
+                            return false;
+                        }
+                    }
+                    true
+                } else {
+                    true
+                }
             });
+
+        let mapper_iter = batch.map(|c| {
+            let tags = c.tag_string.unwrap();
+            let tag_list = Vec::from_iter(tags.split(' ').map(|tag| tag.to_string()));
 
             let rt = c.rating.unwrap();
             let rating = if rt == "s" {
@@ -225,21 +240,17 @@ impl Extractor for DanbooruExtractor {
                 Rating::from_rating_str(&rt)
             };
 
-            let unit = Post {
+            Post {
                 id: c.id.unwrap(),
                 md5: c.md5.unwrap(),
                 url: c.file_url.unwrap(),
                 extension: c.file_ext.unwrap(),
                 tags: tag_list,
                 rating,
-            };
-
-            posts.lock().unwrap().push(unit);
+            }
         });
 
-        let mtx = posts.lock().unwrap().clone();
-        drop(posts);
-        Ok(mtx)
+        Ok(Vec::from_iter(mapper_iter))
     }
 
     fn client(&self) -> Client {

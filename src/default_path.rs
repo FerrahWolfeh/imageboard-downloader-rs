@@ -91,7 +91,12 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
 
     match *args.imageboard {
         ImageBoards::Danbooru => {
-            let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let mut unit = DanbooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             auth_imgboard(args.auth, &mut unit).await?;
 
             let posts = unit.full_search(args.start_page, args.limit).await?;
@@ -101,7 +106,12 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             Ok((posts, unit.total_removed(), unit.client()))
         }
         ImageBoards::E621 => {
-            let mut unit = E621Extractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let mut unit = E621Extractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             auth_imgboard(args.auth, &mut unit).await?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -110,8 +120,13 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             Ok((posts, unit.total_removed(), unit.client()))
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let mut unit = GelbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist)
-                .set_imageboard(*args.imageboard)?;
+            let mut unit = GelbooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            )
+            .set_imageboard(*args.imageboard)?;
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -119,7 +134,12 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             Ok((posts, unit.total_removed(), unit.client()))
         }
         ImageBoards::Konachan => {
-            let mut unit = MoebooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let mut unit = MoebooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());

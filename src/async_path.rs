@@ -53,7 +53,12 @@ async fn search_args_async(
 
     match *args.imageboard {
         ImageBoards::Danbooru => {
-            let mut unit = DanbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let mut unit = DanbooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             auth_imgboard(args.auth, &mut unit).await?;
 
             let client = unit.client();
@@ -68,7 +73,12 @@ async fn search_args_async(
             Ok((ext_thd, client))
         }
         ImageBoards::E621 => {
-            let mut unit = E621Extractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let mut unit = E621Extractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             auth_imgboard(args.auth, &mut unit).await?;
 
             let client = unit.client();
@@ -83,8 +93,13 @@ async fn search_args_async(
             Ok((ext_thd, client))
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let unit = GelbooruExtractor::new(&args.tags, &ratings, args.disable_blacklist)
-                .set_imageboard(*args.imageboard)?;
+            let unit = GelbooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            )
+            .set_imageboard(*args.imageboard)?;
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -97,7 +112,12 @@ async fn search_args_async(
             Ok((ext_thd, client))
         }
         ImageBoards::Konachan => {
-            let unit = MoebooruExtractor::new(&args.tags, &ratings, args.disable_blacklist);
+            let unit = MoebooruExtractor::new(
+                &args.tags,
+                &ratings,
+                args.disable_blacklist,
+                !args.no_animated,
+            );
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(

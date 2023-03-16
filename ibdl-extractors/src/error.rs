@@ -1,7 +1,7 @@
 use crate::auth::Error;
 use ibdl_common::{
     post::Post,
-    reqwest,
+    reqwest, serde_json,
     tokio::{self, sync::mpsc::error::SendError},
 };
 use thiserror::Error;
@@ -31,6 +31,9 @@ pub enum ExtractorError {
         #[from]
         source: Error,
     },
+
+    #[error("Error while deserializing JSON")]
+    JsonSerializeFail(#[from] serde_json::Error),
 
     #[error("Error while reading Global blacklist file. error: {source}")]
     BlacklistIOError {

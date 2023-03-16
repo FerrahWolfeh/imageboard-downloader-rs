@@ -10,13 +10,12 @@ use ibdl_common::{
     ImageBoards,
 };
 use std::fmt::Display;
-use std::sync::Mutex;
 
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::moebooru::models::KonachanPost,
 };
 
-use super::Extractor;
+use super::{Extractor, VIDEO_EXTENSIONS};
 
 mod models;
 mod unsync;
@@ -28,11 +27,17 @@ pub struct MoebooruExtractor {
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
     total_removed: u64,
+    map_videos: bool,
 }
 
 #[async_trait]
 impl Extractor for MoebooruExtractor {
-    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
+    fn new<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+    ) -> Self
     where
         S: ToString + Display,
     {
@@ -58,6 +63,7 @@ impl Extractor for MoebooruExtractor {
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
             total_removed: 0,
+            map_videos,
         }
     }
 
@@ -190,7 +196,7 @@ impl Extractor for MoebooruExtractor {
 
         let post_iter = items.iter().filter(|c| c.file_url.is_some());
 
-        let post_mtx: Mutex<Vec<Post>> = Mutex::new(Vec::with_capacity(post_iter.size_hint().0));
+        let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|c| {
             let url = c.file_url.clone().unwrap();
@@ -199,25 +205,33 @@ impl Extractor for MoebooruExtractor {
 
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
+            let ext = extract_ext_from_url!(url);
+
+            if !self.map_videos {
+                for exten in VIDEO_EXTENSIONS {
+                    if ext.ends_with(exten) {
+                        break;
+                    }
+                }
+            }
+
             tag_iter.for_each(|i| {
                 tags.push(i.to_string());
             });
 
             let unit = Post {
                 id: c.id.unwrap(),
-                url: url.clone(),
+                url,
                 md5: c.md5.clone().unwrap(),
-                extension: extract_ext_from_url!(url),
+                extension: ext,
                 tags,
                 rating: Rating::from_rating_str(&c.rating),
             };
 
-            post_mtx.lock().unwrap().push(unit);
+            post_mtx.push(unit);
         });
 
-        let post_list = post_mtx.lock().unwrap().clone();
-        drop(post_mtx);
-        Ok(post_list)
+        Ok(post_mtx)
     }
 
     fn client(&self) -> Client {

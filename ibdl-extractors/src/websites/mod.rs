@@ -90,13 +90,20 @@ pub mod moebooru;
 
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 
+pub const VIDEO_EXTENSIONS: [&str; 4] = [".mp4", ".zip", ".webm", ".gif"];
+
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
 pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new<S>(tags: &[S], download_ratings: &[Rating], disable_blacklist: bool) -> Self
+    fn new<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+    ) -> Self
     where
         S: ToString + Display;
 
