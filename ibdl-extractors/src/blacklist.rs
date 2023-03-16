@@ -39,10 +39,13 @@ use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
 use ibdl_common::tokio::io::AsyncWriteExt;
 use ibdl_common::tokio::time::Instant;
 use ibdl_common::ImageBoards;
+use std::collections::HashSet;
 use std::path::Path;
 use toml::from_str;
 
 use super::error::ExtractorError;
+
+static VIDEO_EXTENSIONS: [&str; 4] = ["mp4", "zip", "webm", "gif"];
 
 const BF_INIT_TEXT: &str = r#"[blacklist]
 global = [] # Place in this array all the tags that will be excluded from all imageboards
@@ -121,6 +124,7 @@ pub struct BlacklistFilter {
     gbl_tags: AHashSet<String>,
     selected_ratings: Vec<Rating>,
     disabled: bool,
+    ignore_animated: bool,
 }
 
 impl BlacklistFilter {
@@ -129,6 +133,7 @@ impl BlacklistFilter {
         auth_tags: &[String],
         selected_ratings: &[Rating],
         disabled: bool,
+        ignore_animated: bool,
     ) -> Result<Self, ExtractorError> {
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
         if !disabled {
@@ -166,6 +171,7 @@ impl BlacklistFilter {
             gbl_tags,
             selected_ratings: sorted_list,
             disabled,
+            ignore_animated,
         })
     }
 
@@ -175,6 +181,8 @@ impl BlacklistFilter {
 
         let original_size = original_list.len();
         let mut removed = 0;
+
+        let ve = HashSet::from(VIDEO_EXTENSIONS);
 
         let start = Instant::now();
         if !self.selected_ratings.is_empty() {
@@ -187,12 +195,19 @@ impl BlacklistFilter {
             removed += safe_counter as u64;
         }
 
-        if !self.disabled && !self.gbl_tags.is_empty() {
+        if !self.disabled {
             let fsize = original_list.len();
-            debug!("Removing posts with tags {:?}", self.gbl_tags);
+            if !self.gbl_tags.is_empty() {
+                debug!("Removing posts with tags {:?}", self.gbl_tags);
 
-            original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
-
+                original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
+            }
+            if self.ignore_animated {
+                original_list.retain(|post| {
+                    let ext = post.extension.as_str();
+                    !ve.contains(ext)
+                })
+            }
             let bp = fsize - original_list.len();
             debug!("Blacklist removed {} posts", bp);
             removed += bp as u64;

@@ -15,7 +15,7 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::moebooru::models::KonachanPost,
 };
 
-use super::{Extractor, VIDEO_EXTENSIONS};
+use super::Extractor;
 
 mod models;
 mod unsync;
@@ -97,6 +97,7 @@ impl Extractor for MoebooruExtractor {
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 
@@ -206,14 +207,6 @@ impl Extractor for MoebooruExtractor {
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             let ext = extract_ext_from_url!(url);
-
-            if !self.map_videos {
-                for exten in VIDEO_EXTENSIONS {
-                    if ext.ends_with(exten) {
-                        break;
-                    }
-                }
-            }
 
             tag_iter.for_each(|i| {
                 tags.push(i.to_string());

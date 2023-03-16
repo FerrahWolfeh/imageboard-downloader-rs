@@ -51,6 +51,7 @@ impl AsyncFetch for E621Extractor {
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 

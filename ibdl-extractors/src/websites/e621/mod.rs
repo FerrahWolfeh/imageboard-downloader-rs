@@ -22,7 +22,7 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::e621::models::E621TopLevel,
 };
 
-use super::{Auth, Extractor, VIDEO_EXTENSIONS};
+use super::{Auth, Extractor};
 
 mod models;
 mod unsync;
@@ -112,6 +112,7 @@ impl Extractor for E621Extractor {
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 
@@ -214,24 +215,7 @@ impl Extractor for E621Extractor {
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
         let mut items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
 
-        let post_iter = items
-            .posts
-            .iter_mut()
-            .filter(|c| c.file.url.is_some())
-            .filter(|post| {
-                let extension = post.file.ext.clone().unwrap();
-
-                if !self.map_videos {
-                    for ext in VIDEO_EXTENSIONS {
-                        if extension.ends_with(ext) {
-                            return false;
-                        }
-                    }
-                    true
-                } else {
-                    true
-                }
-            });
+        let post_iter = items.posts.iter_mut().filter(|c| c.file.url.is_some());
 
         let mut post_list: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 

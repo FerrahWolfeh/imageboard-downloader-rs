@@ -19,7 +19,6 @@ use ibdl_common::{
 use std::fmt::Display;
 use std::time::Duration;
 
-use crate::websites::VIDEO_EXTENSIONS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
 use super::{Extractor, MultiWebsite};
@@ -109,6 +108,7 @@ impl Extractor for GelbooruExtractor {
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 
@@ -282,14 +282,6 @@ impl GelbooruExtractor {
 
             let ext = extract_ext_from_url!(file);
 
-            if !self.map_videos {
-                for exten in VIDEO_EXTENSIONS {
-                    if ext.ends_with(exten) {
-                        break;
-                    }
-                }
-            }
-
             let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
                 format!(
                     "https://realbooru.com/images/{}/{}.{}",
@@ -338,14 +330,6 @@ impl GelbooruExtractor {
             });
 
             let extension = extract_ext_from_url!(url);
-
-            if !self.map_videos {
-                for exten in VIDEO_EXTENSIONS {
-                    if extension.ends_with(exten) {
-                        break;
-                    }
-                }
-            }
 
             let unit = Post {
                 id: post["id"].as_u64().unwrap(),

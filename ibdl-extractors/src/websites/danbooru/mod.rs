@@ -6,7 +6,7 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor, VIDEO_EXTENSIONS};
+use super::{Auth, Extractor};
 use crate::auth::ImageboardConfig;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
@@ -107,6 +107,7 @@ impl Extractor for DanbooruExtractor {
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 
@@ -211,23 +212,7 @@ impl Extractor for DanbooruExtractor {
         let parsed_json: Vec<DanbooruPost> =
             serde_json::from_str::<Vec<DanbooruPost>>(raw_json.as_str())?;
 
-        let batch = parsed_json
-            .into_iter()
-            .filter(|c| c.file_url.is_some())
-            .filter(|post| {
-                let extension = post.file_ext.clone().unwrap();
-
-                if !self.map_videos {
-                    for ext in VIDEO_EXTENSIONS {
-                        if extension.ends_with(ext) {
-                            return false;
-                        }
-                    }
-                    true
-                } else {
-                    true
-                }
-            });
+        let batch = parsed_json.into_iter().filter(|c| c.file_url.is_some());
 
         let mapper_iter = batch.map(|c| {
             let tags = c.tag_string.unwrap();

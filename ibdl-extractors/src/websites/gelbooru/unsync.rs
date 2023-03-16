@@ -50,6 +50,7 @@ impl AsyncFetch for GelbooruExtractor {
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
+            !self.map_videos,
         )
         .await?;
 

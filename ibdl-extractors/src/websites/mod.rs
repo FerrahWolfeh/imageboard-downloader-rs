@@ -90,8 +90,6 @@ pub mod moebooru;
 
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 
-pub const VIDEO_EXTENSIONS: [&str; 4] = [".mp4", ".zip", ".webm", ".gif"];
-
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
 pub trait Extractor {
