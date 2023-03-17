@@ -182,7 +182,7 @@ impl BlacklistFilter {
         let original_size = original_list.len();
         let mut removed = 0;
 
-        let ve = HashSet::from(VIDEO_EXTENSIONS);
+        let ve = AHashSet::from(VIDEO_EXTENSIONS);
 
         let start = Instant::now();
         if !self.selected_ratings.is_empty() {
@@ -205,7 +205,7 @@ impl BlacklistFilter {
             if self.ignore_animated {
                 original_list.retain(|post| {
                     let ext = post.extension.as_str();
-                    !ve.contains(ext)
+                    !(post.tags.contains(&String::from("animated")) || ve.contains(ext))
                 })
             }
             let bp = fsize - original_list.len();
