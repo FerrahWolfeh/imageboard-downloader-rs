@@ -262,6 +262,7 @@ impl Extractor for E621Extractor {
 
             let unit = Post {
                 id: c.id.unwrap(),
+                website: ImageBoards::E621,
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
                 extension: c.file.ext.clone().unwrap(),

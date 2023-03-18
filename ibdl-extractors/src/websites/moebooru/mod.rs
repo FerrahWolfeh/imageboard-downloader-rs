@@ -214,6 +214,7 @@ impl Extractor for MoebooruExtractor {
 
             let unit = Post {
                 id: c.id.unwrap(),
+                website: ImageBoards::Konachan,
                 url,
                 md5: c.md5.clone().unwrap(),
                 extension: ext,

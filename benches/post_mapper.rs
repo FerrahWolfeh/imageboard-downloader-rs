@@ -23,7 +23,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             false,
             true,
         );
-        b.iter(|| ee.map_posts(black_box(TEST_JSON_E621.to_string())))
+        b.iter(|| black_box(ee.map_posts(black_box(TEST_JSON_E621.to_string()))))
     });
     c.bench_function("Map 200 Danbooru posts", |b| {
         let ee = DanbooruExtractor::new(
@@ -32,7 +32,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             false,
             true,
         );
-        b.iter(|| ee.map_posts(black_box(TEST_JSON_DANBOORU.to_string())))
+        b.iter(|| black_box(ee.map_posts(black_box(TEST_JSON_DANBOORU.to_string()))))
     });
     c.bench_function("Map 200 Konachan posts", |b| {
         let ee = MoebooruExtractor::new(
@@ -41,7 +41,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             false,
             true,
         );
-        b.iter(|| ee.map_posts(black_box(TEST_JSON_KONACHAN.to_string())))
+        b.iter(|| black_box(ee.map_posts(black_box(TEST_JSON_KONACHAN.to_string()))))
     });
     c.bench_function("Map 200 Rule34 posts", |b| {
         let ee = GelbooruExtractor::new(
@@ -51,7 +51,7 @@ fn post_mapper_e621(c: &mut Criterion) {
             true,
         );
         let ab = ee.set_imageboard(ibdl_common::ImageBoards::Rule34).unwrap();
-        b.iter(|| ab.map_posts(black_box(TEST_JSON_R34.to_string())))
+        b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_R34.to_string()))))
     });
     c.bench_function("Map 200 Gelbooru posts", |b| {
         let ee = GelbooruExtractor::new(
@@ -63,7 +63,7 @@ fn post_mapper_e621(c: &mut Criterion) {
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Gelbooru)
             .unwrap();
-        b.iter(|| ab.map_posts(black_box(TEST_JSON_GB.to_string())))
+        b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_GB.to_string()))))
     });
     c.bench_function("Map 200 Realbooru posts", |b| {
         let ee = GelbooruExtractor::new(
@@ -75,7 +75,7 @@ fn post_mapper_e621(c: &mut Criterion) {
         let ab = ee
             .set_imageboard(ibdl_common::ImageBoards::Realbooru)
             .unwrap();
-        b.iter(|| ab.map_posts(black_box(TEST_JSON_RB.to_string())))
+        b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_RB.to_string()))))
     });
 }
 

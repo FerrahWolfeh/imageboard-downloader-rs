@@ -184,6 +184,7 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
 
         let pst = Post {
             id,
+            website: ibdl_common::ImageBoards::Danbooru,
             url: "".to_string(),
             md5,
             extension: ext,
@@ -223,33 +224,33 @@ pub fn blacklist_filter(list: Vec<Post>, tags: &AHashSet<String>, safe: bool) ->
 
 fn post_filter_bench(c: &mut Criterion) {
     c.bench_function("Filter 20 Posts", |b| {
+        let (list, tlist) = seed_data(20);
         b.iter(|| {
-            let (list, tlist) = black_box(seed_data(20));
-            blacklist_filter(list, &tlist, false);
+            black_box(blacklist_filter(list.clone(), &tlist, false));
         })
     });
     c.bench_function("Filter 50 Posts", |b| {
+        let (list, tlist) = seed_data(100);
         b.iter(|| {
-            let (list, tlist) = black_box(seed_data(50));
-            blacklist_filter(list, &tlist, false);
+            black_box(blacklist_filter(list.clone(), &tlist, false));
         })
     });
     c.bench_function("Filter 100 Posts", |b| {
+        let (list, tlist) = seed_data(100);
         b.iter(|| {
-            let (list, tlist) = black_box(seed_data(100));
-            blacklist_filter(list, &tlist, false);
+            black_box(blacklist_filter(list.clone(), &tlist, false));
         })
     });
     c.bench_function("Filter 1000 Posts", |b| {
+        let (list, tlist) = seed_data(1000);
         b.iter(|| {
-            let (list, tlist) = black_box(seed_data(1000));
-            blacklist_filter(list, &tlist, false);
+            black_box(blacklist_filter(list.clone(), &tlist, false));
         })
     });
     c.bench_function("Filter 10000 Posts", |b| {
+        let (list, tlist) = seed_data(10000);
         b.iter(|| {
-            let (list, tlist) = black_box(seed_data(10000));
-            blacklist_filter(list, &tlist, false);
+            black_box(blacklist_filter(list.clone(), &tlist, false));
         })
     });
 }

@@ -62,6 +62,8 @@ impl PostQueue {
 pub struct Post {
     /// ID number of the post given by the imageboard
     pub id: u64,
+    /// The imageboard where this post was extracted from
+    pub website: ImageBoards,
     /// Direct URL of the original image file located inside the imageboard's server
     pub url: String,
     /// Instead of calculating the downloaded file's MD5 hash on the fly, it uses the one provided by the API.
@@ -87,6 +89,7 @@ impl Debug for Post {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Post")
             .field("Post ID", &self.id)
+            .field("Website", &self.website)
             .field("Download URL", &self.url)
             .field("MD5 Hash", &self.md5)
             .field("File Extension", &self.extension)

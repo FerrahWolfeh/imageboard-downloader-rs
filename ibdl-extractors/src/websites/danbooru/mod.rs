@@ -227,6 +227,7 @@ impl Extractor for DanbooruExtractor {
 
             Post {
                 id: c.id.unwrap(),
+                website: ImageBoards::Danbooru,
                 md5: c.md5.unwrap(),
                 url: c.file_url.unwrap(),
                 extension: c.file_ext.unwrap(),

@@ -295,6 +295,7 @@ impl GelbooruExtractor {
 
             let unit = Post {
                 id: f["id"].as_u64().unwrap(),
+                website: self.active_imageboard,
                 url: drop_url,
                 md5,
                 extension: ext,
@@ -333,6 +334,7 @@ impl GelbooruExtractor {
 
             let unit = Post {
                 id: post["id"].as_u64().unwrap(),
+                website: self.active_imageboard,
                 md5: post["md5"].as_str().unwrap().to_string(),
                 url,
                 extension,

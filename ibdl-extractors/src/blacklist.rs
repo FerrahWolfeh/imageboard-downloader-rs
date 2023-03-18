@@ -39,7 +39,6 @@ use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
 use ibdl_common::tokio::io::AsyncWriteExt;
 use ibdl_common::tokio::time::Instant;
 use ibdl_common::ImageBoards;
-use std::collections::HashSet;
 use std::path::Path;
 use toml::from_str;
 
