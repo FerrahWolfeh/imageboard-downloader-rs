@@ -66,9 +66,10 @@ pub async fn default_path(args: Cli) -> Result<()> {
         args.simultaneous_downloads,
         Some(client),
         args.cbz,
+        args.annotate,
     );
 
-    let total_down = qw.download(dirname, nt, args.annotate).await?;
+    let total_down = qw.download(dirname, nt).await?;
 
     if !args.cbz {
         let summary = SummaryFile::new(

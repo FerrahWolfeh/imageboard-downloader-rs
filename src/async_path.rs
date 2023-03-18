@@ -34,9 +34,10 @@ pub async fn async_path(args: &Cli) -> Result<()> {
         Some(client),
         args.cbz,
         args.name_type(),
+        args.annotate,
     );
 
-    let asd = qw.setup_async_downloader(dirname, args.annotate, POST_COUNTER.clone(), channel_rx);
+    let asd = qw.setup_async_downloader(dirname, POST_COUNTER.clone(), channel_rx);
 
     let (Ok(removed), Ok(results)) = join!(ext, asd) else {bail!("Failed starting threads!")};
 

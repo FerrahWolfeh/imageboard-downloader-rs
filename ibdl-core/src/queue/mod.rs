@@ -97,6 +97,7 @@ pub struct Queue {
     sim_downloads: u8,
     client: Client,
     cbz: bool,
+    annotate: bool,
 }
 
 impl Queue {
@@ -108,6 +109,7 @@ impl Queue {
         sim_downloads: u8,
         custom_client: Option<Client>,
         save_as_cbz: bool,
+        annotate: bool,
     ) -> Self {
         let client = if let Some(cli) = custom_client {
             cli
@@ -122,6 +124,7 @@ impl Queue {
             imageboard,
             sim_downloads,
             client,
+            annotate,
         }
     }
 
@@ -158,7 +161,6 @@ impl Queue {
         self,
         output_dir: PathBuf,
         name_type: NameType,
-        annotate: bool,
     ) -> Result<u64, QueueError> {
         let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
 
@@ -182,6 +184,7 @@ impl Queue {
                 let file_path = output_dir.join(d.file_name(name_type));
                 let variant = self.imageboard;
                 let counters = counters.clone();
+                let annotate = self.annotate;
 
                 task::spawn(async move {
                     if !Self::check_file_exists(&d, &file_path, counters.clone(), name_type).await?
@@ -224,9 +227,10 @@ impl Queue {
                 let variant = self.imageboard;
                 let counters = counters.clone();
                 let zip = zip.clone();
+                let annotate = self.annotate;
 
                 task::spawn(async move {
-                    Self::fetch_cbz(cli, variant, name_type, d, counters, zip).await?;
+                    Self::fetch_cbz(cli, variant, name_type, d, annotate, counters, zip).await?;
                     Ok::<(), QueueError>(())
                 })
             })
@@ -374,6 +378,7 @@ impl Queue {
         variant: ImageBoards,
         name_type: NameType,
         post: Post,
+        annotate: bool,
         counters: Arc<ProgressCounter>,
         zip: Arc<Mutex<ZipWriter<File>>>,
     ) -> Result<(), PostError> {
@@ -405,6 +410,9 @@ impl Queue {
         let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
 
         let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+        let cap_options = FileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .compression_level(Some(5));
 
         while let Some(item) = stream.next().await {
             // Retrieve chunk.
@@ -436,6 +444,28 @@ impl Queue {
             };
 
             un_mut.write_all(&fvec)?;
+
+            if annotate {
+                debug!("Writing caption for {} to cbz file", filename);
+                match un_mut.start_file(
+                    format!("{}/{}.txt", post.rating.to_string(), post.name(name_type)),
+                    cap_options,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => {
+                        return Err(PostError::ZipFileWriteError {
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
+                let prompt = post.tags.join(", ");
+
+                let f1 = prompt.replace('_', " ");
+                //let f2 = f1.replace('(', "\\(");
+                //let final_prompt = f2.replace(')', "\\)");
+                un_mut.write_all(f1.as_bytes())?;
+            }
             Ok(())
         })
         .await??;
