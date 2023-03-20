@@ -43,6 +43,8 @@ impl AsyncFetch for DanbooruExtractor {
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<u64, ExtractorError> {
+        debug!("Async extractor thread initialized");
+
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
             &self.auth.user_data.blacklisted_tags,
@@ -56,8 +58,6 @@ impl AsyncFetch for DanbooruExtractor {
         let mut total_posts_sent: u16 = 0;
 
         let mut page = 1;
-
-        debug!("Async extractor thread initialized");
 
         loop {
             let position = if let Some(n) = start_page {
@@ -77,7 +77,7 @@ impl AsyncFetch for DanbooruExtractor {
                 break;
             }
 
-            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+            let list = if !(self.disable_blacklist || self.download_ratings.is_empty()) {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -99,7 +99,6 @@ impl AsyncFetch for DanbooruExtractor {
                 sender_channel.send(i)?;
                 total_posts_sent += 1;
                 if let Some(counter) = &post_counter {
-                    let counter = counter;
                     counter.fetch_add(1, Ordering::Relaxed);
                 }
             }
@@ -112,6 +111,7 @@ impl AsyncFetch for DanbooruExtractor {
             }
 
             if page == 100 {
+                debug!("Max number of pages reached");
                 break;
             }
 
