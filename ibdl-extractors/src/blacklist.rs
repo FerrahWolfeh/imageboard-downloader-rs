@@ -212,8 +212,7 @@ impl BlacklistFilter {
             removed += bp as u64;
         }
 
-        let end = Instant::now();
-        debug!("Filtering took {:?}", end - start);
+        debug!("Filtering took {:?}", start.elapsed());
         debug!("Removed total of {} posts", removed);
 
         (removed, original_list)

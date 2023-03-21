@@ -129,6 +129,7 @@ impl Post {
         format!("{}.{}", name, self.extension)
     }
 
+    /// Get the generic name of the post. Can be it's MD5 hash or ID
     #[inline]
     pub fn name(&self, name_type: NameType) -> String {
         match name_type {

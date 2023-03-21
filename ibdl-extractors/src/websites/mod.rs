@@ -1,7 +1,7 @@
-//! Modules that work by parsing post info from a imageboard API into a list of [Posts](crate::imageboards::post).
+//! Modules that work by parsing post info from a imageboard API into a list of [Posts](ibdl_common::post).
 //! # Extractors
 //!
-//! All modules implementing [`Extractor`] work by connecting to a imageboard website, searching for posts with the tags supplied and parsing all of them into a [`PostQueue`](crate::imageboards::post::PostQueue).
+//! All modules implementing [`Extractor`] work by connecting to a imageboard website, searching for posts with the tags supplied and parsing all of them into a [`PostQueue`](ibdl_common::post::PostQueue).
 //!
 //! ## General example
 //! Most extractors have a common set of public methods that should be the default way of implementing and interacting with them.
@@ -135,7 +135,7 @@ pub trait Extractor {
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist
 #[async_trait]
 pub trait Auth {
-    /// Authenticates to the imageboard using the supplied [`Config`](ibdl_common::auth::ImageboardConfig)
+    /// Authenticates to the imageboard using the supplied [`Config`](crate::auth::ImageboardConfig)
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError>;
 }
 
@@ -144,7 +144,7 @@ pub trait MultiWebsite {
     /// Changes the state of the internal active imageboard. If not set, the extractor should default to something, but never `panic`.
     fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
     where
-        Self: std::marker::Sized;
+        Self: std::marker::Sized + Extractor;
 }
 
 /// Capability for the extractor asynchronously send posts through a [`unbounded_channel`](ibdl_common::tokio::sync::mpsc::unbounded_channel) to another thread.
@@ -159,7 +159,7 @@ pub trait AsyncFetch {
         post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<u64, ExtractorError>;
 
-    /// High-level convenience thread builder for [`async_fetch`](async_fetch)
+    /// High-level convenience thread builder for [`async_fetch`](crate::websites::AsyncFetch::async_fetch)
     fn setup_fetch_thread(
         self,
         sender_channel: UnboundedSender<Post>,
