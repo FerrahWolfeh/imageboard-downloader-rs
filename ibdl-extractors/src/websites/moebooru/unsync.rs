@@ -45,7 +45,7 @@ impl AsyncFetch for MoebooruExtractor {
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Konachan,
-            &Vec::default(),
+            &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,

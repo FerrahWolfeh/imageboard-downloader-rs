@@ -7,15 +7,13 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::{
-    generate_output_path, generate_output_path_precise, parse_tag_string, ImageBoardArg, RatingArg,
-};
+use crate::{generate_output_path, generate_output_path_precise, ImageBoardArg, RatingArg};
 
 #[derive(Parser, Debug)]
 #[clap(name = "Imageboard Downloader", author, version, about, long_about = None)]
 pub struct Cli {
     /// Tags to search
-    #[clap(value_parser = parse_tag_string, required = true)]
+    #[clap(value_parser, required = true)]
     pub tags: Vec<String>,
 
     /// Specify which website to download from
@@ -150,7 +148,7 @@ pub struct Cli {
     pub annotate: bool,
 
     /// Exclude posts with these tags
-    #[clap(short, long, value_parser = parse_tag_string, help_heading = "GENERAL")]
+    #[clap(short, long, value_parser, help_heading = "GENERAL")]
     pub exclude: Vec<String>,
 }
 

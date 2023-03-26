@@ -47,7 +47,7 @@ impl AsyncFetch for DanbooruExtractor {
 
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
-            &self.auth.user_data.blacklisted_tags,
+            &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,

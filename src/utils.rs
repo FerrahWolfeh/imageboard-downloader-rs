@@ -23,7 +23,7 @@ pub fn print_results(total_down: u64, total_black: u64) {
         println!(
             "{} {}",
             total_black.to_string().bold().red(),
-            "posts with blacklisted tags were not downloaded."
+            "found posts with blacklisted tags were not downloaded."
                 .bold()
                 .red()
         );

@@ -48,7 +48,7 @@ impl AsyncFetch for E621Extractor {
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::E621,
-            &self.auth.user_data.blacklisted_tags,
+            &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,

@@ -153,16 +153,3 @@ pub fn generate_output_path_precise(main_path: &Path, cbz_mode: bool) -> PathBuf
     }
     main_path.to_path_buf()
 }
-
-pub(crate) fn parse_tag_string(s: &str) -> Result<Vec<String>, String> {
-    if s.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let tag_iter_spaces = s.split(' ');
-    if tag_iter_spaces.size_hint().0 == 0 && !s.is_empty() {
-        return Err("Invalid tag string".to_string());
-    }
-
-    Ok(Vec::from_iter(tag_iter_spaces.map(|st| st.to_string())))
-}

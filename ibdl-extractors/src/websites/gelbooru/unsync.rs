@@ -47,7 +47,7 @@ impl AsyncFetch for GelbooruExtractor {
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             self.active_imageboard,
-            &Vec::default(),
+            &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
