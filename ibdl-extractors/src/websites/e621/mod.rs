@@ -41,6 +41,7 @@ pub struct E621Extractor {
     disable_blacklist: bool,
     total_removed: u64,
     map_videos: bool,
+    excluded_tags: Vec<String>,
 }
 
 #[async_trait]
@@ -79,6 +80,7 @@ impl Extractor for E621Extractor {
             disable_blacklist,
             total_removed: 0,
             map_videos,
+            excluded_tags: vec![],
         }
     }
 
@@ -287,12 +289,22 @@ impl Extractor for E621Extractor {
     fn imageboard(&self) -> ImageBoards {
         ImageBoards::E621
     }
+
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
 }
 
 #[async_trait]
 impl Auth for E621Extractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
-        self.auth = config;
+        let mut cfg = config;
+
+        self.excluded_tags
+            .append(&mut cfg.user_data.blacklisted_tags);
+
+        self.auth = cfg;
         self.auth_state = true;
 
         Ok(())

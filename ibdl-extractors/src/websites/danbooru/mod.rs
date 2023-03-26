@@ -36,6 +36,7 @@ pub struct DanbooruExtractor {
     disable_blacklist: bool,
     total_removed: u64,
     map_videos: bool,
+    excluded_tags: Vec<String>,
 }
 
 #[async_trait]
@@ -74,6 +75,7 @@ impl Extractor for DanbooruExtractor {
             disable_blacklist,
             total_removed: 0,
             map_videos,
+            excluded_tags: vec![],
         }
     }
 
@@ -104,7 +106,7 @@ impl Extractor for DanbooruExtractor {
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::init(
             ImageBoards::Danbooru,
-            &self.auth.user_data.blacklisted_tags,
+            &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
@@ -250,12 +252,22 @@ impl Extractor for DanbooruExtractor {
     fn imageboard(&self) -> ImageBoards {
         ImageBoards::Danbooru
     }
+
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
 }
 
 #[async_trait]
 impl Auth for DanbooruExtractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
-        self.auth = config;
+        let mut cfg = config;
+
+        self.excluded_tags
+            .append(&mut cfg.user_data.blacklisted_tags);
+
+        self.auth = cfg;
         self.auth_state = true;
         Ok(())
     }

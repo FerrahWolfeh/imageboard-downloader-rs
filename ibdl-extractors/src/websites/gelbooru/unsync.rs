@@ -63,9 +63,9 @@ impl AsyncFetch for GelbooruExtractor {
 
         loop {
             let position = if let Some(n) = start_page {
-                page + n
+                page + n - 1
             } else {
-                page
+                page - 1
             };
 
             let posts = self.get_post_list(position).await?;

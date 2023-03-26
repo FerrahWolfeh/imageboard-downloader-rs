@@ -44,37 +44,33 @@ fn post_mapper_e621(c: &mut Criterion) {
         b.iter(|| black_box(ee.map_posts(black_box(TEST_JSON_KONACHAN.to_string()))))
     });
     c.bench_function("Map 200 Rule34 posts", |b| {
-        let ee = GelbooruExtractor::new(
+        let mut ee = GelbooruExtractor::new(
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
             true,
         );
-        let ab = ee.set_imageboard(ibdl_common::ImageBoards::Rule34).unwrap();
+        let ab = ee.set_imageboard(ibdl_common::ImageBoards::Rule34);
         b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_R34.to_string()))))
     });
     c.bench_function("Map 200 Gelbooru posts", |b| {
-        let ee = GelbooruExtractor::new(
+        let mut ee = GelbooruExtractor::new(
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
             true,
         );
-        let ab = ee
-            .set_imageboard(ibdl_common::ImageBoards::Gelbooru)
-            .unwrap();
+        let ab = ee.set_imageboard(ibdl_common::ImageBoards::Gelbooru);
         b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_GB.to_string()))))
     });
     c.bench_function("Map 200 Realbooru posts", |b| {
-        let ee = GelbooruExtractor::new(
+        let mut ee = GelbooruExtractor::new(
             black_box(&["bb"]),
             &[Rating::Safe, Rating::Questionable],
             false,
             true,
         );
-        let ab = ee
-            .set_imageboard(ibdl_common::ImageBoards::Realbooru)
-            .unwrap();
+        let ab = ee.set_imageboard(ibdl_common::ImageBoards::Realbooru);
         b.iter(|| black_box(ab.map_posts(black_box(TEST_JSON_RB.to_string()))))
     });
 }

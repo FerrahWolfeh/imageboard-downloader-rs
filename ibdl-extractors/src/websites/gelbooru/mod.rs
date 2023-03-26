@@ -11,7 +11,7 @@ use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::{self, Value};
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
-    client, extract_ext_from_url, join_tags,
+    extract_ext_from_url, join_tags,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
     ImageBoards,
@@ -34,6 +34,7 @@ pub struct GelbooruExtractor {
     total_removed: u64,
     download_ratings: Vec<Rating>,
     map_videos: bool,
+    excluded_tags: Vec<String>,
 }
 
 #[async_trait]
@@ -75,6 +76,7 @@ impl Extractor for GelbooruExtractor {
             total_removed: 0,
             download_ratings: download_ratings.to_vec(),
             map_videos,
+            excluded_tags: vec![],
         }
     }
 
@@ -225,36 +227,27 @@ impl Extractor for GelbooruExtractor {
     fn imageboard(&self) -> ImageBoards {
         self.active_imageboard
     }
+
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
 }
 
 impl MultiWebsite for GelbooruExtractor {
     /// Sets the imageboard to extract posts from
     ///
     /// If not set, defaults to `ImageBoards::Rule34`
-    fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
+    fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
     where
         Self: std::marker::Sized,
     {
-        let imageboard = match imageboard {
+        self.active_imageboard = match imageboard {
             ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
-            _ => {
-                return Err(ExtractorError::InvalidImageboard {
-                    imgboard: imageboard.to_string(),
-                })
-            }
+            _ => ImageBoards::Gelbooru,
         };
-        let client = client!(imageboard);
 
-        Ok(Self {
-            active_imageboard: imageboard,
-            client,
-            tags: self.tags,
-            tag_string: self.tag_string,
-            disable_blacklist: self.disable_blacklist,
-            total_removed: self.total_removed,
-            download_ratings: self.download_ratings,
-            map_videos: self.map_videos,
-        })
+        self
     }
 }
 

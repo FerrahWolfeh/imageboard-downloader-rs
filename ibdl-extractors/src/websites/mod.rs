@@ -116,6 +116,8 @@ pub trait Extractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError>;
 
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self;
+
     /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError>;
 
@@ -142,7 +144,7 @@ pub trait Auth {
 /// Indicates that the extractor is capable of extracting from multiple websites that share a similar API
 pub trait MultiWebsite {
     /// Changes the state of the internal active imageboard. If not set, the extractor should default to something, but never `panic`.
-    fn set_imageboard(self, imageboard: ImageBoards) -> Result<Self, ExtractorError>
+    fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
     where
         Self: std::marker::Sized + Extractor;
 }

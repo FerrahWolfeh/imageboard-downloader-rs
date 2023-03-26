@@ -62,6 +62,8 @@ async fn search_args_async(
             );
             auth_imgboard(args.auth, &mut unit).await?;
 
+            unit.exclude_tags(&args.exclude);
+
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -82,6 +84,8 @@ async fn search_args_async(
             );
             auth_imgboard(args.auth, &mut unit).await?;
 
+            unit.exclude_tags(&args.exclude);
+
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -94,13 +98,16 @@ async fn search_args_async(
             Ok((ext_thd, client))
         }
         ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-            let unit = GelbooruExtractor::new(
+            let mut unit = GelbooruExtractor::new(
                 &args.tags,
                 &ratings,
                 args.disable_blacklist,
                 !args.no_animated,
-            )
-            .set_imageboard(*args.imageboard)?;
+            );
+
+            unit.exclude_tags(&args.exclude)
+                .set_imageboard(*args.imageboard);
+
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -113,13 +120,15 @@ async fn search_args_async(
             Ok((ext_thd, client))
         }
         ImageBoards::Konachan => {
-            let unit = MoebooruExtractor::new(
+            let mut unit = MoebooruExtractor::new(
                 &args.tags,
                 &ratings,
                 args.disable_blacklist,
                 !args.no_animated,
             );
             let client = unit.client();
+
+            unit.exclude_tags(&args.exclude);
 
             let ext_thd = unit.setup_fetch_thread(
                 channel_tx,

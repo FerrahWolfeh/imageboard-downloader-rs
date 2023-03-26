@@ -28,6 +28,7 @@ pub struct MoebooruExtractor {
     disable_blacklist: bool,
     total_removed: u64,
     map_videos: bool,
+    excluded_tags: Vec<String>,
 }
 
 #[async_trait]
@@ -64,6 +65,7 @@ impl Extractor for MoebooruExtractor {
             disable_blacklist,
             total_removed: 0,
             map_videos,
+            excluded_tags: vec![],
         }
     }
 
@@ -238,5 +240,10 @@ impl Extractor for MoebooruExtractor {
 
     fn imageboard(&self) -> ImageBoards {
         ImageBoards::Konachan
+    }
+
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
     }
 }

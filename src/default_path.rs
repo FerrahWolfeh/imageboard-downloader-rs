@@ -100,6 +100,8 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             );
             auth_imgboard(args.auth, &mut unit).await?;
 
+            unit.exclude_tags(&args.exclude);
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -114,6 +116,9 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
                 !args.no_animated,
             );
             auth_imgboard(args.auth, &mut unit).await?;
+
+            unit.exclude_tags(&args.exclude);
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -126,8 +131,11 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
                 &ratings,
                 args.disable_blacklist,
                 !args.no_animated,
-            )
-            .set_imageboard(*args.imageboard)?;
+            );
+
+            unit.exclude_tags(&args.exclude)
+                .set_imageboard(*args.imageboard);
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -141,6 +149,9 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
                 args.disable_blacklist,
                 !args.no_animated,
             );
+
+            unit.exclude_tags(&args.exclude);
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
