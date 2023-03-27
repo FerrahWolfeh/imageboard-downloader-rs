@@ -1,7 +1,7 @@
-use super::error::QueueError;
 use chrono::{serde::ts_seconds, DateTime, Utc};
 use ibdl_common::serde::{self, Deserialize, Serialize};
 use ibdl_common::serde_json::from_str;
+use ibdl_common::tokio::sync::mpsc::UnboundedReceiver;
 use ibdl_common::{
     bincode::{deserialize, serialize},
     post::{NameType, Post},
@@ -21,6 +21,8 @@ use tokio::{
     task::spawn_blocking,
 };
 use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
+
+use crate::queue::error::QueueError;
 
 /// The download summary can be saved in two formats:
 /// - As a ZSTD-compressed bincode file
@@ -65,34 +67,17 @@ impl SummaryFile {
     pub fn new(
         imageboard: ImageBoards,
         tags: &[String],
-        posts: &[Post],
         name_mode: NameType,
         file_mode: SummaryType,
     ) -> Self {
-        let last_down = posts.first().unwrap().clone();
-
-        let mut post_list: Vec<PostInfo> = Vec::with_capacity(posts.len());
-
-        posts.iter().for_each(|post| {
-            let info = PostInfo {
-                saved_as: post.file_name(name_mode),
-                post: post.clone(),
-            };
-
-            post_list.push(info);
-        });
-
-        post_list.sort();
-        post_list.reverse();
-
         Self {
             file_mode,
             imageboard,
             name_mode,
             tags: tags.to_vec(),
             last_updated: Utc::now(),
-            last_downloaded: last_down.id,
-            posts: post_list,
+            last_downloaded: 0,
+            posts: vec![],
         }
     }
 

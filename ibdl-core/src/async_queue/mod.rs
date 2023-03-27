@@ -50,6 +50,8 @@
 //!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
+//mod summary;
+
 use futures::stream::iter;
 use futures::StreamExt;
 use ibdl_common::log::debug;
@@ -462,8 +464,7 @@ impl Queue {
                 let prompt = post.tags.join(", ");
 
                 let f1 = prompt.replace('_', " ");
-                //let f2 = f1.replace('(', "\\(");
-                //let final_prompt = f2.replace(')', "\\)");
+
                 un_mut.write_all(f1.as_bytes())?;
             }
             Ok(())
@@ -541,7 +542,6 @@ impl Queue {
 
         if annotate {
             let mut prompt_file = OpenOptions::new()
-                .append(true)
                 .create(true)
                 .open(output.join(format!("{}.txt", post.name(name_type))))
                 .await?;
@@ -549,8 +549,7 @@ impl Queue {
             let prompt = post.tags.join(", ");
 
             let f1 = prompt.replace('_', " ");
-            //let f2 = f1.replace('(', "\\(");
-            //let final_prompt = f2.replace(')', "\\)");
+
             prompt_file.write_all(f1.as_bytes()).await?;
         }
 
