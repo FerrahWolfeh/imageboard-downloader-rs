@@ -85,14 +85,15 @@ use crate::queue::error::QueueError;
 use crate::queue::summary::{SummaryFile, SummaryType};
 
 macro_rules! finish_and_increment {
-    ($x:expr) => {{
-        $x.main.inc(1);
-        $x.downloaded_mtx.fetch_add(1, Ordering::SeqCst);
-        $x.total_mtx.fetch_add(1, Ordering::SeqCst);
+    () => {{
+        let counters = get_counters!();
+        counters.main.inc(1);
+        counters.downloaded_mtx.fetch_add(1, Ordering::SeqCst);
+        counters.total_mtx.fetch_add(1, Ordering::SeqCst);
     }};
 }
 
-static PROGRESS_COUNTERS: OnceCell<Arc<ProgressCounter>> = OnceCell::new();
+static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
 
 macro_rules! get_counters {
     () => {{
@@ -100,7 +101,7 @@ macro_rules! get_counters {
     }};
 }
 
-/// Struct where all the downloading and filtering will take place
+/// Struct where all the downloading will take place
 pub struct Queue {
     imageboard: ImageBoards,
     sim_downloads: u8,
@@ -471,7 +472,7 @@ impl Queue {
 
         pb.finish_and_clear();
 
-        finish_and_increment!(counters);
+        finish_and_increment!();
 
         Ok(())
     }
@@ -555,7 +556,7 @@ impl Queue {
 
         pb.finish_and_clear();
 
-        finish_and_increment!(counters);
+        finish_and_increment!();
 
         Ok(())
     }

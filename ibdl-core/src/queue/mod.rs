@@ -162,7 +162,10 @@ impl Queue {
         output_dir: PathBuf,
         name_type: NameType,
     ) -> Result<u64, QueueError> {
-        let counters = ProgressCounter::initialize(self.list.len().try_into()?, self.imageboard);
+        let counters = Arc::new(ProgressCounter::initialize(
+            self.list.len().try_into()?,
+            self.imageboard,
+        ));
 
         self.create_out(&output_dir).await?;
 

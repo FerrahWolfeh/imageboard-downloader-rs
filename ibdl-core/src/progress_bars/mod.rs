@@ -53,48 +53,48 @@ impl Default for BarTemplates {
 pub struct ProgressCounter {
     pub total_mtx: Arc<AtomicUsize>,
     pub downloaded_mtx: Arc<AtomicU64>,
-    pub main: Arc<ProgressBar>,
-    pub multi: Arc<MultiProgress>,
+    pub main: ProgressBar,
+    pub multi: MultiProgress,
 }
 
 impl ProgressCounter {
     /// Initialize the main progress bar and the stat counters.
     ///
     /// The style that the main progress bar will use is based on the predefined styles for each variant of the ['ImageBoards' enum](ibdl_common::ImageBoards)
-    pub fn initialize(len: u64, imageboard: ImageBoards) -> Arc<Self> {
+    pub fn initialize(len: u64, imageboard: ImageBoards) -> Self {
         let template = BarTemplates::new(imageboard);
         let bar = ProgressBar::new(len).with_style(master_progress_style(&template));
         bar.set_draw_target(ProgressDrawTarget::stderr());
         bar.enable_steady_tick(Duration::from_millis(100));
 
         // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
+        let multi = MultiProgress::new();
+        let main = multi.add(bar);
 
-        Arc::new(Self {
+        Self {
             main,
             multi,
             total_mtx: Default::default(),
             downloaded_mtx: Default::default(),
-        })
+        }
     }
 
     /// About the same as `initialize`, but accepts predefined styles instead.
-    pub fn initialize_custom_style(len: u64, style: ProgressStyle) -> Arc<Self> {
+    pub fn initialize_custom_style(len: u64, style: ProgressStyle) -> Self {
         let bar = ProgressBar::new(len).with_style(style);
         bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
         bar.enable_steady_tick(Duration::from_millis(100));
 
         // Initialize the bars
-        let multi = Arc::new(MultiProgress::new());
-        let main = Arc::new(multi.add(bar));
+        let multi = MultiProgress::new();
+        let main = multi.add(bar);
 
-        Arc::new(Self {
+        Self {
             main,
             multi,
             total_mtx: Default::default(),
             downloaded_mtx: Default::default(),
-        })
+        }
     }
 
     /// Adds a download bar under the main progress bar. Will use the predefined style present in the ['ImageBoards' enum](ibdl_common::ImageBoards)
