@@ -45,7 +45,7 @@ impl AsyncFetch for GelbooruExtractor {
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<u64, ExtractorError> {
-        let blacklist = BlacklistFilter::init(
+        let blacklist = BlacklistFilter::new(
             self.active_imageboard,
             &self.excluded_tags,
             &self.download_ratings,

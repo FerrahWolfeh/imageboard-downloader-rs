@@ -43,7 +43,7 @@ impl AsyncFetch for MoebooruExtractor {
         limit: Option<u16>,
         post_counter: Option<Arc<AtomicU64>>,
     ) -> Result<u64, ExtractorError> {
-        let blacklist = BlacklistFilter::init(
+        let blacklist = BlacklistFilter::new(
             ImageBoards::Konachan,
             &self.excluded_tags,
             &self.download_ratings,

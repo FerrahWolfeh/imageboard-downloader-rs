@@ -62,6 +62,7 @@ use ibdl_common::tokio::sync::mpsc::UnboundedReceiver;
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
+use once_cell::sync::OnceCell;
 use owo_colors::OwoColorize;
 use std::convert::TryInto;
 use std::fs::File;
@@ -91,6 +92,14 @@ macro_rules! finish_and_increment {
     }};
 }
 
+static PROGRESS_COUNTERS: OnceCell<Arc<ProgressCounter>> = OnceCell::new();
+
+macro_rules! get_counters {
+    () => {{
+        PROGRESS_COUNTERS.get().unwrap()
+    }};
+}
+
 /// Struct where all the downloading and filtering will take place
 pub struct Queue {
     imageboard: ImageBoards,
@@ -99,12 +108,10 @@ pub struct Queue {
     cbz: bool,
     name_type: NameType,
     annotate: bool,
-    _tags: Vec<String>,
 }
 
 impl Queue {
     /// Set up the queue for download
-    #[must_use]
     pub fn new(
         imageboard: ImageBoards,
         sim_downloads: u8,
@@ -126,7 +133,6 @@ impl Queue {
             annotate,
             client,
             name_type,
-            _tags: vec![],
         }
     }
 
@@ -139,8 +145,9 @@ impl Queue {
         spawn(async move {
             debug!("Async Downloader thread initialized");
 
-            let counters =
-                ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard);
+            let counters = PROGRESS_COUNTERS.get_or_init(|| {
+                ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard)
+            });
 
             self.create_out(&output_dir).await?;
 
@@ -149,7 +156,7 @@ impl Queue {
             if self.cbz {
                 counters.init_length_updater(post_counter.clone(), 500);
 
-                self.cbz_path(output_dir, counters.clone(), channel).await?;
+                self.cbz_path(output_dir, channel).await?;
 
                 counters.main.finish_and_clear();
 
@@ -160,8 +167,7 @@ impl Queue {
 
             counters.init_length_updater(post_counter.clone(), 500);
 
-            self.download_channel(channel, output_dir, counters.clone())
-                .await;
+            self.download_channel(channel, output_dir).await;
 
             counters.main.finish_and_clear();
 
@@ -171,12 +177,7 @@ impl Queue {
         })
     }
 
-    async fn download_channel(
-        &self,
-        channel: UnboundedReceiverStream<Post>,
-        output_dir: PathBuf,
-        counters: Arc<ProgressCounter>,
-    ) {
+    async fn download_channel(&self, channel: UnboundedReceiverStream<Post>, output_dir: PathBuf) {
         channel
             .map(|d| {
                 let nt = self.name_type;
@@ -185,12 +186,11 @@ impl Queue {
                 let output = output_dir.clone();
                 let file_path = output_dir.join(d.file_name(self.name_type));
                 let variant = self.imageboard;
-                let counters = counters.clone();
                 let annotate = self.annotate;
 
                 task::spawn(async move {
-                    if !Self::check_file_exists(&d, &file_path, counters.clone(), nt).await? {
-                        Self::fetch(cli, variant, &d, counters, &output, nt, annotate).await?;
+                    if !Self::check_file_exists(&d, &file_path, nt).await? {
+                        Self::fetch(cli, variant, &d, &output, nt, annotate).await?;
                     }
                     Ok::<(), QueueError>(())
                 })
@@ -231,7 +231,6 @@ impl Queue {
     async fn cbz_path(
         &self,
         path: PathBuf,
-        counters: Arc<ProgressCounter>,
         channel: UnboundedReceiverStream<Post>,
     ) -> Result<(), QueueError> {
         debug!("Target file: {}", path.display());
@@ -248,11 +247,10 @@ impl Queue {
                 let cli = self.client.clone();
                 let zip = zip.clone();
                 let variant = self.imageboard;
-                let counters = counters.clone();
                 let annotate = self.annotate;
 
                 task::spawn(async move {
-                    Self::fetch_cbz(cli, variant, nt, d, annotate, counters, zip).await?;
+                    Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
 
                     Ok::<(), QueueError>(())
                 })
@@ -280,9 +278,9 @@ impl Queue {
     async fn check_file_exists(
         post: &Post,
         output: &Path,
-        counters: Arc<ProgressCounter>,
         name_type: NameType,
     ) -> Result<bool, QueueError> {
+        let counters = get_counters!();
         let id_name = post.file_name(NameType::ID);
         let md5_name = post.file_name(NameType::MD5);
 
@@ -290,17 +288,25 @@ impl Queue {
 
         let raw_path = output.parent().unwrap();
 
-        let (actual, file_is_same) = if output.exists() {
-            debug!("File {} found.", &name);
-            (output.to_path_buf(), false)
-        } else if name_type == NameType::ID {
-            debug!("File {} not found.", &name);
-            debug!("Trying possibly matching file: {}", &md5_name);
-            (raw_path.join(Path::new(&md5_name)), true)
-        } else {
-            debug!("File {} not found.", &name);
-            debug!("Trying possibly matching file: {}", &id_name);
-            (raw_path.join(Path::new(&id_name)), true)
+        let (actual, file_is_same) = match name_type {
+            NameType::ID if output.exists() => {
+                debug!("File {} found.", &name);
+                (output.to_path_buf(), false)
+            }
+            NameType::ID => {
+                debug!("File {} not found.", &name);
+                debug!("Trying possibly matching file: {}", &md5_name);
+                (raw_path.join(Path::new(&md5_name)), true)
+            }
+            NameType::MD5 if output.exists() => {
+                debug!("File {} found.", &name);
+                (output.to_path_buf(), false)
+            }
+            NameType::MD5 => {
+                debug!("File {} not found.", &name);
+                debug!("Trying possibly matching file: {}", &id_name);
+                (raw_path.join(Path::new(&id_name)), true)
+            }
         };
 
         if actual.exists() {
@@ -372,9 +378,9 @@ impl Queue {
         name_type: NameType,
         post: Post,
         annotate: bool,
-        counters: Arc<ProgressCounter>,
         zip: Arc<Mutex<ZipWriter<File>>>,
     ) -> Result<(), PostError> {
+        let counters = get_counters!();
         let filename = post.file_name(name_type);
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
@@ -474,12 +480,14 @@ impl Queue {
         client: Client,
         variant: ImageBoards,
         post: &Post,
-        counters: Arc<ProgressCounter>,
         output: &Path,
         name_type: NameType,
         annotate: bool,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &post.url);
+
+        let counters = get_counters!();
+
         let res = client.get(&post.url).send().await?;
 
         if res.status().is_client_error() {

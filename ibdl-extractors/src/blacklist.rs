@@ -127,7 +127,7 @@ pub struct BlacklistFilter {
 }
 
 impl BlacklistFilter {
-    pub async fn init(
+    pub async fn new(
         imageboard: ImageBoards,
         auth_tags: &[String],
         selected_ratings: &[Rating],

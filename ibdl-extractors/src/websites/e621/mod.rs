@@ -109,7 +109,7 @@ impl Extractor for E621Extractor {
         start_page: Option<u16>,
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
-        let blacklist = BlacklistFilter::init(
+        let blacklist = BlacklistFilter::new(
             ImageBoards::E621,
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,

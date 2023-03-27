@@ -45,7 +45,7 @@ impl AsyncFetch for DanbooruExtractor {
     ) -> Result<u64, ExtractorError> {
         debug!("Async extractor thread initialized");
 
-        let blacklist = BlacklistFilter::init(
+        let blacklist = BlacklistFilter::new(
             ImageBoards::Danbooru,
             &self.excluded_tags,
             &self.download_ratings,

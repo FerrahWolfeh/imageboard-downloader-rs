@@ -104,7 +104,7 @@ impl Extractor for DanbooruExtractor {
         start_page: Option<u16>,
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
-        let blacklist = BlacklistFilter::init(
+        let blacklist = BlacklistFilter::new(
             ImageBoards::Danbooru,
             &self.excluded_tags,
             &self.download_ratings,
