@@ -20,7 +20,7 @@ use spinoff::{spinners, Color, Spinner};
 use crate::utils::{auth_imgboard, print_results};
 
 pub async fn default_path(args: Cli) -> Result<()> {
-    let spinner = Spinner::new_with_stream(
+    let mut spinner = Spinner::new_with_stream(
         spinners::SimpleDotsScrolling,
         "Scanning for posts, please wait".bold().to_string(),
         Color::Blue,

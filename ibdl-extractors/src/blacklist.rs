@@ -32,6 +32,7 @@
 use ahash::AHashSet;
 use ibdl_common::directories::ProjectDirs;
 use ibdl_common::log::debug;
+use ibdl_common::post::extension::Extension;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::Post;
 use ibdl_common::serde::{self, Deserialize, Serialize};
@@ -124,6 +125,7 @@ pub struct BlacklistFilter {
     selected_ratings: Vec<Rating>,
     disabled: bool,
     ignore_animated: bool,
+    extension: Option<Extension>,
 }
 
 impl BlacklistFilter {
@@ -133,6 +135,7 @@ impl BlacklistFilter {
         selected_ratings: &[Rating],
         disabled: bool,
         ignore_animated: bool,
+        extension: Option<Extension>,
     ) -> Result<Self, ExtractorError> {
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
         if !disabled {
@@ -171,6 +174,7 @@ impl BlacklistFilter {
             selected_ratings: sorted_list,
             disabled,
             ignore_animated,
+            extension,
         })
     }
 
@@ -184,6 +188,11 @@ impl BlacklistFilter {
         let ve = AHashSet::from(VIDEO_EXTENSIONS);
 
         let start = Instant::now();
+        if let Some(ext) = self.extension {
+            debug!("Selecting only posts with extension {:?}", ext.to_string());
+            original_list.retain(|post| ext == Extension::guess_format(&post.extension))
+        }
+
         if !self.selected_ratings.is_empty() {
             debug!("Selected ratings: {:?}", self.selected_ratings);
             original_list.retain(|c| self.selected_ratings.binary_search(&c.rating).is_ok());

@@ -14,6 +14,7 @@ use crate::ImageBoards;
 use self::rating::Rating;
 
 pub mod error;
+pub mod extension;
 pub mod rating;
 
 /// Special enum to simplify the selection of the output file name when downloading a [`Post`]

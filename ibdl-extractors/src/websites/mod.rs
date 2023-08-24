@@ -72,7 +72,7 @@ use std::{
 use crate::auth::ImageboardConfig;
 use async_trait::async_trait;
 use ibdl_common::{
-    post::{rating::Rating, Post, PostQueue},
+    post::{extension::Extension, rating::Rating, Post, PostQueue},
     reqwest::Client,
     tokio::{sync::mpsc::UnboundedSender, task::JoinHandle},
     ImageBoards,
@@ -117,6 +117,8 @@ pub trait Extractor {
     ) -> Result<PostQueue, ExtractorError>;
 
     fn exclude_tags(&mut self, tags: &[String]) -> &mut Self;
+
+    fn force_extension(&mut self, extension: Extension) -> &mut Self;
 
     /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError>;

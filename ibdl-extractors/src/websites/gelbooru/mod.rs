@@ -7,6 +7,7 @@
 //!
 
 use async_trait::async_trait;
+use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::{self, Value};
 use ibdl_common::tokio::time::{sleep, Instant};
@@ -35,6 +36,7 @@ pub struct GelbooruExtractor {
     download_ratings: Vec<Rating>,
     map_videos: bool,
     excluded_tags: Vec<String>,
+    selected_extension: Option<Extension>,
 }
 
 #[async_trait]
@@ -77,6 +79,7 @@ impl Extractor for GelbooruExtractor {
             download_ratings: download_ratings.to_vec(),
             map_videos,
             excluded_tags: vec![],
+            selected_extension: None,
         }
     }
 
@@ -111,6 +114,7 @@ impl Extractor for GelbooruExtractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 
@@ -178,6 +182,11 @@ impl Extractor for GelbooruExtractor {
         };
 
         Ok(fin)
+    }
+
+    fn force_extension(&mut self, extension: Extension) -> &mut Self {
+        self.selected_extension = Some(extension);
+        self
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {

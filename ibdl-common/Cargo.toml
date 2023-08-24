@@ -11,7 +11,7 @@ documentation = "https://docs.rs/ibdl-common"
 
 [dependencies]
 log = "0.4.17"
-directories = "4.0.1"
+directories = "5.0.1"
 md5 = "0.7.0"
 thiserror = "1.0.32"
 thiserror-impl = "1.0.32"

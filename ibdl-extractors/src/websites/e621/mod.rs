@@ -6,6 +6,7 @@
 //!
 use crate::auth::ImageboardConfig;
 use async_trait::async_trait;
+use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json;
 use ibdl_common::{
@@ -42,6 +43,7 @@ pub struct E621Extractor {
     total_removed: u64,
     map_videos: bool,
     excluded_tags: Vec<String>,
+    selected_extension: Option<Extension>,
 }
 
 #[async_trait]
@@ -81,6 +83,7 @@ impl Extractor for E621Extractor {
             total_removed: 0,
             map_videos,
             excluded_tags: vec![],
+            selected_extension: None,
         }
     }
 
@@ -104,6 +107,11 @@ impl Extractor for E621Extractor {
         Ok(qw)
     }
 
+    fn force_extension(&mut self, extension: Extension) -> &mut Self {
+        self.selected_extension = Some(extension);
+        self
+    }
+
     async fn full_search(
         &mut self,
         start_page: Option<u16>,
@@ -115,6 +123,7 @@ impl Extractor for E621Extractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 

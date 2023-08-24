@@ -49,6 +49,7 @@ impl AsyncFetch for MoebooruExtractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 

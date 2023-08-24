@@ -1,5 +1,6 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
 use async_trait::async_trait;
+use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Client;
 use ibdl_common::{
     client, extract_ext_from_url, join_tags,
@@ -29,6 +30,7 @@ pub struct MoebooruExtractor {
     total_removed: u64,
     map_videos: bool,
     excluded_tags: Vec<String>,
+    selected_extension: Option<Extension>,
 }
 
 #[async_trait]
@@ -66,6 +68,7 @@ impl Extractor for MoebooruExtractor {
             total_removed: 0,
             map_videos,
             excluded_tags: vec![],
+            selected_extension: None,
         }
     }
 
@@ -100,6 +103,7 @@ impl Extractor for MoebooruExtractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 
@@ -163,6 +167,11 @@ impl Extractor for MoebooruExtractor {
         };
 
         Ok(fin)
+    }
+
+    fn force_extension(&mut self, extension: Extension) -> &mut Self {
+        self.selected_extension = Some(extension);
+        self
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {

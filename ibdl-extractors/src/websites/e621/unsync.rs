@@ -52,6 +52,7 @@ impl AsyncFetch for E621Extractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 

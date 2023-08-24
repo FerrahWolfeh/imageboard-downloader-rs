@@ -40,4 +40,7 @@ pub enum PostError {
 
     #[error("Int conversion failed (maybe size is too large?)")]
     IntConversion(#[from] TryFromIntError),
+
+    #[error("Post has an unknown extension: {message}")]
+    UnknownExtension { message: String },
 }

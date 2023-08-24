@@ -51,6 +51,7 @@ impl AsyncFetch for GelbooruExtractor {
             &self.download_ratings,
             self.disable_blacklist,
             !self.map_videos,
+            self.selected_extension,
         )
         .await?;
 
