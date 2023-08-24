@@ -1,6 +1,6 @@
 // 20002709
 use ibdl_common::{
-    post::{rating::Rating, NameType},
+    post::{extension::Extension, rating::Rating, NameType},
     ImageBoards,
 };
 use std::path::PathBuf;
@@ -150,6 +150,9 @@ pub struct Cli {
     /// Exclude posts with these tags
     #[clap(short, long, value_parser, help_heading = "GENERAL")]
     pub exclude: Vec<String>,
+
+    #[clap(long, value_parser, help_heading = "DOWNLOAD")]
+    pub force_extension: Option<String>,
 }
 
 impl Cli {
@@ -180,6 +183,13 @@ impl Cli {
             ratings.push(Rating::Unknown);
         }
         ratings
+    }
+
+    pub fn get_extension(&self) -> Option<Extension> {
+        if let Some(ext) = &self.force_extension {
+            return Some(Extension::guess_format(ext));
+        }
+        None
     }
 
     pub fn generate_save_path(&self) -> Result<PathBuf, std::io::Error> {

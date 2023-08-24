@@ -102,6 +102,10 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
 
             unit.exclude_tags(&args.exclude);
 
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
+
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
             debug!("Collected {} valid posts", posts.posts.len());
@@ -118,6 +122,10 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             auth_imgboard(args.auth, &mut unit).await?;
 
             unit.exclude_tags(&args.exclude);
+
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
 
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
@@ -138,6 +146,10 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
 
             let posts = unit.full_search(args.start_page, args.limit).await?;
 
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
+
             debug!("Collected {} valid posts", posts.posts.len());
 
             Ok((posts, unit.total_removed(), unit.client()))
@@ -153,6 +165,10 @@ async fn search_args(args: &Cli) -> Result<(PostQueue, u64, Client)> {
             unit.exclude_tags(&args.exclude);
 
             let posts = unit.full_search(args.start_page, args.limit).await?;
+
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
 
             debug!("Collected {} valid posts", posts.posts.len());
 

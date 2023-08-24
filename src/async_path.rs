@@ -64,6 +64,10 @@ async fn search_args_async(
 
             unit.exclude_tags(&args.exclude);
 
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
+
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -85,6 +89,10 @@ async fn search_args_async(
             auth_imgboard(args.auth, &mut unit).await?;
 
             unit.exclude_tags(&args.exclude);
+
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
 
             let client = unit.client();
 
@@ -108,6 +116,10 @@ async fn search_args_async(
             unit.exclude_tags(&args.exclude)
                 .set_imageboard(*args.imageboard);
 
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
+
             let client = unit.client();
 
             let ext_thd = unit.setup_fetch_thread(
@@ -129,6 +141,10 @@ async fn search_args_async(
             let client = unit.client();
 
             unit.exclude_tags(&args.exclude);
+
+            if let Some(ext) = args.get_extension() {
+                unit.force_extension(ext);
+            }
 
             let ext_thd = unit.setup_fetch_thread(
                 channel_tx,
