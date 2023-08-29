@@ -1,6 +1,6 @@
 [package]
 name = "ibdl-core"
-version = "1.3.2"
+version = "1.4.0"
 edition = "2021"
 description = "Main download infrastructure for imageboard_downloader"
 license = "MIT"

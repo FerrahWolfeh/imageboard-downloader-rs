@@ -86,15 +86,6 @@ pub struct Cli {
     #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 
-    /// Enable experimental async downloader (currently only available for Danbooru)
-    #[clap(
-        long = "async",
-        value_parser,
-        default_value_t = false,
-        help_heading = "DOWNLOAD"
-    )]
-    pub async_download: bool,
-
     /// Disable blacklist filtering
     #[clap(long, value_parser, default_value_t = false, help_heading = "GENERAL")]
     pub disable_blacklist: bool,
@@ -116,18 +107,6 @@ pub struct Cli {
         value_name = "PAGE"
     )]
     pub start_page: Option<u16>,
-
-    /// Download only the latest images for tag selection.
-    ///
-    /// Will not re-download already present or deleted images from destination directory
-    #[clap(
-        short,
-        long,
-        value_parser,
-        default_value_t = false,
-        help_heading = "SAVE"
-    )]
-    pub update: bool,
 
     /// Download posts with the selected rating. Can be used multiple times to download posts with other ratings
     #[clap(

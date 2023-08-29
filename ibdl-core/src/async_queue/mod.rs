@@ -84,8 +84,7 @@ use zip::ZipWriter;
 
 use crate::progress_bars::ProgressCounter;
 
-use crate::queue::error::QueueError;
-use crate::queue::summary::{SummaryFile, SummaryType};
+use crate::error::QueueError;
 
 static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
 

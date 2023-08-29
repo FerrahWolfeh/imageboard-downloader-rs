@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 
 pub mod async_queue;
 pub mod cli;
+pub mod error;
 pub mod progress_bars;
-pub mod queue;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
