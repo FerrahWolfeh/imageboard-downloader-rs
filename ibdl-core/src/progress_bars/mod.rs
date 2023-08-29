@@ -1,4 +1,4 @@
-use ibdl_common::ImageBoards;
+use ibdl_common::{tokio::sync::mpsc::Receiver, ImageBoards};
 use indicatif::{
     HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
 };
@@ -49,7 +49,7 @@ impl Default for BarTemplates {
 /// Struct to condense a commonly used duo of progress bar instances and counters for downloaded posts.
 ///
 /// The main usage for this is to pass references of the counters across multiple threads while downloading.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ProgressCounter {
     pub total_mtx: Arc<AtomicUsize>,
     pub downloaded_mtx: Arc<AtomicU64>,
@@ -119,6 +119,20 @@ impl ProgressCounter {
         thread::spawn(move || loop {
             cloned_bar.set_length(counter.load(Ordering::Relaxed));
             thread::sleep(Duration::from_millis(interval));
+        });
+    }
+
+    pub fn init_download_counter(&self, channel: Receiver<bool>) {
+        let mut channel = channel;
+        let cloned_bar = self.main.clone();
+        let cloned_mtx = self.downloaded_mtx.clone();
+        thread::spawn(move || {
+            while let Some(downloaded) = channel.blocking_recv() {
+                if downloaded {
+                    cloned_bar.inc(1);
+                    cloned_mtx.fetch_add(1, Ordering::Relaxed);
+                }
+            }
         });
     }
 }

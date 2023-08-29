@@ -54,14 +54,14 @@
 
 use futures::stream::iter;
 use futures::StreamExt;
-use ibdl_common::log::debug;
+use ibdl_common::log::{debug, trace};
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::tags::TagType;
 use ibdl_common::post::{NameType, Post, PostQueue};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::UnboundedReceiver;
+use ibdl_common::tokio::sync::mpsc::{channel, Sender, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
@@ -86,15 +86,6 @@ use crate::progress_bars::ProgressCounter;
 
 use crate::queue::error::QueueError;
 use crate::queue::summary::{SummaryFile, SummaryType};
-
-macro_rules! finish_and_increment {
-    () => {{
-        let counters = get_counters!();
-        counters.main.inc(1);
-        counters.downloaded_mtx.fetch_add(1, Ordering::SeqCst);
-        counters.total_mtx.fetch_add(1, Ordering::SeqCst);
-    }};
-}
 
 static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
 
@@ -155,33 +146,45 @@ impl Queue {
 
             self.create_out(&output_dir).await?;
 
-            let channel = UnboundedReceiverStream::new(channel_rx);
+            let post_channel = UnboundedReceiverStream::new(channel_rx);
+            let (progress_sender, progress_channel) = channel(self.sim_downloads as usize);
 
             if self.cbz {
                 counters.init_length_updater(post_counter.clone(), 500);
+                counters.init_download_counter(progress_channel);
 
-                self.cbz_path(output_dir, channel).await?;
+                self.cbz_path(output_dir, progress_sender, post_channel)
+                    .await?;
 
                 counters.main.finish_and_clear();
 
-                let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
+                let tot = counters.downloaded_mtx.load(Ordering::Relaxed);
 
                 return Ok(tot);
             }
 
             counters.init_length_updater(post_counter.clone(), 500);
+            counters.init_download_counter(progress_channel);
 
-            self.download_channel(channel, output_dir).await;
+            self.download_channel(post_channel, progress_sender, output_dir)
+                .await;
 
             counters.main.finish_and_clear();
 
-            let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
+            let tot = counters.downloaded_mtx.load(Ordering::Relaxed);
 
             Ok(tot)
         })
     }
 
-    async fn download_channel(&self, channel: UnboundedReceiverStream<Post>, output_dir: PathBuf) {
+    async fn download_channel(
+        &self,
+        channel: UnboundedReceiverStream<Post>,
+        progress: Sender<bool>,
+        output_dir: PathBuf,
+    ) {
+        let sender = progress.clone();
+
         channel
             .map(|d| {
                 let nt = self.name_type;
@@ -200,7 +203,9 @@ impl Queue {
                 })
             })
             .buffer_unordered(self.sim_downloads as usize)
-            .for_each(|_| async {})
+            .for_each(|_| async {
+                let _ = sender.send(true).await;
+            })
             .await
     }
 
@@ -235,6 +240,7 @@ impl Queue {
     async fn cbz_path(
         &self,
         path: PathBuf,
+        progress_channel: Sender<bool>,
         channel: UnboundedReceiverStream<Post>,
     ) -> Result<(), QueueError> {
         debug!("Target file: {}", path.display());
@@ -243,6 +249,7 @@ impl Queue {
         let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
         self.write_zip_structure(zip.clone())?;
+        let sender = progress_channel.clone();
 
         channel
             .map(|d| {
@@ -255,12 +262,13 @@ impl Queue {
 
                 task::spawn(async move {
                     Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
-
                     Ok::<(), QueueError>(())
                 })
             })
             .buffer_unordered(self.sim_downloads.into())
-            .for_each(|_| async {})
+            .for_each(|_| async {
+                let _ = sender.send(true).await;
+            })
             .await;
 
         let mut mtx = zip.lock().unwrap();
@@ -481,8 +489,6 @@ impl Queue {
 
         pb.finish_and_clear();
 
-        finish_and_increment!();
-
         Ok(())
     }
 
@@ -566,11 +572,10 @@ impl Queue {
             let f1 = prompt.replace('_', " ");
 
             prompt_file.write_all(f1.as_bytes()).await?;
+            debug!("Wrote caption file for {}", post.file_name(name_type))
         }
 
         pb.finish_and_clear();
-
-        finish_and_increment!();
 
         Ok(())
     }
