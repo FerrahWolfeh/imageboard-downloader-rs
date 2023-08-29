@@ -9,6 +9,7 @@ pub struct DanbooruPost {
     pub id: Option<u64>,
     pub md5: Option<String>,
     pub file_url: Option<String>,
+    pub tag_string: Option<String>,
     pub tag_string_general: Option<String>,
     pub tag_string_character: Option<String>,
     pub tag_string_copyright: Option<String>,

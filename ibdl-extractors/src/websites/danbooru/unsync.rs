@@ -67,7 +67,7 @@ impl AsyncFetch for DanbooruExtractor {
                 page
             };
 
-            let posts = self.get_post_list(position).await?;
+            let mut posts = self.get_post_list(position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -77,6 +77,12 @@ impl AsyncFetch for DanbooruExtractor {
 
                 break;
             }
+
+            posts.retain(|post| {
+                post.tags
+                    .iter()
+                    .any(|tag| self.extra_tags.contains(&tag.tag()))
+            });
 
             let list = if !(self.disable_blacklist || self.download_ratings.is_empty()) {
                 let (removed, posts) = blacklist.filter(posts);

@@ -17,6 +17,7 @@ pub enum TagType {
     /// Exclusive to e621/926
     Lore,
     Meta,
+    Any,
 }
 
 impl Tag {
@@ -38,7 +39,7 @@ impl Tag {
     pub fn is_prompt_tag(&self) -> bool {
         match self.tag_type {
             TagType::Author | TagType::Copyright | TagType::Lore | TagType::Meta => false,
-            TagType::Character | TagType::Species | TagType::General => true,
+            TagType::Character | TagType::Species | TagType::General | TagType::Any => true,
         }
     }
 }

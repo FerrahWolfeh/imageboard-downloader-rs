@@ -39,6 +39,7 @@ pub struct DanbooruExtractor {
     map_videos: bool,
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
+    extra_tags: Vec<String>,
 }
 
 #[async_trait]
@@ -55,13 +56,20 @@ impl Extractor for DanbooruExtractor {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Danbooru);
 
-        let strvec: Vec<String> = tags
+        let mut strvec: Vec<String> = tags
             .iter()
             .map(|t| {
                 let st: String = t.to_string();
                 st
             })
             .collect();
+
+        let mut extra_tags = Vec::with_capacity(strvec.len().saturating_sub(2));
+
+        if strvec.len() > 2 {
+            let extra = strvec.split_off(1);
+            extra_tags = extra;
+        }
 
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
@@ -79,6 +87,7 @@ impl Extractor for DanbooruExtractor {
             map_videos,
             excluded_tags: vec![],
             selected_extension: None,
+            extra_tags,
         }
     }
 
