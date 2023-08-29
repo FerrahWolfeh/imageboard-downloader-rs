@@ -193,18 +193,34 @@ impl Queue {
                 let output = output_dir.clone();
                 let file_path = output_dir.join(d.file_name(self.name_type));
                 let variant = self.imageboard;
-                let annotate = self.annotate;
 
                 task::spawn(async move {
                     if !Self::check_file_exists(&d, &file_path, nt).await? {
-                        Self::fetch(cli, variant, &d, &output, nt, annotate).await?;
+                        Self::fetch(cli, variant, &d, &output, nt).await?;
                     }
-                    Ok::<(), QueueError>(())
+                    Ok::<Post, QueueError>(d)
                 })
             })
             .buffer_unordered(self.sim_downloads as usize)
-            .for_each(|_| async {
-                let _ = sender.send(true).await;
+            .for_each(|task| async {
+                if let Ok(Ok(post)) = task {
+                    if self.annotate {
+                        if let Err(error) =
+                            Self::write_caption(&post, self.name_type, &output_dir).await
+                        {
+                            let ctrs = get_counters!();
+                            ctrs.multi
+                                .println(format!(
+                                    "{} {}: {}",
+                                    "Failed to write caption file for".red().bold(),
+                                    post.file_name(self.name_type).red().bold(),
+                                    error
+                                ))
+                                .unwrap();
+                        };
+                        let _ = sender.send(true).await;
+                    }
+                }
             })
             .await
     }
@@ -498,7 +514,6 @@ impl Queue {
         post: &Post,
         output: &Path,
         name_type: NameType,
-        annotate: bool,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &post.url);
 
@@ -554,29 +569,36 @@ impl Queue {
         }
         bw.flush().await?;
 
-        if annotate {
-            let mut prompt_file = OpenOptions::new()
-                .create(true)
-                .open(output.join(format!("{}.txt", post.name(name_type))))
-                .await?;
-
-            let tag_list = Vec::from_iter(
-                post.tags
-                    .iter()
-                    .filter(|t| t.is_prompt_tag())
-                    .map(|tag| tag.tag()),
-            );
-
-            let prompt = tag_list.join(", ");
-
-            let f1 = prompt.replace('_', " ");
-
-            prompt_file.write_all(f1.as_bytes()).await?;
-            debug!("Wrote caption file for {}", post.file_name(name_type))
-        }
-
         pb.finish_and_clear();
 
+        Ok(())
+    }
+
+    async fn write_caption(
+        post: &Post,
+        name_type: NameType,
+        output: &Path,
+    ) -> Result<(), PostError> {
+        let outpath = output.join(format!("{}.txt", post.name(name_type)));
+        let mut prompt_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(outpath)
+            .await?;
+
+        let tag_list = Vec::from_iter(
+            post.tags
+                .iter()
+                .filter(|t| t.is_prompt_tag())
+                .map(|tag| tag.tag()),
+        );
+
+        let prompt = tag_list.join(", ");
+
+        let f1 = prompt.replace('_', " ");
+
+        prompt_file.write_all(f1.as_bytes()).await?;
+        debug!("Wrote caption file for {}", post.file_name(name_type));
         Ok(())
     }
 }

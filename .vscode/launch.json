@@ -204,6 +204,36 @@
                 "--cbz"
             ],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test Danbooru async download",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--async",
+                "-e",
+                "lowres",
+                "--id",
+                "--ignore-unknown",
+                "--no-animated",
+                "-O",
+                "/mnt/ram/tst",
+                "folinic_(arknights)",
+                "solo",
+                "--annotate"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
