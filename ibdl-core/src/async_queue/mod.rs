@@ -57,6 +57,7 @@ use futures::StreamExt;
 use ibdl_common::log::debug;
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::rating::Rating;
+use ibdl_common::post::tags::TagType;
 use ibdl_common::post::{NameType, Post, PostQueue};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
@@ -461,7 +462,14 @@ impl Queue {
                     }
                 };
 
-                let prompt = post.tags.join(", ");
+                let tag_list = Vec::from_iter(
+                    post.tags
+                        .iter()
+                        .filter(|t| t.is_prompt_tag())
+                        .map(|tag| tag.tag()),
+                );
+
+                let prompt = tag_list.join(", ");
 
                 let f1 = prompt.replace('_', " ");
 
@@ -546,7 +554,14 @@ impl Queue {
                 .open(output.join(format!("{}.txt", post.name(name_type))))
                 .await?;
 
-            let prompt = post.tags.join(", ");
+            let tag_list = Vec::from_iter(
+                post.tags
+                    .iter()
+                    .filter(|t| t.is_prompt_tag())
+                    .map(|tag| tag.tag()),
+            );
+
+            let prompt = tag_list.join(", ");
 
             let f1 = prompt.replace('_', " ");
 

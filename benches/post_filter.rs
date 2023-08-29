@@ -1,6 +1,10 @@
 use ahash::AHashSet;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use ibdl_common::post::{rating::Rating, Post};
+use ibdl_common::post::{
+    rating::Rating,
+    tags::{Tag, TagType},
+    Post,
+};
 use rand::{
     distributions::{Alphanumeric, DistString},
     seq::SliceRandom,
@@ -175,9 +179,9 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
 
         let ext = EXTENSIONS.choose(&mut rng).unwrap().to_string();
 
-        let tags: Vec<String> = TAGS
+        let tags = TAGS
             .choose_multiple(&mut rng, rn)
-            .map(|t| t.to_string())
+            .map(|t| Tag::new(t, TagType::General))
             .collect();
 
         let rating = *RATINGS.choose(&mut rng).unwrap();
@@ -213,7 +217,7 @@ pub fn blacklist_filter(list: Vec<Post>, tags: &AHashSet<String>, safe: bool) ->
 
     if !blacklist.is_empty() {
         let secondary_sz = lst.len();
-        lst.retain(|c| !c.tags.iter().any(|s| blacklist.contains(s)));
+        lst.retain(|c| !c.tags.iter().any(|s| blacklist.contains(&s.tag())));
 
         let bp = secondary_sz - lst.len();
         removed += bp as u64;

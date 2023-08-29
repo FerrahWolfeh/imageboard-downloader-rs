@@ -462,7 +462,14 @@ impl Queue {
                     }
                 };
 
-                let prompt = post.tags.join(", ");
+                let tag_list = Vec::from_iter(
+                    post.tags
+                        .iter()
+                        .filter(|t| t.is_prompt_tag())
+                        .map(|tag| tag.tag()),
+                );
+
+                let prompt = tag_list.join(", ");
 
                 let f1 = prompt.replace('_', " ");
                 //let f2 = f1.replace('(', "\\(");
@@ -547,7 +554,14 @@ impl Queue {
                 .open(output.join(format!("{}.txt", post.name(name_type))))
                 .await?;
 
-            let prompt = post.tags.join(", ");
+            let tag_list = Vec::from_iter(
+                post.tags
+                    .iter()
+                    .filter(|t| t.is_prompt_tag())
+                    .map(|tag| tag.tag()),
+            );
+
+            let prompt = tag_list.join(", ");
 
             let f1 = prompt.replace('_', " ");
             //let f2 = f1.replace('(', "\\(");

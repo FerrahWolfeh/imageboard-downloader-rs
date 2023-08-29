@@ -13,6 +13,7 @@
 
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
+use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::{self, Value};
 use ibdl_common::tokio::time::{sleep, Instant};
@@ -278,7 +279,7 @@ impl GelbooruExtractor {
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|f| {
-                tags.push(f.to_string());
+                tags.push(Tag::new(f, TagType::General));
             });
 
             let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
@@ -334,7 +335,7 @@ impl GelbooruExtractor {
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|i| {
-                tags.push(i.to_string());
+                tags.push(Tag::new(i, TagType::General));
             });
 
             let extension = extract_ext_from_url!(url);

@@ -34,6 +34,7 @@ use ibdl_common::directories::ProjectDirs;
 use ibdl_common::log::debug;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::rating::Rating;
+use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::post::Post;
 use ibdl_common::serde::{self, Deserialize, Serialize};
 use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
@@ -208,12 +209,12 @@ impl BlacklistFilter {
             if !self.gbl_tags.is_empty() {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
 
-                original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s)));
+                original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
             }
             if self.ignore_animated {
                 original_list.retain(|post| {
                     let ext = post.extension.as_str();
-                    !(post.tags.contains(&String::from("animated")) || ve.contains(ext))
+                    !(post.tags.contains(&Tag::new("animated", TagType::Meta)) || ve.contains(ext))
                 })
             }
             let bp = fsize - original_list.len();

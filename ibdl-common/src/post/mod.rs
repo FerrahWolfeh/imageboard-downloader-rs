@@ -11,11 +11,12 @@ use std::{cmp::Ordering, fmt::Debug, ops::Not};
 
 use crate::ImageBoards;
 
-use self::rating::Rating;
+use self::{rating::Rating, tags::Tag};
 
 pub mod error;
 pub mod extension;
 pub mod rating;
+pub mod tags;
 
 /// Special enum to simplify the selection of the output file name when downloading a [`Post`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,7 +84,7 @@ pub struct Post {
     /// Set of tags associated with the post.
     ///
     /// Used to exclude posts according to a blacklist
-    pub tags: Vec<String>,
+    pub tags: Vec<Tag>,
 }
 
 impl Debug for Post {

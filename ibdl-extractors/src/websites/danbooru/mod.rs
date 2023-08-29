@@ -226,8 +226,7 @@ impl Extractor for DanbooruExtractor {
         let batch = parsed_json.into_iter().filter(|c| c.file_url.is_some());
 
         let mapper_iter = batch.map(|c| {
-            let tags = c.tag_string.unwrap();
-            let tag_list = Vec::from_iter(tags.split(' ').map(|tag| tag.to_string()));
+            let tag_list = c.map_tags();
 
             let rt = c.rating.unwrap();
             let rating = if rt == "s" {

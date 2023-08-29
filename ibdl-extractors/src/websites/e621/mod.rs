@@ -231,45 +231,7 @@ impl Extractor for E621Extractor {
         let mut post_list: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|c| {
-            let tag_array = [
-                c.tags.artist.len(),
-                c.tags.character.len(),
-                c.tags.general.len(),
-                c.tags.copyright.len(),
-                c.tags.lore.len(),
-                c.tags.meta.len(),
-                c.tags.species.len(),
-            ];
-
-            let chunks = tag_array.chunks_exact(4);
-            let remainder = chunks.remainder();
-
-            let sum = chunks.fold([0usize; 4], |mut acc, chunk| {
-                let chunk: [usize; 4] = chunk.try_into().unwrap();
-                for i in 0..4 {
-                    acc[i] += chunk[i];
-                }
-                acc
-            });
-
-            let remainder: usize = remainder.iter().sum();
-
-            let mut reduced: usize = 0;
-            for i in sum {
-                reduced += i;
-            }
-            let full_size = reduced + remainder;
-
-            //let full_size = tag_array.iter().sum();
-
-            let mut tag_list = Vec::with_capacity(full_size);
-            tag_list.append(&mut c.tags.character);
-            tag_list.append(&mut c.tags.artist);
-            tag_list.append(&mut c.tags.general);
-            tag_list.append(&mut c.tags.copyright);
-            tag_list.append(&mut c.tags.lore);
-            tag_list.append(&mut c.tags.meta);
-            tag_list.append(&mut c.tags.species);
+            let tag_list = c.tags.map_tags();
 
             let unit = Post {
                 id: c.id.unwrap(),

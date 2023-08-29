@@ -1,4 +1,7 @@
-use ibdl_common::serde::{self, Deserialize, Serialize};
+use ibdl_common::{
+    post::tags::{Tag, TagType},
+    serde::{self, Deserialize, Serialize},
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "self::serde")]
@@ -43,4 +46,27 @@ pub struct Tags {
     pub artist: Vec<String>,
     pub lore: Vec<String>,
     pub meta: Vec<String>,
+}
+
+impl Tags {
+    pub fn map_tags(&self) -> Vec<Tag> {
+        let mut tag_list = Vec::with_capacity(64);
+        tag_list.extend(self.general.iter().map(|t| Tag::new(t, TagType::General)));
+        tag_list.extend(self.species.iter().map(|t| Tag::new(t, TagType::Species)));
+        tag_list.extend(
+            self.character
+                .iter()
+                .map(|t| Tag::new(t, TagType::Character)),
+        );
+        tag_list.extend(
+            self.copyright
+                .iter()
+                .map(|t| Tag::new(t, TagType::Copyright)),
+        );
+        tag_list.extend(self.artist.iter().map(|t| Tag::new(t, TagType::Author)));
+        tag_list.extend(self.lore.iter().map(|t| Tag::new(t, TagType::Lore)));
+        tag_list.extend(self.meta.iter().map(|t| Tag::new(t, TagType::Meta)));
+
+        tag_list
+    }
 }

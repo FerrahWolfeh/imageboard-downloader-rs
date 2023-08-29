@@ -1,6 +1,7 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
+use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
 use ibdl_common::{
     client, extract_ext_from_url, join_tags,
@@ -220,7 +221,7 @@ impl Extractor for MoebooruExtractor {
             let ext = extract_ext_from_url!(url);
 
             tag_iter.for_each(|i| {
-                tags.push(i.to_string());
+                tags.push(Tag::new(i, TagType::General));
             });
 
             let unit = Post {
