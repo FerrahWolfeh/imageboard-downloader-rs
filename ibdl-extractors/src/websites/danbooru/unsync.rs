@@ -81,7 +81,7 @@ impl AsyncFetch for DanbooruExtractor {
             posts.retain(|post| {
                 post.tags
                     .iter()
-                    .any(|tag| self.extra_tags.contains(&tag.tag()))
+                    .all(|tag| self.extra_tags.contains(&tag.tag()))
             });
 
             let list = if !(self.disable_blacklist || self.download_ratings.is_empty()) {

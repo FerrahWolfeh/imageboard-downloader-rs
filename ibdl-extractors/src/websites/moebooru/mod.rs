@@ -221,7 +221,7 @@ impl Extractor for MoebooruExtractor {
             let ext = extract_ext_from_url!(url);
 
             tag_iter.for_each(|i| {
-                tags.push(Tag::new(i, TagType::General));
+                tags.push(Tag::new(i, TagType::Any));
             });
 
             let unit = Post {

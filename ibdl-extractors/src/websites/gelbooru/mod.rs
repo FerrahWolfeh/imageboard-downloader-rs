@@ -279,7 +279,7 @@ impl GelbooruExtractor {
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|f| {
-                tags.push(Tag::new(f, TagType::General));
+                tags.push(Tag::new(f, TagType::Any));
             });
 
             let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
@@ -335,7 +335,7 @@ impl GelbooruExtractor {
             let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
             tag_iter.for_each(|i| {
-                tags.push(Tag::new(i, TagType::General));
+                tags.push(Tag::new(i, TagType::Any));
             });
 
             let extension = extract_ext_from_url!(url);
