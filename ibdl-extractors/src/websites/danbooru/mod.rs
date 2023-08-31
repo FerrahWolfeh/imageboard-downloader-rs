@@ -71,9 +71,13 @@ impl Extractor for DanbooruExtractor {
             extra_tags = extra;
         }
 
+        debug!("Tag List: {:?}", strvec);
+        if !extra_tags.is_empty() {
+            debug!("Extra tags: {:?}", extra_tags);
+        }
+
         // Merge all tags in the URL format
         let tag_string = join_tags!(strvec);
-        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
