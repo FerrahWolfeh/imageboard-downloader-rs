@@ -174,3 +174,12 @@ pub trait AsyncFetch {
         post_counter: Option<Arc<AtomicU64>>,
     ) -> JoinHandle<Result<u64, ExtractorError>>;
 }
+
+#[async_trait]
+pub trait PoolExtract {
+    async fn fetch_pool_idxs(&mut self, pool_id: u32) -> Result<Vec<u64>, ExtractorError>;
+
+    fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError>;
+
+    fn setup_pool_download(&mut self, pool_id: Option<u32>);
+}

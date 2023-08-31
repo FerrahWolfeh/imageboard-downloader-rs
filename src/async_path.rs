@@ -14,6 +14,7 @@ use ibdl_core::{async_queue::Queue, cli::Cli};
 use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor, AsyncFetch, Extractor, ExtractorThreadHandle, MultiWebsite,
+    PoolExtract,
 };
 use once_cell::sync::Lazy;
 

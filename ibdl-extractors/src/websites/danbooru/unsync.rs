@@ -14,7 +14,7 @@ use ibdl_common::{
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{AsyncFetch, Extractor},
+    websites::{AsyncFetch, Extractor, PoolExtract},
 };
 
 use super::DanbooruExtractor;
