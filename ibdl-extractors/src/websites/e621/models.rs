@@ -70,3 +70,9 @@ impl Tags {
         tag_list
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "self::serde")]
+pub struct E621PoolList {
+    pub post_ids: Vec<u64>,
+}

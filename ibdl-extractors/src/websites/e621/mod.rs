@@ -26,6 +26,7 @@ use crate::{
 use super::{Auth, Extractor};
 
 mod models;
+mod pool;
 mod unsync;
 
 //const _E621_FAVORITES: &str = "https://e621.net/favorites.json";
@@ -44,6 +45,7 @@ pub struct E621Extractor {
     map_videos: bool,
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
+    pool_id: Option<u32>,
 }
 
 #[async_trait]
@@ -84,6 +86,7 @@ impl Extractor for E621Extractor {
             map_videos,
             excluded_tags: vec![],
             selected_extension: None,
+            pool_id: None,
         }
     }
 
