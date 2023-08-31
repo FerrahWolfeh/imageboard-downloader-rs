@@ -94,12 +94,39 @@ macro_rules! get_counters {
     }};
 }
 
+#[derive(Debug, Copy, Clone)]
+enum DownloadFormat {
+    Cbz,
+    CbzPool,
+    Folder,
+}
+
+impl DownloadFormat {
+    #[inline]
+    pub fn download_cbz(&self) -> bool {
+        match self {
+            DownloadFormat::Cbz => true,
+            DownloadFormat::CbzPool => true,
+            DownloadFormat::Folder => false,
+        }
+    }
+
+    #[inline]
+    pub fn download_pool_cbz(&self) -> bool {
+        match self {
+            DownloadFormat::Cbz => false,
+            DownloadFormat::CbzPool => true,
+            DownloadFormat::Folder => false,
+        }
+    }
+}
+
 /// Struct where all the downloading will take place
 pub struct Queue {
     imageboard: ImageBoards,
     sim_downloads: u8,
     client: Client,
-    cbz: bool,
+    download_fmt: DownloadFormat,
     name_type: NameType,
     annotate: bool,
 }
@@ -111,6 +138,7 @@ impl Queue {
         sim_downloads: u8,
         custom_client: Option<Client>,
         save_as_cbz: bool,
+        pool_download: bool,
         name_type: NameType,
         annotate: bool,
     ) -> Self {
@@ -120,8 +148,16 @@ impl Queue {
             client!(imageboard)
         };
 
+        let download_fmt = if save_as_cbz && pool_download {
+            DownloadFormat::CbzPool
+        } else if save_as_cbz {
+            DownloadFormat::Cbz
+        } else {
+            DownloadFormat::Folder
+        };
+
         Self {
-            cbz: save_as_cbz,
+            download_fmt,
             imageboard,
             sim_downloads,
             annotate,
@@ -148,12 +184,17 @@ impl Queue {
             let post_channel = UnboundedReceiverStream::new(channel_rx);
             let (progress_sender, progress_channel) = channel(self.sim_downloads as usize);
 
-            if self.cbz {
+            if self.download_fmt.download_cbz() {
                 counters.init_length_updater(post_counter.clone(), 500);
                 counters.init_download_counter(progress_channel);
 
-                self.cbz_path(output_dir, progress_sender, post_channel)
-                    .await?;
+                self.cbz_path(
+                    output_dir,
+                    progress_sender,
+                    post_channel,
+                    self.download_fmt.download_pool_cbz(),
+                )
+                .await?;
 
                 counters.main.finish_and_clear();
 
@@ -217,15 +258,15 @@ impl Queue {
                                 ))
                                 .unwrap();
                         };
-                        let _ = sender.send(true).await;
                     }
+                    let _ = sender.send(true).await;
                 }
             })
             .await
     }
 
     async fn create_out(&self, dir: &Path) -> Result<(), QueueError> {
-        if self.cbz {
+        if self.download_fmt.download_cbz() {
             let output_file = dir.parent().unwrap().to_path_buf();
 
             match create_dir_all(&output_file).await {
@@ -257,13 +298,16 @@ impl Queue {
         path: PathBuf,
         progress_channel: Sender<bool>,
         channel: UnboundedReceiverStream<Post>,
+        pool: bool,
     ) -> Result<(), QueueError> {
         debug!("Target file: {}", path.display());
 
         let file = File::create(&path)?;
         let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
-        self.write_zip_structure(zip.clone())?;
+        if !pool {
+            self.write_zip_structure(zip.clone())?;
+        }
         let sender = progress_channel.clone();
 
         channel
@@ -276,6 +320,11 @@ impl Queue {
                 let annotate = self.annotate;
 
                 task::spawn(async move {
+                    if pool {
+                        Self::fetch_cbz_pool(cli, variant, nt, d, zip).await?;
+                        return Ok::<(), QueueError>(());
+                    }
+
                     Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
                     Ok::<(), QueueError>(())
                 })
@@ -397,6 +446,83 @@ impl Queue {
         } else {
             Ok(false)
         }
+    }
+
+    async fn fetch_cbz_pool(
+        client: Client,
+        variant: ImageBoards,
+        name_type: NameType,
+        post: Post,
+        zip: Arc<Mutex<ZipWriter<File>>>,
+    ) -> Result<(), PostError> {
+        let counters = get_counters!();
+        let filename = post.file_name(name_type);
+        debug!("Fetching {}", &post.url);
+        let res = client.get(&post.url).send().await?;
+
+        if res.status().is_client_error() {
+            counters.multi.println(format!(
+                "{} {}{}",
+                "Image source returned status".bold().red(),
+                res.status().as_str().bold().red(),
+                ". Skipping download.".bold().red()
+            ))?;
+            counters.main.inc(1);
+            return Err(PostError::RemoteFileNotFound);
+        }
+
+        let size = res.content_length().unwrap_or_default();
+
+        let pb = counters.add_download_bar(size, variant);
+
+        // Download the file chunk by chunk.
+        debug!("Retrieving chunks for {}", &filename);
+        let mut stream = res.bytes_stream();
+
+        let buf_size: usize = size.try_into()?;
+
+        let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
+
+        let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+
+        while let Some(item) = stream.next().await {
+            // Retrieve chunk.
+            let chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => {
+                    return Err(PostError::ChunkDownloadFail {
+                        message: e.to_string(),
+                    })
+                }
+            };
+            pb.inc(chunk.len().try_into()?);
+
+            // Write to file.
+            AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
+        }
+
+        spawn_blocking(move || -> Result<(), PostError> {
+            let mut un_mut = zip.lock().unwrap();
+
+            debug!("Writing {} to cbz file", filename);
+            match un_mut.start_file(filename, options) {
+                Ok(_) => {}
+                Err(error) => {
+                    return Err(PostError::ZipFileWriteError {
+                        message: error.to_string(),
+                    })
+                }
+            };
+
+            un_mut.write_all(&fvec)?;
+
+            Ok(())
+        })
+        .await??;
+
+        pb.finish_and_clear();
+
+        Ok(())
     }
 
     async fn fetch_cbz(

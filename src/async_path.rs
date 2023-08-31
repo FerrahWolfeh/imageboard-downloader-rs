@@ -33,6 +33,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
         args.simultaneous_downloads,
         Some(client),
         args.cbz,
+        args.pool_id.is_some(),
         args.name_type(),
         args.annotate,
     );
@@ -66,6 +67,10 @@ async fn search_args_async(
 
             if let Some(ext) = args.get_extension() {
                 unit.force_extension(ext);
+            }
+
+            if args.pool_id.is_some() {
+                unit.setup_pool_download(args.pool_id)
             }
 
             let client = unit.client();

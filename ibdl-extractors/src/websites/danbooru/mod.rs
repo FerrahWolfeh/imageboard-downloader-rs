@@ -23,6 +23,7 @@ use ibdl_common::{
 use std::fmt::Display;
 
 mod models;
+mod pool;
 mod unsync;
 
 /// Main object to download posts
@@ -40,6 +41,7 @@ pub struct DanbooruExtractor {
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
     extra_tags: Vec<String>,
+    pool_id: Option<u32>,
 }
 
 #[async_trait]
@@ -92,6 +94,7 @@ impl Extractor for DanbooruExtractor {
             excluded_tags: vec![],
             selected_extension: None,
             extra_tags,
+            pool_id: None,
         }
     }
 

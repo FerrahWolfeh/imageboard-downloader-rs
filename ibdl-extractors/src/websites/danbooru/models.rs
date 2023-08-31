@@ -3,6 +3,12 @@ use ibdl_common::{
     serde::{self, Deserialize, Serialize},
 };
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "self::serde")]
+pub struct DanbooruPoolList {
+    pub post_ids: Vec<u64>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "self::serde")]
 pub struct DanbooruPost {

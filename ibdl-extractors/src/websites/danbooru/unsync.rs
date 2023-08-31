@@ -55,6 +55,13 @@ impl AsyncFetch for DanbooruExtractor {
         )
         .await?;
 
+        let mut pool_idxs = vec![];
+
+        if let Some(p_id) = self.pool_id {
+            self.tag_string = format!("pool:{}", p_id);
+            pool_idxs = self.fetch_pool_idxs(p_id).await?;
+        }
+
         let mut has_posts: bool = false;
         let mut total_posts_sent: u16 = 0;
 
@@ -86,7 +93,7 @@ impl AsyncFetch for DanbooruExtractor {
                 });
             }
 
-            let list = if !(self.disable_blacklist || self.download_ratings.is_empty()) {
+            let mut list = if !(self.disable_blacklist || self.download_ratings.is_empty()) {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -98,14 +105,20 @@ impl AsyncFetch for DanbooruExtractor {
                 has_posts = true;
             }
 
-            for i in list {
+            for i in list.iter_mut() {
                 if let Some(num) = limit {
                     if total_posts_sent >= num {
                         break;
                     }
                 }
 
-                sender_channel.send(i)?;
+                if self.pool_id.is_some() {
+                    let page_num = pool_idxs.iter().position(|index| &i.id == index).unwrap();
+
+                    i.id = page_num as u64;
+                }
+
+                sender_channel.send(i.clone())?;
                 total_posts_sent += 1;
                 if let Some(counter) = &post_counter {
                     counter.fetch_add(1, Ordering::Relaxed);

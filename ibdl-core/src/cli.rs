@@ -130,8 +130,15 @@ pub struct Cli {
     #[clap(short, long, value_parser, help_heading = "GENERAL")]
     pub exclude: Vec<String>,
 
+    /// Force the extractor to only fetch posts with the selected extension
     #[clap(long, value_parser, help_heading = "DOWNLOAD")]
     pub force_extension: Option<String>,
+
+    /// Pool ID to download.
+    ///
+    /// Will always ignore `--id` and cli tags
+    #[clap(long = "pool", value_parser, value_name = "ID", conflicts_with("tags"))]
+    pub pool_id: Option<u32>,
 }
 
 impl Cli {

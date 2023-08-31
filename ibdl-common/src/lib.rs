@@ -98,6 +98,15 @@ impl ImageBoards {
         }
     }
 
+    #[inline]
+    pub fn pool_idx_url(self) -> &'static str {
+        match self {
+            ImageBoards::Danbooru => "https://danbooru.donmai.us/pools",
+            ImageBoards::E621 => "https://e621.net/pools",
+            _ => "",
+        }
+    }
+
     /// Returns max number of posts per page a imageboard can have
     #[inline]
     pub fn max_post_limit(self) -> usize {
