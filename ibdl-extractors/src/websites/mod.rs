@@ -116,8 +116,10 @@ pub trait Extractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError>;
 
+    /// Adds additional tags to the [blacklist filter](ibdl_extractors::blacklist::BlacklistFilter)
     fn exclude_tags(&mut self, tags: &[String]) -> &mut Self;
 
+    /// Forces the extractor to only map posts that have the specified extension
     fn force_extension(&mut self, extension: Extension) -> &mut Self;
 
     /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
@@ -154,7 +156,7 @@ pub trait MultiWebsite {
 /// Capability for the extractor asynchronously send posts through a [`unbounded_channel`](ibdl_common::tokio::sync::mpsc::unbounded_channel) to another thread.
 #[async_trait]
 pub trait AsyncFetch {
-    /// Simliar to [`full_search`](Extractor::full_search) in functionality, but instead of returning a [`PostQueue`](ibdl_common::post::PostQueue), sends posts asynchronously through a given channel.
+    /// Simliar to [`full_search`](Extractor::full_search) in functionality, but instead of returning a [`PostQueue`](ibdl_common::post::PostQueue), sends posts asynchronously through a channel.
     async fn async_fetch(
         &mut self,
         sender_channel: UnboundedSender<Post>,
