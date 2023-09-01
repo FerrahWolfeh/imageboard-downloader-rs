@@ -1,6 +1,9 @@
 use ahash::HashMap;
 use async_trait::async_trait;
-use ibdl_common::{log::debug, serde_json, ImageBoards};
+use ibdl_common::{
+    log::{debug, trace},
+    serde_json, ImageBoards,
+};
 
 use crate::{error::ExtractorError, websites::PoolExtract};
 
@@ -37,6 +40,7 @@ impl PoolExtract for DanbooruExtractor {
         let position_map =
             HashMap::from_iter(mtx.iter().enumerate().map(|(position, id)| (*id, position)));
 
+        trace!("Pool post positions: {:#?}", position_map);
         debug!("Pool size: {}", position_map.len());
         Ok(position_map)
     }
