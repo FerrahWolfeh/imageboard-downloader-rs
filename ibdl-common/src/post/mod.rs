@@ -139,4 +139,9 @@ impl Post {
             NameType::MD5 => self.md5.to_string(),
         }
     }
+
+    #[inline]
+    pub fn seq_file_name(&self) -> String {
+        format!("{:0>6}.{}", self.id, self.extension)
+    }
 }
