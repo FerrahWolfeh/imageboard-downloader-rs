@@ -61,7 +61,7 @@ use ibdl_common::post::tags::TagType;
 use ibdl_common::post::{NameType, Post, PostQueue};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::{channel, Sender, UnboundedReceiver};
+use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio, ImageBoards};
 use md5::compute;
@@ -171,6 +171,7 @@ impl Queue {
         output_dir: PathBuf,
         post_counter: Arc<AtomicU64>,
         channel_rx: UnboundedReceiver<Post>,
+        length_rx: Receiver<u64>,
     ) -> JoinHandle<Result<u64, QueueError>> {
         spawn(async move {
             debug!("Async Downloader thread initialized");
@@ -185,7 +186,7 @@ impl Queue {
             let (progress_sender, progress_channel) = channel(self.sim_downloads as usize);
 
             if self.download_fmt.download_cbz() {
-                counters.init_length_updater(post_counter.clone(), 500);
+                counters.init_length_updater(length_rx);
                 counters.init_download_counter(progress_channel);
 
                 self.cbz_path(
@@ -203,7 +204,7 @@ impl Queue {
                 return Ok(tot);
             }
 
-            counters.init_length_updater(post_counter.clone(), 500);
+            counters.init_length_updater(length_rx);
             counters.init_download_counter(progress_channel);
 
             self.download_channel(post_channel, progress_sender, output_dir)

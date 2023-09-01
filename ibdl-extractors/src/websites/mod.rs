@@ -64,17 +64,17 @@
 //!```
 //!
 //!
-use std::{
-    fmt::Display,
-    sync::{atomic::AtomicU64, Arc},
-};
+use std::fmt::Display;
 
 use crate::auth::ImageboardConfig;
 use async_trait::async_trait;
 use ibdl_common::{
     post::{extension::Extension, rating::Rating, Post, PostQueue},
     reqwest::Client,
-    tokio::{sync::mpsc::UnboundedSender, task::JoinHandle},
+    tokio::{
+        sync::mpsc::{Sender, UnboundedSender},
+        task::JoinHandle,
+    },
     ImageBoards,
 };
 
@@ -162,7 +162,7 @@ pub trait AsyncFetch {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
-        post_counter: Option<Arc<AtomicU64>>,
+        post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError>;
 
     /// High-level convenience thread builder for [`async_fetch`](crate::websites::AsyncFetch::async_fetch)
@@ -171,7 +171,7 @@ pub trait AsyncFetch {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
-        post_counter: Option<Arc<AtomicU64>>,
+        post_counter: Option<Sender<u64>>,
     ) -> JoinHandle<Result<u64, ExtractorError>>;
 }
 

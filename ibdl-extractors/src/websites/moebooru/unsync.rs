@@ -1,13 +1,12 @@
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
-
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
     post::Post,
-    tokio::{spawn, sync::mpsc::UnboundedSender, task::JoinHandle},
+    tokio::{
+        spawn,
+        sync::mpsc::{Sender, UnboundedSender},
+        task::JoinHandle,
+    },
     ImageBoards,
 };
 
@@ -27,7 +26,7 @@ impl AsyncFetch for MoebooruExtractor {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
-        post_counter: Option<Arc<AtomicU64>>,
+        post_counter: Option<Sender<u64>>,
     ) -> JoinHandle<Result<u64, ExtractorError>> {
         spawn(async move {
             let mut ext = self;
@@ -41,7 +40,7 @@ impl AsyncFetch for MoebooruExtractor {
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
-        post_counter: Option<Arc<AtomicU64>>,
+        post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
             ImageBoards::Konachan,
@@ -100,8 +99,7 @@ impl AsyncFetch for MoebooruExtractor {
                 sender_channel.send(i)?;
                 total_posts_sent += 1;
                 if let Some(counter) = &post_counter {
-                    let counter = counter;
-                    counter.fetch_add(1, Ordering::Relaxed);
+                    counter.send(1).await?;
                 }
             }
 

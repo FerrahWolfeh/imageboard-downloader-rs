@@ -52,4 +52,10 @@ pub enum ExtractorError {
 
     #[error("Impossible execution path")]
     ImpossibleBehavior,
+
+    #[error("Error sending length data to progress counter: {source}")]
+    SendLengthFail {
+        #[from]
+        source: SendError<u64>,
+    },
 }

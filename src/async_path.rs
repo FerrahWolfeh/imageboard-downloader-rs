@@ -6,7 +6,7 @@ use ibdl_common::{
     reqwest::Client,
     tokio::{
         join,
-        sync::mpsc::{unbounded_channel, UnboundedSender},
+        sync::mpsc::{channel, unbounded_channel, Sender, UnboundedSender},
     },
     ImageBoards,
 };
@@ -25,7 +25,9 @@ static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new
 pub async fn async_path(args: &Cli) -> Result<()> {
     let (channel_tx, channel_rx) = unbounded_channel();
 
-    let (ext, client) = search_args_async(args, channel_tx).await?;
+    let (length_sender, length_channel) = channel(8);
+
+    let (ext, client) = search_args_async(args, channel_tx, length_sender).await?;
 
     let dirname = args.generate_save_path()?;
 
@@ -39,7 +41,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
         args.annotate,
     );
 
-    let asd = qw.setup_async_downloader(dirname, POST_COUNTER.clone(), channel_rx);
+    let asd = qw.setup_async_downloader(dirname, POST_COUNTER.clone(), channel_rx, length_channel);
 
     let (Ok(removed), Ok(results)) = join!(ext, asd) else {bail!("Failed starting threads!")};
 
@@ -51,6 +53,7 @@ pub async fn async_path(args: &Cli) -> Result<()> {
 async fn search_args_async(
     args: &Cli,
     channel_tx: UnboundedSender<Post>,
+    length_tx: Sender<u64>,
 ) -> Result<(ExtractorThreadHandle, Client)> {
     let ratings = args.selected_ratings();
 
@@ -76,12 +79,8 @@ async fn search_args_async(
 
             let client = unit.client();
 
-            let ext_thd = unit.setup_fetch_thread(
-                channel_tx,
-                args.start_page,
-                args.limit,
-                Some(POST_COUNTER.clone()),
-            );
+            let ext_thd =
+                unit.setup_fetch_thread(channel_tx, args.start_page, args.limit, Some(length_tx));
 
             Ok((ext_thd, client))
         }
@@ -102,12 +101,8 @@ async fn search_args_async(
 
             let client = unit.client();
 
-            let ext_thd = unit.setup_fetch_thread(
-                channel_tx,
-                args.start_page,
-                args.limit,
-                Some(POST_COUNTER.clone()),
-            );
+            let ext_thd =
+                unit.setup_fetch_thread(channel_tx, args.start_page, args.limit, Some(length_tx));
 
             Ok((ext_thd, client))
         }
@@ -128,12 +123,8 @@ async fn search_args_async(
 
             let client = unit.client();
 
-            let ext_thd = unit.setup_fetch_thread(
-                channel_tx,
-                args.start_page,
-                args.limit,
-                Some(POST_COUNTER.clone()),
-            );
+            let ext_thd =
+                unit.setup_fetch_thread(channel_tx, args.start_page, args.limit, Some(length_tx));
 
             Ok((ext_thd, client))
         }
@@ -152,12 +143,8 @@ async fn search_args_async(
                 unit.force_extension(ext);
             }
 
-            let ext_thd = unit.setup_fetch_thread(
-                channel_tx,
-                args.start_page,
-                args.limit,
-                Some(POST_COUNTER.clone()),
-            );
+            let ext_thd =
+                unit.setup_fetch_thread(channel_tx, args.start_page, args.limit, Some(length_tx));
 
             Ok((ext_thd, client))
         }

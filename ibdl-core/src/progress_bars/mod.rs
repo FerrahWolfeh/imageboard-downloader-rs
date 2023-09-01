@@ -114,11 +114,13 @@ impl ProgressCounter {
         self.multi.add(bar)
     }
 
-    pub fn init_length_updater(&self, counter: Arc<AtomicU64>, interval: u64) {
+    pub fn init_length_updater(&self, channel: Receiver<u64>) {
+        let mut channel = channel;
         let cloned_bar = self.main.clone();
-        thread::spawn(move || loop {
-            cloned_bar.set_length(counter.load(Ordering::Relaxed));
-            thread::sleep(Duration::from_millis(interval));
+        thread::spawn(move || {
+            while let Some(delta_posts) = channel.blocking_recv() {
+                cloned_bar.inc_length(delta_posts);
+            }
         });
     }
 
