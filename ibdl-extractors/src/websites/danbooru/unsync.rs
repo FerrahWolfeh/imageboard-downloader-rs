@@ -59,7 +59,7 @@ impl AsyncFetch for DanbooruExtractor {
 
         if let Some(p_id) = self.pool_id {
             self.tag_string = format!("pool:{}", p_id);
-            pool_idxs = self.fetch_pool_idxs(p_id).await?;
+            pool_idxs = self.fetch_pool_idxs(p_id, limit).await?;
         }
 
         let mut has_posts: bool = false;
@@ -113,9 +113,11 @@ impl AsyncFetch for DanbooruExtractor {
                 }
 
                 if self.pool_id.is_some() {
-                    let page_num = *pool_idxs.get(&i.id).unwrap() as u64;
-
-                    i.id = page_num;
+                    if let Some(page_num) = pool_idxs.get(&i.id) {
+                        i.id = *page_num as u64;
+                    } else {
+                        continue;
+                    }
                 }
 
                 sender_channel.send(i.clone())?;

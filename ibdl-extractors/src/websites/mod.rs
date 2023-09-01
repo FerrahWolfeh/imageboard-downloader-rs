@@ -181,6 +181,7 @@ pub trait PoolExtract {
     async fn fetch_pool_idxs(
         &mut self,
         pool_id: u32,
+        limit: Option<u16>,
     ) -> Result<HashMap<u64, usize>, ExtractorError>;
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError>;

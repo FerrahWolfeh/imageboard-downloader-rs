@@ -11,6 +11,7 @@ impl PoolExtract for DanbooruExtractor {
     async fn fetch_pool_idxs(
         &mut self,
         pool_id: u32,
+        limit: Option<u16>,
     ) -> Result<HashMap<u64, usize>, ExtractorError> {
         let url = format!("{}/{}.json", ImageBoards::Danbooru.pool_idx_url(), pool_id);
 
@@ -27,7 +28,11 @@ impl PoolExtract for DanbooruExtractor {
 
         let post_array = req.send().await?.text().await?;
 
-        let mtx = self.parse_pool_ids(post_array)?;
+        let mut mtx = self.parse_pool_ids(post_array)?;
+
+        if let Some(limit_post) = limit {
+            mtx.truncate(limit_post as usize)
+        }
 
         let position_map =
             HashMap::from_iter(mtx.iter().enumerate().map(|(position, id)| (*id, position)));
