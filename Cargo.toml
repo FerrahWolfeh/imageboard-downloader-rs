@@ -4,7 +4,7 @@ members = ["ibdl-common", "ibdl-core", "ibdl-extractors"]
 [package]
 name = "imageboard_downloader"
 authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
-version = "1.4.0"
+version = "1.5.0"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"
@@ -40,14 +40,14 @@ name = "post_mapper"
 harness = false
 
 [profile.release]
-#lto = "thin"
+lto = "thin"
 opt-level = 3
 strip = true
 debug = false
 
 [profile.opttest]
 inherits = "release"
-#lto = false
+lto = false
 opt-level = 3
 strip = false
 debug = true
