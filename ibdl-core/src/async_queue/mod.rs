@@ -99,6 +99,7 @@ enum DownloadFormat {
     Cbz,
     CbzPool,
     Folder,
+    FolderPool,
 }
 
 impl DownloadFormat {
@@ -108,15 +109,17 @@ impl DownloadFormat {
             DownloadFormat::Cbz => true,
             DownloadFormat::CbzPool => true,
             DownloadFormat::Folder => false,
+            DownloadFormat::FolderPool => false,
         }
     }
 
     #[inline]
-    pub fn download_pool_cbz(&self) -> bool {
+    pub fn download_pool(&self) -> bool {
         match self {
             DownloadFormat::Cbz => false,
             DownloadFormat::CbzPool => true,
             DownloadFormat::Folder => false,
+            DownloadFormat::FolderPool => true,
         }
     }
 }
@@ -152,6 +155,8 @@ impl Queue {
             DownloadFormat::CbzPool
         } else if save_as_cbz {
             DownloadFormat::Cbz
+        } else if pool_download {
+            DownloadFormat::FolderPool
         } else {
             DownloadFormat::Folder
         };
@@ -193,7 +198,7 @@ impl Queue {
                     output_dir,
                     progress_sender,
                     post_channel,
-                    self.download_fmt.download_pool_cbz(),
+                    self.download_fmt.download_pool(),
                 )
                 .await?;
 
@@ -207,8 +212,13 @@ impl Queue {
             counters.init_length_updater(length_rx);
             counters.init_download_counter(progress_channel);
 
-            self.download_channel(post_channel, progress_sender, output_dir)
-                .await;
+            self.download_channel(
+                post_channel,
+                progress_sender,
+                output_dir,
+                self.download_fmt.download_pool(),
+            )
+            .await;
 
             counters.main.finish_and_clear();
 
@@ -223,6 +233,7 @@ impl Queue {
         channel: UnboundedReceiverStream<Post>,
         progress: Sender<bool>,
         output_dir: PathBuf,
+        pool: bool,
     ) {
         let sender = progress.clone();
 
@@ -237,7 +248,7 @@ impl Queue {
 
                 task::spawn(async move {
                     if !Self::check_file_exists(&d, &file_path, nt).await? {
-                        Self::fetch(cli, variant, &d, &output, nt).await?;
+                        Self::fetch(cli, variant, &d, &output, nt, pool).await?;
                     }
                     Ok::<Post, QueueError>(d)
                 })
@@ -641,6 +652,7 @@ impl Queue {
         post: &Post,
         output: &Path,
         name_type: NameType,
+        pool: bool,
     ) -> Result<(), PostError> {
         debug!("Fetching {}", &post.url);
 
@@ -668,7 +680,13 @@ impl Queue {
 
         let buf_size: usize = size.try_into()?;
 
-        let out = output.join(post.file_name(name_type));
+        let fname = if pool {
+            post.seq_file_name(6)
+        } else {
+            post.file_name(name_type)
+        };
+
+        let out = output.join(fname);
 
         debug!("Creating {:?}", &out);
         let file = OpenOptions::new()
