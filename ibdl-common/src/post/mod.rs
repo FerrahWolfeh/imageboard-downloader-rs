@@ -141,7 +141,7 @@ impl Post {
     }
 
     #[inline]
-    pub fn seq_file_name(&self) -> String {
-        format!("{:0>6}.{}", self.id, self.extension)
+    pub fn seq_file_name(&self, num_digits: usize) -> String {
+        format!("{:0num_digits$}.{}", self.id, self.extension)
     }
 }

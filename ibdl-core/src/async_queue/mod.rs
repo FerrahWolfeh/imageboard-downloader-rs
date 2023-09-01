@@ -322,7 +322,7 @@ impl Queue {
 
                 task::spawn(async move {
                     if pool {
-                        Self::fetch_cbz_pool(cli, variant, d, zip).await?;
+                        Self::fetch_cbz_pool(cli, variant, d, zip, 6).await?;
                         return Ok::<(), QueueError>(());
                     }
 
@@ -454,10 +454,11 @@ impl Queue {
         variant: ImageBoards,
         post: Post,
         zip: Arc<Mutex<ZipWriter<File>>>,
+        num_digits: usize,
     ) -> Result<(), PostError> {
         let counters = get_counters!();
 
-        let filename = post.seq_file_name();
+        let filename = post.seq_file_name(num_digits);
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
 
