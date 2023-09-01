@@ -137,6 +137,11 @@ impl ProgressCounter {
             }
         });
     }
+
+    pub fn increment_counters(&self, delta: u64) {
+        self.main.inc(delta);
+        self.total_mtx.fetch_add(delta as usize, Ordering::SeqCst);
+    }
 }
 
 fn master_progress_style(templates: &BarTemplates) -> ProgressStyle {
