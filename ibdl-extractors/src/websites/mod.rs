@@ -67,6 +67,7 @@
 use std::fmt::Display;
 
 use crate::auth::ImageboardConfig;
+use ahash::HashMap;
 use async_trait::async_trait;
 use ibdl_common::{
     post::{extension::Extension, rating::Rating, Post, PostQueue},
@@ -177,7 +178,10 @@ pub trait AsyncFetch {
 
 #[async_trait]
 pub trait PoolExtract {
-    async fn fetch_pool_idxs(&mut self, pool_id: u32) -> Result<Vec<u64>, ExtractorError>;
+    async fn fetch_pool_idxs(
+        &mut self,
+        pool_id: u32,
+    ) -> Result<HashMap<u64, usize>, ExtractorError>;
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError>;
 

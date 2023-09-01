@@ -1,3 +1,4 @@
+use ahash::HashMap;
 use async_trait::async_trait;
 use ibdl_common::{log::debug, serde_json, ImageBoards};
 
@@ -7,7 +8,10 @@ use super::{models::DanbooruPoolList, DanbooruExtractor};
 
 #[async_trait]
 impl PoolExtract for DanbooruExtractor {
-    async fn fetch_pool_idxs(&mut self, pool_id: u32) -> Result<Vec<u64>, ExtractorError> {
+    async fn fetch_pool_idxs(
+        &mut self,
+        pool_id: u32,
+    ) -> Result<HashMap<u64, usize>, ExtractorError> {
         let url = format!("{}/{}.json", ImageBoards::Danbooru.pool_idx_url(), pool_id);
 
         // Fetch item list from page
@@ -25,8 +29,11 @@ impl PoolExtract for DanbooruExtractor {
 
         let mtx = self.parse_pool_ids(post_array)?;
 
-        debug!("Pool size: {}", mtx.len());
-        Ok(mtx)
+        let position_map =
+            HashMap::from_iter(mtx.iter().enumerate().map(|(position, id)| (*id, position)));
+
+        debug!("Pool size: {}", position_map.len());
+        Ok(position_map)
     }
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError> {

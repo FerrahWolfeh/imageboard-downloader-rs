@@ -1,3 +1,4 @@
+use ahash::{HashMap, HashMapExt};
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
@@ -54,7 +55,7 @@ impl AsyncFetch for DanbooruExtractor {
         )
         .await?;
 
-        let mut pool_idxs = vec![];
+        let mut pool_idxs = HashMap::with_capacity(512);
 
         if let Some(p_id) = self.pool_id {
             self.tag_string = format!("pool:{}", p_id);
@@ -112,9 +113,9 @@ impl AsyncFetch for DanbooruExtractor {
                 }
 
                 if self.pool_id.is_some() {
-                    let page_num = pool_idxs.iter().position(|index| &i.id == index).unwrap();
+                    let page_num = *pool_idxs.get(&i.id).unwrap() as u64;
 
-                    i.id = page_num as u64;
+                    i.id = page_num;
                 }
 
                 sender_channel.send(i.clone())?;
