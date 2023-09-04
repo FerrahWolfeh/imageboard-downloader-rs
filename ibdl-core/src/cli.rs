@@ -143,7 +143,6 @@ pub struct Cli {
         value_name = "ID",
         conflicts_with("tags"),
         conflicts_with("save_file_as_id"),
-        conflicts_with("output"),
         requires("precise_output")
     )]
     pub pool_id: Option<u32>,
