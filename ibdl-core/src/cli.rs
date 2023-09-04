@@ -211,7 +211,7 @@ impl Cli {
             )
         } else if self.precise_output.is_some() {
             assert_eq!(self.output, None);
-            generate_output_path_precise(&raw_save_path, self.cbz, self.pool_id)
+            generate_output_path_precise(&raw_save_path, self.cbz)
         } else {
             raw_save_path
         };
