@@ -143,6 +143,7 @@ pub struct Cli {
         value_name = "ID",
         conflicts_with("tags"),
         conflicts_with("save_file_as_id"),
+        conflicts_with("output"),
         requires("precise_output")
     )]
     pub pool_id: Option<u32>,
@@ -202,16 +203,16 @@ impl Cli {
 
         let dirname = if self.output.is_some() {
             assert_eq!(self.precise_output, None);
-            generate_output_path(&raw_save_path, *self.imageboard, &self.tags, self.cbz)
+            generate_output_path(
+                &raw_save_path,
+                *self.imageboard,
+                &self.tags,
+                self.cbz,
+                self.pool_id,
+            )
         } else if self.precise_output.is_some() {
             assert_eq!(self.output, None);
-            generate_output_path_precise(&raw_save_path, self.cbz)
-        } else if let Some(id) = self.pool_id {
-            if self.cbz {
-                raw_save_path.join(format!("{}.cbz", id))
-            } else {
-                raw_save_path.join(id.to_string())
-            }
+            generate_output_path_precise(&raw_save_path, self.cbz, self.pool_id)
         } else {
             raw_save_path
         };

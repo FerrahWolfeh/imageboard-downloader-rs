@@ -126,12 +126,15 @@ pub fn generate_output_path(
     imageboard: ImageBoards,
     tags: &[String],
     cbz_mode: bool,
+    pool_id: Option<u32>,
 ) -> PathBuf {
     let tag_string = tags.join(" ");
     let tag_path_string = if tag_string.contains("fav:") {
         String::from("Favorites")
     } else if cfg!(windows) {
         tag_string.replace(':', "_")
+    } else if let Some(id) = pool_id {
+        id.to_string()
     } else {
         tag_string
     };
@@ -147,7 +150,19 @@ pub fn generate_output_path(
 /// This function creates the destination directory without creating additional ones related to
 /// the selected imageboard or tags used.
 #[inline]
-pub fn generate_output_path_precise(main_path: &Path, cbz_mode: bool) -> PathBuf {
+pub fn generate_output_path_precise(
+    main_path: &Path,
+    cbz_mode: bool,
+    pool_id: Option<u32>,
+) -> PathBuf {
+    if let Some(id) = pool_id {
+        if cbz_mode {
+            return main_path.join(format!("{}.cbz", id));
+        } else {
+            return main_path.join(id.to_string());
+        }
+    }
+
     if cbz_mode {
         return PathBuf::from(&format!("{}.cbz", main_path.display()));
     }

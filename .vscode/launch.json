@@ -205,5 +205,31 @@
             ],
             "cwd": "${workspaceFolder}"
         },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "CBZ pool same dir",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-i",
+                "e621",
+                "--cbz",
+                "--pool",
+                "6837",
+                "-O",
+                "."
+            ],
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }
