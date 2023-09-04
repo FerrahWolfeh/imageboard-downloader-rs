@@ -46,6 +46,7 @@ pub struct E621Extractor {
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
     pool_id: Option<u32>,
+    pool_last_items_first: bool,
 }
 
 #[async_trait]
@@ -87,6 +88,7 @@ impl Extractor for E621Extractor {
             excluded_tags: vec![],
             selected_extension: None,
             pool_id: None,
+            pool_last_items_first: false,
         }
     }
 

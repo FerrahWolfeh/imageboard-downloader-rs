@@ -76,7 +76,7 @@ async fn search_args_async(
             }
 
             if args.pool_id.is_some() {
-                unit.setup_pool_download(args.pool_id)
+                unit.setup_pool_download(args.pool_id, args.latest_first)
             }
 
             let client = unit.client();
@@ -102,7 +102,7 @@ async fn search_args_async(
             }
 
             if args.pool_id.is_some() {
-                unit.setup_pool_download(args.pool_id)
+                unit.setup_pool_download(args.pool_id, args.latest_first)
             }
 
             let client = unit.client();

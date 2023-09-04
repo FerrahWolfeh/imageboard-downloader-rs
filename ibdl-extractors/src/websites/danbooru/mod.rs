@@ -42,6 +42,7 @@ pub struct DanbooruExtractor {
     selected_extension: Option<Extension>,
     extra_tags: Vec<String>,
     pool_id: Option<u32>,
+    pool_last_items_first: bool,
 }
 
 #[async_trait]
@@ -95,6 +96,7 @@ impl Extractor for DanbooruExtractor {
             selected_extension: None,
             extra_tags,
             pool_id: None,
+            pool_last_items_first: false,
         }
     }
 

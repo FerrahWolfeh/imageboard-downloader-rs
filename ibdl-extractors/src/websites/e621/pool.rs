@@ -33,6 +33,10 @@ impl PoolExtract for E621Extractor {
 
         let mut mtx = self.parse_pool_ids(post_array)?;
 
+        if self.pool_last_items_first {
+            mtx.reverse()
+        }
+
         if let Some(limit_post) = limit {
             mtx.truncate(limit_post as usize)
         }
@@ -51,7 +55,8 @@ impl PoolExtract for E621Extractor {
         Ok(parsed_json.post_ids)
     }
 
-    fn setup_pool_download(&mut self, pool_id: Option<u32>) {
+    fn setup_pool_download(&mut self, pool_id: Option<u32>, last_first: bool) {
         self.pool_id = pool_id;
+        self.pool_last_items_first = last_first;
     }
 }

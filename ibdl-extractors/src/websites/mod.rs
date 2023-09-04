@@ -186,5 +186,5 @@ pub trait PoolExtract {
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError>;
 
-    fn setup_pool_download(&mut self, pool_id: Option<u32>);
+    fn setup_pool_download(&mut self, pool_id: Option<u32>, last_first: bool);
 }

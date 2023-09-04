@@ -4,7 +4,7 @@ members = ["ibdl-common", "ibdl-core", "ibdl-extractors"]
 [package]
 name = "imageboard_downloader"
 authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
-version = "1.5.1"
+version = "1.5.2"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"

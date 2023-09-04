@@ -137,8 +137,21 @@ pub struct Cli {
     /// Pool ID to download.
     ///
     /// Will always ignore `--id` and cli tags
-    #[clap(long = "pool", value_parser, value_name = "ID", conflicts_with("tags"))]
+    #[clap(
+        long = "pool",
+        value_parser,
+        value_name = "ID",
+        conflicts_with("tags"),
+        conflicts_with("save_file_as_id"),
+        requires("precise_output")
+    )]
     pub pool_id: Option<u32>,
+
+    /// Download pool posts in reverse order
+    ///
+    /// Useful when using the download limiter
+    #[clap(long = "latest", value_parser, requires("pool_id"))]
+    pub latest_first: bool,
 }
 
 impl Cli {
@@ -193,6 +206,12 @@ impl Cli {
         } else if self.precise_output.is_some() {
             assert_eq!(self.output, None);
             generate_output_path_precise(&raw_save_path, self.cbz)
+        } else if let Some(id) = self.pool_id {
+            if self.cbz {
+                raw_save_path.join(format!("{}.cbz", id))
+            } else {
+                raw_save_path.join(id.to_string())
+            }
         } else {
             raw_save_path
         };
