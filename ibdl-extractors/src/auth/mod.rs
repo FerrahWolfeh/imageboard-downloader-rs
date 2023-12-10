@@ -1,6 +1,6 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use bincode::serialize;
-use ibdl_common::{bincode, log, reqwest, tokio, zstd};
+use ibdl_common::{bincode, log, reqwest, tokio};
 use log::debug;
 use reqwest::Client;
 use std::io;
@@ -136,7 +136,7 @@ impl ImageboardConfig {
             debug!("User id: {}", self.user_data.id);
             debug!("Blacklisted tags: '{:?}'", self.user_data.blacklisted_tags);
 
-            Self::write_cache(self).await?;
+            self.write_cache().await?;
         }
 
         Ok(())
@@ -155,10 +155,11 @@ impl ImageboardConfig {
             .open(&config_path)
             .await?;
 
-        let Ok(bytes) = serialize(&self) else { return Err(Error::ConfigEncodeError) };
+        let Ok(bytes) = serialize(&self) else {
+            return Err(Error::ConfigEncodeError);
+        };
 
-        let compressed_data = zstd::encode_all(bytes.as_slice(), 7)?;
-        cfg_cache.write_all(&compressed_data).await?;
+        cfg_cache.write_all(&bytes).await?;
         debug!("Wrote auth cache to {}", &config_path.display());
         Ok(())
     }
