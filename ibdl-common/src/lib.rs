@@ -82,6 +82,25 @@ impl ImageBoards {
     #[inline]
     pub fn post_url(&self) -> &'static str {
         match self {
+            ImageBoards::Danbooru => "https://danbooru.donmai.us/posts/",
+            ImageBoards::E621 => "https://e621.net/posts/",
+            ImageBoards::Rule34 => {
+                todo!()
+            }
+            ImageBoards::Konachan => todo!(),
+            ImageBoards::Realbooru => {
+                todo!()
+            }
+            ImageBoards::Gelbooru => {
+                todo!()
+            }
+        }
+    }
+
+    /// Returns the endpoint for the post list with their respective tags.
+    #[inline]
+    pub fn post_list_url(&self) -> &'static str {
+        match self {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/posts.json",
             ImageBoards::E621 => "https://e621.net/posts.json",
             ImageBoards::Rule34 => {
