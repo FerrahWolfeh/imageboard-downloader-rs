@@ -158,24 +158,19 @@ impl PostFetchAsync for ExtractorUnit {
     ) -> JoinHandle<Result<u64, ExtractorError>> {
         spawn(async move {
             let mut ext = self;
-            let mut pctr = 0;
             match method {
                 PostFetchMethod::Single(p_id) => {
                     sender_channel.send(ext.get_post(p_id).await?)?;
-                    pctr += 1;
                 }
                 PostFetchMethod::Multiple(p_ids) => {
                     let posts = ext.get_posts(&p_ids).await?;
-                    let plen = posts.len();
 
                     for i in posts {
                         sender_channel.send(i)?;
                     }
-
-                    pctr += plen as u64;
                 }
             }
-            Ok(pctr)
+            Ok(0)
         })
     }
 }
