@@ -1,9 +1,10 @@
 use std::path::PathBuf;
-use std::{io, io::Write};
 
 use color_eyre::eyre::Result;
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::{Input, Password};
 use ibdl_common::bincode::deserialize;
-use ibdl_common::log::{error, warn};
+use ibdl_common::log::warn;
 use ibdl_common::tokio::fs::{read, remove_file};
 use ibdl_common::{log::debug, reqwest::Client, ImageBoards};
 use ibdl_core::owo_colors::OwoColorize;
@@ -31,23 +32,19 @@ pub fn print_results(total_down: u64, total_black: u64) {
 
 pub async fn auth_prompt(auth_state: bool, imageboard: ImageBoards, client: &Client) -> Result<()> {
     if auth_state {
-        let mut username = String::new();
-        let mut api_key = String::new();
-        let stdin = io::stdin();
         println!(
             "{} {}",
             "Logging into:".bold(),
             imageboard.to_string().green().bold()
         );
-        print!("{}", "Username: ".bold());
-        io::stdout().flush().unwrap();
-        stdin.read_line(&mut username).unwrap();
-        print!("{}", "API Key: ".bold());
-        io::stdout().flush().unwrap();
-        stdin.read_line(&mut api_key).unwrap();
 
-        debug!("Username: {}", username.trim());
-        debug!("API key: {}", api_key.trim());
+        let username: String = Input::with_theme(&ColorfulTheme::default())
+            .with_prompt("Username")
+            .interact()?;
+
+        let api_key: String = Password::with_theme(&ColorfulTheme::default())
+            .with_prompt("API Key")
+            .interact()?;
 
         let mut at = ImageboardConfig::new(
             imageboard,
