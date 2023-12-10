@@ -347,6 +347,11 @@ impl SinglePostFetch for E621Extractor {
 
         for post_id in posts {
             let post = self.get_post(*post_id).await?;
+
+            // This function is pretty heavy on API usage, so let's ease it up a little.
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
+
             pvec.push(post);
         }
         Ok(pvec)

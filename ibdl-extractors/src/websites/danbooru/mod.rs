@@ -12,7 +12,7 @@ use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::serde_json;
-use ibdl_common::tokio::time::Instant;
+use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
     client, join_tags,
     log::debug,
@@ -21,6 +21,7 @@ use ibdl_common::{
     ImageBoards,
 };
 use std::fmt::Display;
+use std::time::Duration;
 
 mod models;
 mod pool;
@@ -357,6 +358,11 @@ impl SinglePostFetch for DanbooruExtractor {
 
         for post_id in posts {
             let post = self.get_post(*post_id).await?;
+
+            // This function is pretty heavy on API usage, so let's ease it up a little.
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
+
             pvec.push(post);
         }
         Ok(pvec)
