@@ -134,6 +134,40 @@ pub struct Cli {
     #[clap(long, value_parser, help_heading = "DOWNLOAD")]
     pub force_extension: Option<String>,
 
+    /// Download a specific post/image
+    #[clap(
+        long,
+        value_parser,
+        value_name = "POST ID",
+        conflicts_with("tags"),
+        conflicts_with("pool_id"),
+        conflicts_with("posts")
+    )]
+    pub post: Option<u32>,
+
+    /// Download a list of posts
+    #[clap(
+        long,
+        value_parser,
+        value_name = "POST IDs",
+        conflicts_with("tags"),
+        conflicts_with("pool_id"),
+        conflicts_with("post")
+    )]
+    pub posts: Vec<u32>,
+
+    /// Download a list of posts from a file (one post id per line)
+    #[clap(
+        long = "post_file",
+        value_name = "FILE PATH",
+        value_parser,
+        conflicts_with("tags"),
+        conflicts_with("pool_id"),
+        conflicts_with("posts"),
+        conflicts_with("post")
+    )]
+    pub post_file: Option<PathBuf>,
+
     /// Pool ID to download.
     ///
     /// Will always ignore `--id` and cli tags

@@ -1,11 +1,15 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
-use color_eyre::eyre::{bail, Result};
+use color_eyre::{
+    eyre::{bail, Result},
+    owo_colors::OwoColorize,
+};
 use ibdl_common::{
+    log::warn,
     post::Post,
     reqwest::Client,
     tokio::{
-        join,
+        fs, join,
         sync::mpsc::{channel, unbounded_channel, Sender, UnboundedSender},
     },
     ImageBoards,
@@ -14,7 +18,7 @@ use ibdl_core::{async_queue::Queue, cli::Cli};
 use ibdl_extractors::websites::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor, AsyncFetch, Extractor, ExtractorThreadHandle, MultiWebsite,
-    PoolExtract,
+    PoolExtract, PostFetchAsync, PostFetchMethod,
 };
 use once_cell::sync::Lazy;
 
@@ -81,8 +85,41 @@ async fn search_args_async(
 
             let client = unit.client();
 
-            let ext_thd =
-                unit.setup_fetch_thread(channel_tx, args.start_page, args.limit, Some(length_tx));
+            let ext_thd = {
+                if let Some(post_id) = args.post {
+                    unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Single(post_id))
+                } else if !args.posts.is_empty() {
+                    unit.setup_async_post_fetch(
+                        channel_tx,
+                        PostFetchMethod::Multiple(args.posts.clone()),
+                    )
+                } else if let Some(path) = &args.post_file {
+                    if !path.exists() {
+                        bail!("File does not exist.");
+                    }
+
+                    let posts = fs::read_to_string(&path).await?;
+                    let ids = Vec::from_iter(posts.lines().filter_map(|line| {
+                        if let Ok(id) = line.parse::<u32>() {
+                            Some(id)
+                        } else {
+                            warn!(
+                                "Failed to parse line {} into a post id",
+                                line.bright_blue().bold()
+                            );
+                            None
+                        }
+                    }));
+                    unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Multiple(ids))
+                } else {
+                    unit.setup_fetch_thread(
+                        channel_tx,
+                        args.start_page,
+                        args.limit,
+                        Some(length_tx),
+                    )
+                }
+            };
 
             Ok((ext_thd, client))
         }

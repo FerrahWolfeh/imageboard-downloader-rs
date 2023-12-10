@@ -84,18 +84,18 @@ pub async fn read_config_from_fs(imageboard: ImageBoards) -> Result<Option<Image
         debug!("Authentication cache found");
 
         if let Ok(rd) = deserialize::<ImageboardConfig>(&config_auth) {
-                debug!("Authentication cache decoded.");
-                debug!("User id: {}", rd.user_data.id);
-                debug!("Username: {}", rd.user_data.name);
-                debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
+            debug!("Authentication cache decoded.");
+            debug!("User id: {}", rd.user_data.id);
+            debug!("Username: {}", rd.user_data.name);
+            debug!("Blacklisted tags: '{:?}'", rd.user_data.blacklisted_tags);
             return Ok(Some(rd));
-            } else {
-                warn!(
-                    "{}",
-                    "Auth cache is invalid or empty. Running without authentication"
-                );
-        debug!("Removing corrupted file");
-        remove_file(cfg_path).await?;
+        } else {
+            warn!(
+                "{}",
+                "Auth cache is invalid or empty. Running without authentication"
+            );
+            debug!("Removing corrupted file");
+            remove_file(cfg_path).await?;
             return Ok(None);
         };
     };
