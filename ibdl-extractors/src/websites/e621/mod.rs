@@ -23,7 +23,9 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, websites::e621::models::E621TopLevel,
 };
 
-use super::{Auth, Extractor};
+use self::models::E621Post;
+
+use super::{Auth, Extractor, SinglePostFetch};
 
 mod models;
 mod pool;
@@ -200,7 +202,11 @@ impl Extractor for E621Extractor {
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
         // Check safe mode
-        let url = format!("{}?tags={}", ImageBoards::E621.post_url(), &self.tag_string);
+        let url = format!(
+            "{}?tags={}",
+            ImageBoards::E621.post_list_url(),
+            &self.tag_string
+        );
 
         let req = if self.auth_state {
             debug!("[AUTH] Fetching posts from page {}", page);
@@ -284,5 +290,65 @@ impl Auth for E621Extractor {
         self.auth_state = true;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl SinglePostFetch for E621Extractor {
+    fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
+        let c: E621Post = serde_json::from_str::<E621Post>(raw_json.as_str())?;
+
+        if c.file.url.is_some() {
+            let tag_list = c.tags.map_tags();
+
+            let unit = Post {
+                id: c.id.unwrap(),
+                website: ImageBoards::E621,
+                url: c.file.url.clone().unwrap(),
+                md5: c.file.md5.clone().unwrap(),
+                extension: c.file.ext.clone().unwrap(),
+                tags: tag_list,
+                rating: Rating::from_rating_str(&c.rating),
+            };
+            Ok(unit)
+        } else {
+            Err(ExtractorError::ZeroPosts)
+        }
+    }
+
+    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
+        let url = format!("{}/{}.json", ImageBoards::E621.post_url(), post_id);
+
+        // Fetch item list from page
+        let req = if self.auth_state {
+            debug!("[AUTH] Fetching post {}", post_id);
+            self.client
+                .get(url)
+                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+        } else {
+            debug!("Fetching post {}", post_id);
+            self.client.get(url)
+        };
+
+        let post_array = req.send().await?.text().await?;
+
+        let start_point = Instant::now();
+
+        let mtx = self.map_post(post_array)?;
+
+        let end_iter = start_point.elapsed();
+
+        debug!("Post mapping took {:?}", end_iter);
+        Ok(mtx)
+    }
+
+    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {
+        let mut pvec = Vec::with_capacity(posts.len());
+
+        for post_id in posts {
+            let post = self.get_post(*post_id).await?;
+            pvec.push(post);
+        }
+        Ok(pvec)
     }
 }

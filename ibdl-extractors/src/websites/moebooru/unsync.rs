@@ -18,8 +18,11 @@ use crate::{
 
 use super::MoebooruExtractor;
 
+// A quick alias so I can copy paste stuff faster
+type ExtractorUnit = MoebooruExtractor;
+
 #[async_trait]
-impl AsyncFetch for MoebooruExtractor {
+impl AsyncFetch for ExtractorUnit {
     #[inline]
     fn setup_fetch_thread(
         self,

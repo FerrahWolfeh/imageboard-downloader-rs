@@ -6,7 +6,7 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor};
+use super::{Auth, Extractor, SinglePostFetch};
 use crate::auth::ImageboardConfig;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
@@ -157,7 +157,7 @@ impl Extractor for DanbooruExtractor {
 
             debug!("Scanning page {}", position);
 
-            let posts = Self::get_post_list(self, position).await?;
+            let posts = self.get_post_list(position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -206,7 +206,7 @@ impl Extractor for DanbooruExtractor {
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
             "{}?tags={}",
-            ImageBoards::Danbooru.post_url(),
+            ImageBoards::Danbooru.post_list_url(),
             &self.tag_string
         );
 
@@ -296,5 +296,69 @@ impl Auth for DanbooruExtractor {
         self.auth = cfg;
         self.auth_state = true;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl SinglePostFetch for DanbooruExtractor {
+    fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
+        let parsed_json: DanbooruPost = serde_json::from_str::<DanbooruPost>(raw_json.as_str())?;
+
+        let tag_list = parsed_json.map_tags();
+
+        let rt = parsed_json.rating.unwrap();
+        let rating = if rt == "s" {
+            Rating::Questionable
+        } else {
+            Rating::from_rating_str(&rt)
+        };
+
+        let post = Post {
+            id: parsed_json.id.unwrap(),
+            website: ImageBoards::Danbooru,
+            md5: parsed_json.md5.unwrap(),
+            url: parsed_json.file_url.unwrap(),
+            extension: parsed_json.file_ext.unwrap(),
+            tags: tag_list,
+            rating,
+        };
+
+        Ok(post)
+    }
+
+    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
+        let url = format!("{}/{}.json", ImageBoards::Danbooru.post_url(), post_id);
+
+        // Fetch item list from page
+        let req = if self.auth_state {
+            debug!("[AUTH] Fetching post {}", post_id);
+            self.client
+                .get(url)
+                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+        } else {
+            debug!("Fetching post {}", post_id);
+            self.client.get(url)
+        };
+
+        let post_array = req.send().await?.text().await?;
+
+        let start_point = Instant::now();
+
+        let mtx = self.map_post(post_array)?;
+
+        let end_iter = start_point.elapsed();
+
+        debug!("Post mapping took {:?}", end_iter);
+        Ok(mtx)
+    }
+
+    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {
+        let mut pvec = Vec::with_capacity(posts.len());
+
+        for post_id in posts {
+            let post = self.get_post(*post_id).await?;
+            pvec.push(post);
+        }
+        Ok(pvec)
     }
 }

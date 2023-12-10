@@ -17,13 +17,18 @@ use ibdl_common::{
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{AsyncFetch, Extractor, PoolExtract},
+    websites::{
+        AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
+    },
 };
 
 use super::E621Extractor;
 
+// A quick alias so I can copy paste stuff faster
+type ExtractorUnit = E621Extractor;
+
 #[async_trait]
-impl AsyncFetch for E621Extractor {
+impl AsyncFetch for ExtractorUnit {
     #[inline]
     fn setup_fetch_thread(
         self,
@@ -142,5 +147,35 @@ impl AsyncFetch for E621Extractor {
 
         debug!("Terminating thread.");
         Ok(self.total_removed)
+    }
+}
+
+impl PostFetchAsync for ExtractorUnit {
+    fn setup_async_post_fetch(
+        self,
+        sender_channel: UnboundedSender<Post>,
+        method: PostFetchMethod,
+    ) -> JoinHandle<Result<u64, ExtractorError>> {
+        spawn(async move {
+            let mut ext = self;
+            let mut pctr = 0;
+            match method {
+                PostFetchMethod::Single(p_id) => {
+                    sender_channel.send(ext.get_post(p_id).await?)?;
+                    pctr += 1;
+                }
+                PostFetchMethod::Multiple(p_ids) => {
+                    let posts = ext.get_posts(&p_ids).await?;
+                    let plen = posts.len();
+
+                    for i in posts {
+                        sender_channel.send(i)?;
+                    }
+
+                    pctr += plen as u64;
+                }
+            }
+            Ok(pctr)
+        })
     }
 }

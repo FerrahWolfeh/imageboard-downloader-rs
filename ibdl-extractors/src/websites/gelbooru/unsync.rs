@@ -20,8 +20,11 @@ use crate::{
 
 use super::GelbooruExtractor;
 
+// A quick alias so I can copy paste stuff faster
+type ExtractorUnit = GelbooruExtractor;
+
 #[async_trait]
-impl AsyncFetch for GelbooruExtractor {
+impl AsyncFetch for ExtractorUnit {
     #[inline]
     fn setup_fetch_thread(
         self,

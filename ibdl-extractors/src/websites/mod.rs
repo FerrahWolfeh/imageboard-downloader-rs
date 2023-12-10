@@ -188,3 +188,29 @@ pub trait PoolExtract {
 
     fn setup_pool_download(&mut self, pool_id: Option<u32>, last_first: bool);
 }
+
+#[derive(Debug, Clone)]
+pub enum PostFetchMethod {
+    Single(u32),
+    Multiple(Vec<u32>),
+}
+
+#[async_trait]
+pub trait SinglePostFetch {
+    /// This is a separate lower level function to map a single post by feeding the imageboard's post representation.
+    fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError>;
+
+    /// Fetch one single post from the imageboard.
+    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError>;
+
+    /// Fetch n posts from the imageboard.
+    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError>;
+}
+
+pub trait PostFetchAsync {
+    fn setup_async_post_fetch(
+        self,
+        sender_channel: UnboundedSender<Post>,
+        method: PostFetchMethod,
+    ) -> JoinHandle<Result<u64, ExtractorError>>;
+}

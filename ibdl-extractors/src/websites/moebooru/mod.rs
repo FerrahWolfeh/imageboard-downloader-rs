@@ -179,7 +179,7 @@ impl Extractor for MoebooruExtractor {
         // Get URL
         let url = format!(
             "{}?tags={}",
-            ImageBoards::Konachan.post_url(),
+            ImageBoards::Konachan.post_list_url(),
             &self.tag_string
         );
 
