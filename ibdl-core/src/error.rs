@@ -75,5 +75,8 @@ pub enum CliError {
     ImpossibleExecutionPath,
 
     #[error("This operation is currently unsupported for this imageboard")]
-    ImageboardUnsupportedMode,
+    ExtractorUnsupportedMode,
+
+    #[error("No posts given")]
+    NoPostsInInput,
 }

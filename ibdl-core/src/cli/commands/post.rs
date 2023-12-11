@@ -20,11 +20,13 @@ use crate::{
 #[derive(Debug, Args)]
 pub struct Post {
     /// Download a specific post/image
-    #[clap(long, value_parser, value_name = "POST ID", conflicts_with("posts"))]
-    post: Option<u32>,
-
-    /// Download a list of posts
-    #[clap(long, value_parser, value_name = "POST IDs", conflicts_with("post"))]
+    #[clap(
+        long,
+        value_parser,
+        value_name = "POST IDs",
+        conflicts_with("post_file"),
+        required = true
+    )]
     posts: Vec<u32>,
 
     /// Download a list of posts from a file (one post id per line)
@@ -32,8 +34,7 @@ pub struct Post {
         long = "post_file",
         value_name = "FILE PATH",
         value_parser,
-        conflicts_with("posts"),
-        conflicts_with("post")
+        conflicts_with("posts")
     )]
     post_file: Option<PathBuf>,
 }
@@ -52,9 +53,7 @@ impl Post {
                 let client = unit.client();
 
                 let ext_thd = {
-                    if let Some(post_id) = self.post {
-                        unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Single(post_id))
-                    } else if !self.posts.is_empty() {
+                    if !self.posts.is_empty() {
                         unit.setup_async_post_fetch(
                             channel_tx,
                             PostFetchMethod::Multiple(self.posts.clone()),
@@ -72,9 +71,14 @@ impl Post {
                                 None
                             }
                         }));
+
+                        if ids.is_empty() {
+                            return Err(CliError::NoPostsInInput);
+                        }
+
                         unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Multiple(ids))
                     } else {
-                        return Err(CliError::ImpossibleExecutionPath);
+                        return Err(CliError::NoPostsInInput);
                     }
                 };
 
@@ -85,11 +89,8 @@ impl Post {
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 let client = unit.client();
-
                 let ext_thd = {
-                    if let Some(post_id) = self.post {
-                        unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Single(post_id))
-                    } else if !self.posts.is_empty() {
+                    if !self.posts.is_empty() {
                         unit.setup_async_post_fetch(
                             channel_tx,
                             PostFetchMethod::Multiple(self.posts.clone()),
@@ -107,16 +108,21 @@ impl Post {
                                 None
                             }
                         }));
+
+                        if ids.is_empty() {
+                            return Err(CliError::NoPostsInInput);
+                        }
+
                         unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Multiple(ids))
                     } else {
-                        return Err(CliError::ImpossibleExecutionPath);
+                        return Err(CliError::NoPostsInInput);
                     }
                 };
 
                 Ok((ext_thd, client))
             }
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-                Err(CliError::ImageboardUnsupportedMode)
+                Err(CliError::ExtractorUnsupportedMode)
                 // let mut unit = GelbooruExtractor::new(
                 //     &args.tags,
                 //     &ratings,
@@ -143,7 +149,7 @@ impl Post {
                 // Ok((ext_thd, client))
             }
             ImageBoards::Konachan => {
-                Err(CliError::ImageboardUnsupportedMode)
+                Err(CliError::ExtractorUnsupportedMode)
 
                 // let mut unit = MoebooruExtractor::new(
                 //     &args.tags,
