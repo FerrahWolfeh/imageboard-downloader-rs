@@ -12,6 +12,7 @@ documentation = "https://docs.rs/ibdl-core"
 [dependencies]
 indicatif = "0.17.6"
 ibdl-common = { version = "1.5.0", path = "../ibdl-common" }
+ibdl-extractors = { version = "1.5.0", path = "../ibdl-extractors" }
 thiserror = "1.0.47"
 thiserror-impl = "1.0.47"
 bytes = "1.4.0"
@@ -20,6 +21,8 @@ md5 = "0.7.0"
 tokio-stream = "0.1.14"
 owo-colors = "3.5.0"
 once_cell = "1.18.0"
+dialoguer = "0.11.0"
+
 
 [dependencies.chrono]
 version = "0.4.27"

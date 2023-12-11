@@ -1,36 +1,26 @@
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
-use color_eyre::eyre::Result;
-use dialoguer::theme::ColorfulTheme;
-use dialoguer::{Input, Password};
-use ibdl_common::bincode::deserialize;
-use ibdl_common::log::warn;
-use ibdl_common::tokio::fs::{read, remove_file};
-use ibdl_common::{log::debug, reqwest::Client, ImageBoards};
-use ibdl_core::owo_colors::OwoColorize;
-use ibdl_extractors::auth::ImageboardConfig;
-use ibdl_extractors::websites::{Auth, Extractor};
+use dialoguer::{theme::ColorfulTheme, Input, Password};
+use ibdl_common::{
+    bincode::deserialize,
+    log::{debug, warn},
+    reqwest::Client,
+    tokio::fs::{read, remove_file},
+    ImageBoards,
+};
+use ibdl_extractors::{
+    auth::ImageboardConfig,
+    websites::{Auth, Extractor},
+};
+use owo_colors::OwoColorize;
 
-pub fn print_results(total_down: u64, total_black: u64) {
-    println!(
-        "{} {} {}",
-        total_down.to_string().bold().blue(),
-        "files".bold().blue(),
-        "downloaded".bold()
-    );
+use crate::error::CliError;
 
-    if total_black > 0 && total_down != 0 {
-        println!(
-            "{} {}",
-            total_black.to_string().bold().red(),
-            "found posts with blacklisted tags were not downloaded."
-                .bold()
-                .red()
-        );
-    }
-}
-
-pub async fn auth_prompt(auth_state: bool, imageboard: ImageBoards, client: &Client) -> Result<()> {
+pub async fn auth_prompt(
+    auth_state: bool,
+    imageboard: ImageBoards,
+    client: &Client,
+) -> Result<(), CliError> {
     if auth_state {
         println!(
             "{} {}",
@@ -59,7 +49,7 @@ pub async fn auth_prompt(auth_state: bool, imageboard: ImageBoards, client: &Cli
     Ok(())
 }
 
-pub async fn auth_imgboard<E>(ask: bool, extractor: &mut E) -> Result<()>
+pub async fn auth_imgboard<E>(ask: bool, extractor: &mut E) -> Result<(), CliError>
 where
     E: Auth + Extractor,
 {
@@ -78,7 +68,9 @@ where
 /// Reads and parses the authentication cache from the path provided by `auth_cache_dir`.
 ///
 /// Returns `None` if the file is corrupted or does not exist.
-pub async fn read_config_from_fs(imageboard: ImageBoards) -> Result<Option<ImageboardConfig>> {
+pub async fn read_config_from_fs(
+    imageboard: ImageBoards,
+) -> Result<Option<ImageboardConfig>, io::Error> {
     let cfg_path = ImageBoards::auth_cache_dir()?.join(PathBuf::from(imageboard.to_string()));
     if let Ok(config_auth) = read(&cfg_path).await {
         debug!("Authentication cache found");
