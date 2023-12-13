@@ -1,4 +1,7 @@
-use ibdl_common::{tokio::sync::mpsc::Receiver, ImageBoards};
+use ibdl_common::{
+    tokio::{spawn, sync::mpsc::Receiver},
+    ImageBoards,
+};
 use indicatif::{
     HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
 };
@@ -8,7 +11,6 @@ use std::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc,
     },
-    thread,
     time::Duration,
 };
 
@@ -114,25 +116,27 @@ impl ProgressCounter {
         self.multi.add(bar)
     }
 
-    pub fn init_length_updater(&self, channel: Receiver<u64>) {
+    pub async fn init_length_updater(&self, channel: Receiver<u64>) {
         let mut channel = channel;
         let cloned_bar = self.main.clone();
-        thread::spawn(move || {
-            while let Some(delta_posts) = channel.blocking_recv() {
+        spawn(async move {
+            while let Some(delta_posts) = channel.recv().await {
                 cloned_bar.inc_length(delta_posts);
             }
-        });
+        })
+        .await
+        .unwrap();
     }
 
-    pub fn init_download_counter(&self, channel: Receiver<bool>) {
+    pub async fn init_download_counter(&self, channel: Receiver<bool>) {
         let mut channel = channel;
         let cloned_bar = self.main.clone();
         let cloned_mtx = self.downloaded_mtx.clone();
-        thread::spawn(move || {
-            while let Some(downloaded) = channel.blocking_recv() {
+        spawn(async move {
+            while let Some(downloaded) = channel.recv().await {
                 if downloaded {
                     cloned_bar.inc(1);
-                    cloned_mtx.fetch_add(1, Ordering::Relaxed);
+                    cloned_mtx.fetch_add(1, Ordering::SeqCst);
                 }
             }
         });

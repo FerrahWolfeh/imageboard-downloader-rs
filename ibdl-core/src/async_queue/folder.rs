@@ -39,11 +39,14 @@ impl Queue {
                 let output = output_dir.clone();
                 let file_path = output_dir.join(d.file_name(self.name_type));
                 let variant = self.imageboard;
+                let sender_chn = sender.clone();
 
                 task::spawn(async move {
                     if !Self::check_file_exists(&d, &file_path, nt).await? {
                         Self::fetch(cli, variant, &d, &output, nt, pool).await?;
                     }
+                    let _ = sender_chn.send(true).await;
+
                     Ok::<Post, QueueError>(d)
                 })
             })
@@ -65,7 +68,6 @@ impl Queue {
                                 .unwrap();
                         };
                     }
-                    let _ = sender.send(true).await;
                 }
             })
             .await
@@ -128,7 +130,6 @@ impl Queue {
                         }
                     };
 
-                    counters.increment_counters(1);
                     return Ok(true);
                 }
                 match counters.multi.println(format!(
@@ -145,7 +146,6 @@ impl Queue {
                     }
                 };
 
-                counters.increment_counters(1);
                 return Ok(true);
             }
             remove_file(&actual).await?;

@@ -5,7 +5,10 @@ use ibdl_common::{
     log::warn,
     post::Post as Pst,
     reqwest::Client,
-    tokio::{fs, sync::mpsc::UnboundedSender},
+    tokio::{
+        fs,
+        sync::mpsc::{Sender, UnboundedSender},
+    },
     ImageBoards,
 };
 use ibdl_extractors::websites::{danbooru::DanbooruExtractor, e621::E621Extractor};
@@ -21,7 +24,6 @@ use crate::{
 pub struct Post {
     /// Download a specific post/image
     #[clap(
-        long,
         value_parser,
         value_name = "POST IDs",
         conflicts_with("post_file"),
@@ -44,6 +46,7 @@ impl Post {
         &self,
         args: &Cli,
         channel_tx: UnboundedSender<Pst>,
+        length_tx: Sender<u64>,
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         match *args.imageboard {
             ImageBoards::Danbooru => {
@@ -57,6 +60,7 @@ impl Post {
                         unit.setup_async_post_fetch(
                             channel_tx,
                             PostFetchMethod::Multiple(self.posts.clone()),
+                            length_tx,
                         )
                     } else if let Some(path) = &self.post_file {
                         let posts = fs::read_to_string(&path).await?;
@@ -76,7 +80,11 @@ impl Post {
                             return Err(CliError::NoPostsInInput);
                         }
 
-                        unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Multiple(ids))
+                        unit.setup_async_post_fetch(
+                            channel_tx,
+                            PostFetchMethod::Multiple(ids),
+                            length_tx,
+                        )
                     } else {
                         return Err(CliError::NoPostsInInput);
                     }
@@ -94,6 +102,7 @@ impl Post {
                         unit.setup_async_post_fetch(
                             channel_tx,
                             PostFetchMethod::Multiple(self.posts.clone()),
+                            length_tx,
                         )
                     } else if let Some(path) = &self.post_file {
                         let posts = fs::read_to_string(&path).await?;
@@ -113,7 +122,11 @@ impl Post {
                             return Err(CliError::NoPostsInInput);
                         }
 
-                        unit.setup_async_post_fetch(channel_tx, PostFetchMethod::Multiple(ids))
+                        unit.setup_async_post_fetch(
+                            channel_tx,
+                            PostFetchMethod::Multiple(ids),
+                            length_tx,
+                        )
                     } else {
                         return Err(CliError::NoPostsInInput);
                     }

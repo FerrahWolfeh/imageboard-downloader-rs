@@ -245,21 +245,21 @@ impl Queue {
                 let zip = zip.clone();
                 let variant = self.imageboard;
                 let annotate = self.annotate;
+                let sender = sender.clone();
 
                 task::spawn(async move {
                     if pool {
                         Self::fetch_cbz_pool(cli, variant, d, zip, 6).await?;
-                        return Ok::<(), QueueError>(());
+                    } else {
+                        Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
                     }
 
-                    Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
+                    let _ = sender.send(true).await;
                     Ok::<(), QueueError>(())
                 })
             })
             .buffer_unordered(self.sim_downloads.into())
-            .for_each(|_| async {
-                let _ = sender.send(true).await;
-            })
+            .for_each(|_| async {})
             .await;
 
         let mut mtx = zip.lock().unwrap();

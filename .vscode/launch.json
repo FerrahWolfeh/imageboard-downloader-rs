@@ -257,5 +257,29 @@
             ],
             "cwd": "${workspaceFolder}"
         },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Async Length Counter test",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imageboard_downloader",
+                    "--package=imageboard_downloader"
+                ],
+                "filter": {
+                    "name": "imageboard_downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "post",
+                "--cbz",
+                "-o",
+                "/mnt/ram/u",
+                "6778031",
+            ],
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

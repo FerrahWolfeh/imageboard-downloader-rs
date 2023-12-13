@@ -191,10 +191,10 @@ impl Queue {
             let post_channel = UnboundedReceiverStream::new(channel_rx);
             let (progress_sender, progress_channel) = channel(self.sim_downloads as usize);
 
-            if self.download_fmt.download_cbz() {
-                counters.init_length_updater(length_rx);
-                counters.init_download_counter(progress_channel);
+            counters.init_length_updater(length_rx).await;
+            counters.init_download_counter(progress_channel).await;
 
+            if self.download_fmt.download_cbz() {
                 self.cbz_path(
                     output_dir,
                     progress_sender,
@@ -202,28 +202,19 @@ impl Queue {
                     self.download_fmt.download_pool(),
                 )
                 .await?;
-
-                counters.main.finish_and_clear();
-
-                let tot = counters.downloaded_mtx.load(Ordering::Relaxed);
-
-                return Ok(tot);
+            } else {
+                self.download_channel(
+                    post_channel,
+                    progress_sender,
+                    output_dir,
+                    self.download_fmt.download_pool(),
+                )
+                .await;
             }
-
-            counters.init_length_updater(length_rx);
-            counters.init_download_counter(progress_channel);
-
-            self.download_channel(
-                post_channel,
-                progress_sender,
-                output_dir,
-                self.download_fmt.download_pool(),
-            )
-            .await;
 
             counters.main.finish_and_clear();
 
-            let tot = counters.downloaded_mtx.load(Ordering::Relaxed);
+            let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
 
             Ok(tot)
         })

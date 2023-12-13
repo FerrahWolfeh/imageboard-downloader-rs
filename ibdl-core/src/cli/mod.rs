@@ -75,7 +75,13 @@ pub struct Cli {
     /// Save posts inside a cbz file.
     ///
     /// Will always overwrite the destination file.
-    #[clap(long, value_parser, default_value_t = false, help_heading = "SAVE")]
+    #[clap(
+        long,
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE",
+        global = true
+    )]
     pub cbz: bool,
 
     /// Write tags in a txt file next to the downloaded image (for Stable Diffusion training)
