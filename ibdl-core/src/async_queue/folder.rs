@@ -153,7 +153,7 @@ impl Queue {
                 "{} {} {}",
                 "File".bold().red(),
                 name.bold().yellow().italic(),
-                "is corrupted. Re-downloading...".bold().red()
+                "MD5 mismatch. Redownloading...".bold().red()
             ))?;
 
             Ok(false)
