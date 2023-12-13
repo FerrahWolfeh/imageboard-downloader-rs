@@ -74,7 +74,7 @@ pub struct Cli {
 
     /// Save posts inside a cbz file.
     ///
-    /// Will always overwrite the destination file.
+    /// Will ask to overwrite the destination file.
     #[clap(
         long,
         value_parser,

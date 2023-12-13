@@ -55,6 +55,8 @@
 mod cbz;
 mod folder;
 
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
 use futures::stream::iter;
 use futures::StreamExt;
 use ibdl_common::log::{debug, trace};
@@ -181,6 +183,21 @@ impl Queue {
     ) -> JoinHandle<Result<u64, QueueError>> {
         spawn(async move {
             debug!("Async Downloader thread initialized");
+
+            if output_dir.exists() {
+                let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
+                    .with_prompt(format!(
+                        "File {} already exists. Do you want to overwrite it?",
+                        output_dir.display().bold().blue().italic()
+                    ))
+                    .wait_for_newline(true)
+                    .interact()
+                    .unwrap();
+                if !conf_exists {
+                    println!("{}", "Download cancelled".bold().blue());
+                    std::process::exit(0);
+                }
+            }
 
             let counters = PROGRESS_COUNTERS.get_or_init(|| {
                 ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard)
