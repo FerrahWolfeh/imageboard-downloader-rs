@@ -11,7 +11,9 @@ use ibdl_common::{
     },
     ImageBoards,
 };
-use ibdl_extractors::websites::{danbooru::DanbooruExtractor, e621::E621Extractor};
+use ibdl_extractors::websites::{
+    danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
+};
 use ibdl_extractors::{prelude::*, websites::PostFetchMethod};
 use owo_colors::OwoColorize;
 
@@ -135,7 +137,48 @@ impl Post {
                 Ok((ext_thd, client))
             }
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-                Err(CliError::ExtractorUnsupportedMode)
+                let mut unit = GelbooruExtractor::new(&[""], &[], true, true);
+
+                unit.set_imageboard(*args.imageboard);
+
+                let client = unit.client();
+                let ext_thd = {
+                    if !self.posts.is_empty() {
+                        unit.setup_async_post_fetch(
+                            channel_tx,
+                            PostFetchMethod::Multiple(self.posts.clone()),
+                            length_tx,
+                        )
+                    } else if let Some(path) = &self.post_file {
+                        let posts = fs::read_to_string(&path).await?;
+                        let ids = Vec::from_iter(posts.lines().filter_map(|line| {
+                            if let Ok(id) = line.parse::<u32>() {
+                                Some(id)
+                            } else {
+                                warn!(
+                                    "Failed to parse line {} into a post id",
+                                    line.bright_blue().bold()
+                                );
+                                None
+                            }
+                        }));
+
+                        if ids.is_empty() {
+                            return Err(CliError::NoPostsInInput);
+                        }
+
+                        unit.setup_async_post_fetch(
+                            channel_tx,
+                            PostFetchMethod::Multiple(ids),
+                            length_tx,
+                        )
+                    } else {
+                        return Err(CliError::NoPostsInInput);
+                    }
+                };
+
+                Ok((ext_thd, client))
+
                 // let mut unit = GelbooruExtractor::new(
                 //     &args.tags,
                 //     &ratings,

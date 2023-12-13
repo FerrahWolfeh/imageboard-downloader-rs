@@ -1,4 +1,9 @@
-use std::{fs::create_dir_all, io, path::PathBuf};
+use std::{
+    env,
+    fs::create_dir_all,
+    io,
+    path::{Path, PathBuf},
+};
 
 // Public Exports
 pub use bincode;
@@ -78,6 +83,19 @@ impl ImageBoards {
         ua
     }
 
+    /// Returns the base URL for the website.
+    #[inline]
+    pub fn base_url(&self) -> &'static str {
+        match self {
+            ImageBoards::Danbooru => "https://danbooru.donmai.us",
+            ImageBoards::E621 => "https://e621.net",
+            ImageBoards::Rule34 => "https://rule34.xxx",
+            ImageBoards::Konachan => "https://konachan.com",
+            ImageBoards::Realbooru => "https://realbooru.com",
+            ImageBoards::Gelbooru => "https://gelbooru.com",
+        }
+    }
+
     /// Returns the endpoint for the post list with their respective tags.
     #[inline]
     pub fn post_url(&self) -> &'static str {
@@ -85,14 +103,14 @@ impl ImageBoards {
             ImageBoards::Danbooru => "https://danbooru.donmai.us/posts/",
             ImageBoards::E621 => "https://e621.net/posts/",
             ImageBoards::Rule34 => {
-                todo!()
+                "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
             }
-            ImageBoards::Konachan => todo!(),
+            ImageBoards::Konachan => "",
             ImageBoards::Realbooru => {
-                todo!()
+                "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             }
             ImageBoards::Gelbooru => {
-                todo!()
+                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             }
         }
     }
@@ -151,11 +169,16 @@ impl ImageBoards {
     /// This is XDG-compliant and saves cache files to
     /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux or
     /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
+    ///
+    /// Or you can set the env var `IBDL_CACHE_DIR` to point it to a custom location.
     #[inline]
     pub fn auth_cache_dir() -> Result<PathBuf, io::Error> {
-        let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+        let cfg_path = env::var("IBDL_CACHE_DIR").unwrap_or({
+            let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+            cdir.config_dir().to_string_lossy().to_string()
+        });
 
-        let cfold = cdir.config_dir();
+        let cfold = Path::new(&cfg_path);
 
         if !cfold.exists() {
             create_dir_all(cfold)?;

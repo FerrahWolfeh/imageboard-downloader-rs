@@ -15,7 +15,7 @@ use ibdl_common::{
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{AsyncFetch, Extractor},
+    websites::{AsyncFetch, Extractor, PostFetchAsync, PostFetchMethod, SinglePostFetch},
 };
 
 use super::GelbooruExtractor;
@@ -128,5 +128,31 @@ impl AsyncFetch for ExtractorUnit {
 
         debug!("Terminating thread.");
         Ok(self.total_removed)
+    }
+}
+
+impl PostFetchAsync for ExtractorUnit {
+    fn setup_async_post_fetch(
+        self,
+        post_channel: UnboundedSender<Post>,
+        method: PostFetchMethod,
+        length_channel: Sender<u64>,
+    ) -> JoinHandle<Result<u64, ExtractorError>> {
+        spawn(async move {
+            let mut unit = self;
+            match method {
+                PostFetchMethod::Single(p_id) => {
+                    post_channel.send(unit.get_post(p_id).await?)?;
+                    length_channel.send(1).await?;
+                }
+                PostFetchMethod::Multiple(p_ids) => {
+                    for p_id in p_ids {
+                        post_channel.send(unit.get_post(p_id).await?)?;
+                        length_channel.send(1).await?;
+                    }
+                }
+            }
+            Ok(0)
+        })
     }
 }

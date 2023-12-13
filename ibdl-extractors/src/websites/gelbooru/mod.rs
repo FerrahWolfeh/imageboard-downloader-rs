@@ -28,7 +28,7 @@ use std::time::Duration;
 
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-use super::{Extractor, MultiWebsite};
+use super::{Extractor, MultiWebsite, SinglePostFetch};
 
 mod unsync;
 
@@ -274,42 +274,7 @@ impl GelbooruExtractor {
         let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|f| {
-            let tag_iter = f["tags"].as_str().unwrap().split(' ');
-
-            let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
-
-            tag_iter.for_each(|f| {
-                tags.push(Tag::new(f, TagType::Any));
-            });
-
-            let rating = Rating::from_rating_str(f["rating"].as_str().unwrap());
-
-            let file = f["image"].as_str().unwrap();
-
-            let md5 = f["hash"].as_str().unwrap().to_string();
-
-            let ext = extract_ext_from_url!(file);
-
-            let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
-                format!(
-                    "https://realbooru.com/images/{}/{}.{}",
-                    f["directory"].as_str().unwrap(),
-                    &md5,
-                    &ext
-                )
-            } else {
-                f["file_url"].as_str().unwrap().to_string()
-            };
-
-            let unit = Post {
-                id: f["id"].as_u64().unwrap(),
-                website: self.active_imageboard,
-                url: drop_url,
-                md5,
-                extension: ext,
-                rating,
-                tags,
-            };
+            let unit = self.gelbooru_old_path_map_post(f);
 
             post_mtx.push(unit);
         });
@@ -329,26 +294,7 @@ impl GelbooruExtractor {
         let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
         post_iter.for_each(|post| {
-            let url = post["file_url"].as_str().unwrap().to_string();
-            let tag_iter = post["tags"].as_str().unwrap().split(' ');
-
-            let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
-
-            tag_iter.for_each(|i| {
-                tags.push(Tag::new(i, TagType::Any));
-            });
-
-            let extension = extract_ext_from_url!(url);
-
-            let unit = Post {
-                id: post["id"].as_u64().unwrap(),
-                website: self.active_imageboard,
-                md5: post["md5"].as_str().unwrap().to_string(),
-                url,
-                extension,
-                tags,
-                rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
-            };
+            let unit = self.gelbooru_new_path_map_post(post);
 
             post_mtx.push(unit);
         });
@@ -359,5 +305,110 @@ impl GelbooruExtractor {
         debug!("Post mapping took {:?}", end - start);
 
         post_mtx
+    }
+
+    #[inline]
+    fn gelbooru_new_path_map_post(&self, post: &Value) -> Post {
+        let url = post["file_url"].as_str().unwrap().to_string();
+        let tag_iter = post["tags"].as_str().unwrap().split(' ');
+
+        let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
+
+        tag_iter.for_each(|i| {
+            tags.push(Tag::new(i, TagType::Any));
+        });
+
+        let extension = extract_ext_from_url!(url);
+
+        Post {
+            id: post["id"].as_u64().unwrap(),
+            website: self.active_imageboard,
+            md5: post["md5"].as_str().unwrap().to_string(),
+            url,
+            extension,
+            tags,
+            rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
+        }
+    }
+
+    #[inline]
+    fn gelbooru_old_path_map_post(&self, post: &Value) -> Post {
+        let tag_iter = post["tags"].as_str().unwrap().split(' ');
+
+        let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
+
+        tag_iter.for_each(|f| {
+            tags.push(Tag::new(f, TagType::Any));
+        });
+
+        let rating = Rating::from_rating_str(post["rating"].as_str().unwrap());
+
+        let file = post["image"].as_str().unwrap();
+
+        let md5 = post["hash"].as_str().unwrap().to_string();
+
+        let ext = extract_ext_from_url!(file);
+
+        let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
+            format!(
+                "https://realbooru.com/images/{}/{}.{}",
+                post["directory"].as_str().unwrap(),
+                &md5,
+                &ext
+            )
+        } else {
+            post["file_url"].as_str().unwrap().to_string()
+        };
+
+        Post {
+            id: post["id"].as_u64().unwrap(),
+            website: self.active_imageboard,
+            url: drop_url,
+            md5,
+            extension: ext,
+            rating,
+            tags,
+        }
+    }
+}
+
+#[async_trait]
+impl SinglePostFetch for GelbooruExtractor {
+    fn map_post(&self, _raw_json: String) -> Result<Post, ExtractorError> {
+        unimplemented!();
+    }
+
+    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
+        let url = format!("{}&id={}", self.active_imageboard.post_url(), post_id);
+
+        let items = self.client.get(&url).send().await?.text().await?;
+
+        let start_point = Instant::now();
+
+        let mtx = self.map_posts(items)?;
+
+        if let Some(post) = mtx.get(0) {
+            let end_iter = start_point.elapsed();
+
+            debug!("Post mapping took {:?}", end_iter);
+            Ok(post.clone())
+        } else {
+            Err(ExtractorError::ZeroPosts)
+        }
+    }
+
+    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {
+        let mut pvec = Vec::with_capacity(posts.len());
+
+        for post_id in posts {
+            let post = self.get_post(*post_id).await?;
+
+            // This function is pretty heavy on API usage, so let's ease it up a little.
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
+
+            pvec.push(post);
+        }
+        Ok(pvec)
     }
 }
