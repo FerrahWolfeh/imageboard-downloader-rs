@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
 
     let (channel_tx, channel_rx) = unbounded_channel();
 
-    let (length_sender, length_channel) = channel(8);
+    let (length_sender, length_channel) = channel(args.simultaneous_downloads as usize);
     let mut is_pool = false;
 
     let (ext, client) = match &args.mode {
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
             is_pool = true;
             com.init_extractor(&args, channel_tx, length_sender).await?
         }
-        Commands::Post(com) => com.init_extractor(&args, channel_tx).await?,
+        Commands::Post(com) => com.init_extractor(&args, channel_tx, length_sender).await?,
     };
 
     let dirname = args.generate_save_path()?;

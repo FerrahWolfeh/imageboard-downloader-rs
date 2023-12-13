@@ -210,7 +210,8 @@ pub trait SinglePostFetch {
 pub trait PostFetchAsync {
     fn setup_async_post_fetch(
         self,
-        sender_channel: UnboundedSender<Post>,
+        post_channel: UnboundedSender<Post>,
         method: PostFetchMethod,
+        length_channel: Sender<u64>,
     ) -> JoinHandle<Result<u64, ExtractorError>>;
 }

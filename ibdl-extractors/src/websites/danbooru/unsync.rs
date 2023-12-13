@@ -155,20 +155,21 @@ impl AsyncFetch for ExtractorUnit {
 impl PostFetchAsync for ExtractorUnit {
     fn setup_async_post_fetch(
         self,
-        sender_channel: UnboundedSender<Post>,
+        post_channel: UnboundedSender<Post>,
         method: PostFetchMethod,
+        length_channel: Sender<u64>,
     ) -> JoinHandle<Result<u64, ExtractorError>> {
         spawn(async move {
             let mut unit = self;
             match method {
                 PostFetchMethod::Single(p_id) => {
-                    sender_channel.send(unit.get_post(p_id).await?)?;
+                    post_channel.send(unit.get_post(p_id).await?)?;
+                    length_channel.send(1).await?;
                 }
                 PostFetchMethod::Multiple(p_ids) => {
-                    let posts = unit.get_posts(&p_ids).await?;
-
-                    for i in posts {
-                        sender_channel.send(i)?;
+                    for p_id in p_ids {
+                        post_channel.send(unit.get_post(p_id).await?)?;
+                        length_channel.send(1).await?;
                     }
                 }
             }

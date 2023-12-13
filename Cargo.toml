@@ -21,7 +21,7 @@ include = ["**/*.rs", "Cargo.toml"]
 env_logger = "0.10.0"
 spinoff = "0.8.0"
 ibdl-core = { version = "1.6.0", path = "./ibdl-core" }
-ibdl-extractors = { version = "1.6.0", path = "./ibdl-extractors" }
+ibdl-extractors = { version = "1.7.0", path = "./ibdl-extractors" }
 ibdl-common = { version = "1.5.0", path = "./ibdl-common" }
 color-eyre = "0.6.2"
 once_cell = "1.18.0"
