@@ -28,7 +28,7 @@ use std::time::Duration;
 
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-use super::{Extractor, MultiWebsite, SinglePostFetch};
+use super::{Extractor, MultiWebsite, ServerConfig, SinglePostFetch};
 
 mod unsync;
 
@@ -56,6 +56,50 @@ impl Extractor for GelbooruExtractor {
     ) -> Self
     where
         S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = Client::builder()
+            .user_agent(ImageBoards::Rule34.user_agent())
+            .build()
+            .unwrap();
+
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
+
+        Self {
+            active_imageboard: ImageBoards::Rule34,
+            client,
+            tags: strvec,
+            tag_string,
+            disable_blacklist,
+            total_removed: 0,
+            download_ratings: download_ratings.to_vec(),
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn new_with_config<S, E>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig<E>,
+    ) -> Self
+    where
+        S: ToString + Display,
+        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()

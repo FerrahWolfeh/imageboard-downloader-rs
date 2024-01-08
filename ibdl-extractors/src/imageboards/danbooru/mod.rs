@@ -6,7 +6,7 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor, SinglePostFetch};
+use super::{Auth, Extractor, ServerConfig, SinglePostFetch};
 use crate::auth::ImageboardConfig;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
@@ -56,6 +56,61 @@ impl Extractor for DanbooruExtractor {
     ) -> Self
     where
         S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::Danbooru);
+
+        let mut strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        let mut extra_tags = Vec::with_capacity(strvec.len().saturating_sub(2));
+
+        if strvec.len() > 2 {
+            let extra = strvec.split_off(1);
+            extra_tags = extra;
+        }
+
+        debug!("Tag List: {:?}", strvec);
+        if !extra_tags.is_empty() {
+            debug!("Extra tags: {:?}", extra_tags);
+        }
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            auth_state: false,
+            auth: ImageboardConfig::default(),
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+            extra_tags,
+            pool_id: None,
+            pool_last_items_first: false,
+        }
+    }
+
+    fn new_with_config<S, E>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig<E>,
+    ) -> Self
+    where
+        S: ToString + Display,
+        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Danbooru);

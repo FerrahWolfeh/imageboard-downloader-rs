@@ -25,7 +25,7 @@ use crate::{
 
 use self::models::E621Post;
 
-use super::{Auth, Extractor, SinglePostFetch};
+use super::{Auth, Extractor, ServerConfig, SinglePostFetch};
 
 mod models;
 mod pool;
@@ -61,6 +61,49 @@ impl Extractor for E621Extractor {
     ) -> Self
     where
         S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::E621);
+
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            auth_state: false,
+            auth: ImageboardConfig::default(),
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+            pool_id: None,
+            pool_last_items_first: false,
+        }
+    }
+
+    fn new_with_config<S, E>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig<E>,
+    ) -> Self
+    where
+        S: ToString + Display,
+        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::E621);

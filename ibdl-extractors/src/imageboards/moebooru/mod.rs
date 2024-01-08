@@ -17,7 +17,7 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
 };
 
-use super::Extractor;
+use super::{Extractor, ServerConfig};
 
 mod models;
 mod unsync;
@@ -44,6 +44,45 @@ impl Extractor for MoebooruExtractor {
     ) -> Self
     where
         S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(ImageBoards::Konachan);
+
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+        }
+    }
+
+    fn new_with_config<S, E>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig<E>,
+    ) -> Self
+    where
+        S: ToString + Display,
+        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
         let client = client!(ImageBoards::Konachan);
