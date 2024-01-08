@@ -184,10 +184,10 @@ impl Queue {
         spawn(async move {
             debug!("Async Downloader thread initialized");
 
-            if output_dir.exists() {
+            if output_dir.exists() && output_dir.read_dir()?.next().is_some() {
                 let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
                     .with_prompt(format!(
-                        "File {} already exists. Do you want to overwrite it?",
+                        "The path {} is not empty or already exists. Do you want to continue?",
                         output_dir.display().bold().blue().italic()
                     ))
                     .wait_for_newline(true)
