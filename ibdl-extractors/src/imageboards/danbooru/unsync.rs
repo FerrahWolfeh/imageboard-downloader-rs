@@ -14,7 +14,7 @@ use ibdl_common::{
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{
+    imageboards::{
         AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
     },
 };

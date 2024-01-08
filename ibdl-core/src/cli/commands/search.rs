@@ -5,11 +5,11 @@ use ibdl_common::{
     tokio::sync::mpsc::{Sender, UnboundedSender},
     ImageBoards,
 };
-use ibdl_extractors::prelude::*;
-use ibdl_extractors::websites::{
+use ibdl_extractors::imageboards::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor,
 };
+use ibdl_extractors::prelude::*;
 
 use crate::{
     cli::{extra::auth_imgboard, Cli},

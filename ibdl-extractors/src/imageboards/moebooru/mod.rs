@@ -14,7 +14,7 @@ use ibdl_common::{
 use std::fmt::Display;
 
 use crate::{
-    blacklist::BlacklistFilter, error::ExtractorError, websites::moebooru::models::KonachanPost,
+    blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
 };
 
 use super::Extractor;

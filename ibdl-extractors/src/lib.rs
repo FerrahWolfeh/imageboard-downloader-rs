@@ -5,5 +5,5 @@ extern crate ibdl_common;
 pub mod auth;
 pub mod blacklist;
 pub mod error;
+pub mod imageboards;
 pub mod prelude;
-pub mod websites;

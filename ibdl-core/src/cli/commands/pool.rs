@@ -6,8 +6,8 @@ use ibdl_common::{
     ImageBoards,
 };
 use ibdl_extractors::{
+    imageboards::{danbooru::DanbooruExtractor, e621::E621Extractor},
     prelude::*,
-    websites::{danbooru::DanbooruExtractor, e621::E621Extractor},
 };
 
 use crate::{

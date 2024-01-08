@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use ahash::{HashMap, HashMapExt};
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
@@ -10,18 +11,21 @@ use ibdl_common::{
         task::JoinHandle,
         time::sleep,
     },
+    ImageBoards,
 };
 
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{AsyncFetch, Extractor, PostFetchAsync, PostFetchMethod, SinglePostFetch},
+    imageboards::{
+        AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
+    },
 };
 
-use super::GelbooruExtractor;
+use super::E621Extractor;
 
 // A quick alias so I can copy paste stuff faster
-type ExtractorUnit = GelbooruExtractor;
+type ExtractorUnit = E621Extractor;
 
 #[async_trait]
 impl AsyncFetch for ExtractorUnit {
@@ -48,7 +52,7 @@ impl AsyncFetch for ExtractorUnit {
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            self.active_imageboard,
+            ImageBoards::E621,
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -56,6 +60,13 @@ impl AsyncFetch for ExtractorUnit {
             self.selected_extension,
         )
         .await?;
+
+        let mut pool_idxs = HashMap::with_capacity(512);
+
+        if let Some(p_id) = self.pool_id {
+            self.tag_string = format!("pool:{}", p_id);
+            pool_idxs = self.fetch_pool_idxs(p_id, limit).await?;
+        }
 
         let mut has_posts: bool = false;
         let mut total_posts_sent: u16 = 0;
@@ -66,9 +77,9 @@ impl AsyncFetch for ExtractorUnit {
 
         loop {
             let position = if let Some(n) = start_page {
-                page + n - 1
+                page + n
             } else {
-                page - 1
+                page
             };
 
             let posts = self.get_post_list(position).await?;
@@ -82,7 +93,7 @@ impl AsyncFetch for ExtractorUnit {
                 break;
             }
 
-            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -94,14 +105,22 @@ impl AsyncFetch for ExtractorUnit {
                 has_posts = true;
             }
 
-            for i in list {
+            for i in list.iter_mut() {
                 if let Some(num) = limit {
                     if total_posts_sent >= num {
                         break;
                     }
                 }
 
-                sender_channel.send(i)?;
+                if self.pool_id.is_some() {
+                    if let Some(page_num) = pool_idxs.get(&i.id) {
+                        i.id = *page_num as u64;
+                    } else {
+                        continue;
+                    }
+                }
+
+                sender_channel.send(i.clone())?;
                 total_posts_sent += 1;
                 if let Some(counter) = &post_counter {
                     counter.send(1).await?;

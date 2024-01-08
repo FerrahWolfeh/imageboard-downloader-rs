@@ -1,10 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ibdl_common::post::rating::Rating;
-use ibdl_extractors::websites::danbooru::DanbooruExtractor;
-use ibdl_extractors::websites::e621::E621Extractor;
-use ibdl_extractors::websites::gelbooru::GelbooruExtractor;
-use ibdl_extractors::websites::moebooru::MoebooruExtractor;
-use ibdl_extractors::websites::{Extractor, MultiWebsite};
+use ibdl_extractors::imageboards::danbooru::DanbooruExtractor;
+use ibdl_extractors::imageboards::e621::E621Extractor;
+use ibdl_extractors::imageboards::gelbooru::GelbooruExtractor;
+use ibdl_extractors::imageboards::moebooru::MoebooruExtractor;
+use ibdl_extractors::imageboards::{Extractor, MultiWebsite};
 
 static TEST_JSON_E621: &str = include_str!("../assets/sample_post_lists/test_list_e621.json");
 static TEST_JSON_DANBOORU: &str =

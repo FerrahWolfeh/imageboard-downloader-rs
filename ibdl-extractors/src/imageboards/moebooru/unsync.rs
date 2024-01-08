@@ -1,6 +1,3 @@
-use std::time::Duration;
-
-use ahash::{HashMap, HashMapExt};
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
@@ -9,7 +6,6 @@ use ibdl_common::{
         spawn,
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
-        time::sleep,
     },
     ImageBoards,
 };
@@ -17,15 +13,13 @@ use ibdl_common::{
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{
-        AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
-    },
+    imageboards::{AsyncFetch, Extractor},
 };
 
-use super::E621Extractor;
+use super::MoebooruExtractor;
 
 // A quick alias so I can copy paste stuff faster
-type ExtractorUnit = E621Extractor;
+type ExtractorUnit = MoebooruExtractor;
 
 #[async_trait]
 impl AsyncFetch for ExtractorUnit {
@@ -52,7 +46,7 @@ impl AsyncFetch for ExtractorUnit {
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::E621,
+            ImageBoards::Konachan,
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -60,13 +54,6 @@ impl AsyncFetch for ExtractorUnit {
             self.selected_extension,
         )
         .await?;
-
-        let mut pool_idxs = HashMap::with_capacity(512);
-
-        if let Some(p_id) = self.pool_id {
-            self.tag_string = format!("pool:{}", p_id);
-            pool_idxs = self.fetch_pool_idxs(p_id, limit).await?;
-        }
 
         let mut has_posts: bool = false;
         let mut total_posts_sent: u16 = 0;
@@ -93,7 +80,7 @@ impl AsyncFetch for ExtractorUnit {
                 break;
             }
 
-            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
+            let list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
                 let (removed, posts) = blacklist.filter(posts);
                 self.total_removed += removed;
                 posts
@@ -105,22 +92,14 @@ impl AsyncFetch for ExtractorUnit {
                 has_posts = true;
             }
 
-            for i in list.iter_mut() {
+            for i in list {
                 if let Some(num) = limit {
                     if total_posts_sent >= num {
                         break;
                     }
                 }
 
-                if self.pool_id.is_some() {
-                    if let Some(page_num) = pool_idxs.get(&i.id) {
-                        i.id = *page_num as u64;
-                    } else {
-                        continue;
-                    }
-                }
-
-                sender_channel.send(i.clone())?;
+                sender_channel.send(i)?;
                 total_posts_sent += 1;
                 if let Some(counter) = &post_counter {
                     counter.send(1).await?;
@@ -139,39 +118,9 @@ impl AsyncFetch for ExtractorUnit {
             }
 
             page += 1;
-
-            //debounce
-            debug!("Debouncing API calls by 500 ms");
-            sleep(Duration::from_millis(500)).await;
         }
 
         debug!("Terminating thread.");
         Ok(self.total_removed)
-    }
-}
-
-impl PostFetchAsync for ExtractorUnit {
-    fn setup_async_post_fetch(
-        self,
-        post_channel: UnboundedSender<Post>,
-        method: PostFetchMethod,
-        length_channel: Sender<u64>,
-    ) -> JoinHandle<Result<u64, ExtractorError>> {
-        spawn(async move {
-            let mut unit = self;
-            match method {
-                PostFetchMethod::Single(p_id) => {
-                    post_channel.send(unit.get_post(p_id).await?)?;
-                    length_channel.send(1).await?;
-                }
-                PostFetchMethod::Multiple(p_ids) => {
-                    for p_id in p_ids {
-                        post_channel.send(unit.get_post(p_id).await?)?;
-                        length_channel.send(1).await?;
-                    }
-                }
-            }
-            Ok(0)
-        })
     }
 }

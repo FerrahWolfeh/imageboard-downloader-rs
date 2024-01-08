@@ -11,10 +11,10 @@ use ibdl_common::{
     },
     ImageBoards,
 };
-use ibdl_extractors::websites::{
+use ibdl_extractors::imageboards::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
 };
-use ibdl_extractors::{prelude::*, websites::PostFetchMethod};
+use ibdl_extractors::{imageboards::PostFetchMethod, prelude::*};
 use owo_colors::OwoColorize;
 
 use crate::{

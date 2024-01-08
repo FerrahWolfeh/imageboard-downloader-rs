@@ -5,7 +5,7 @@ use ibdl_common::{
     serde_json, ImageBoards,
 };
 
-use crate::{error::ExtractorError, websites::PoolExtract};
+use crate::{error::ExtractorError, imageboards::PoolExtract};
 
 use super::{models::DanbooruPoolList, DanbooruExtractor};
 

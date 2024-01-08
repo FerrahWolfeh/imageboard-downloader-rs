@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
@@ -6,20 +8,20 @@ use ibdl_common::{
         spawn,
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
+        time::sleep,
     },
-    ImageBoards,
 };
 
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{AsyncFetch, Extractor},
+    imageboards::{AsyncFetch, Extractor, PostFetchAsync, PostFetchMethod, SinglePostFetch},
 };
 
-use super::MoebooruExtractor;
+use super::GelbooruExtractor;
 
 // A quick alias so I can copy paste stuff faster
-type ExtractorUnit = MoebooruExtractor;
+type ExtractorUnit = GelbooruExtractor;
 
 #[async_trait]
 impl AsyncFetch for ExtractorUnit {
@@ -46,7 +48,7 @@ impl AsyncFetch for ExtractorUnit {
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Konachan,
+            self.active_imageboard,
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -64,9 +66,9 @@ impl AsyncFetch for ExtractorUnit {
 
         loop {
             let position = if let Some(n) = start_page {
-                page + n
+                page + n - 1
             } else {
-                page
+                page - 1
             };
 
             let posts = self.get_post_list(position).await?;
@@ -118,9 +120,39 @@ impl AsyncFetch for ExtractorUnit {
             }
 
             page += 1;
+
+            //debounce
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
         }
 
         debug!("Terminating thread.");
         Ok(self.total_removed)
+    }
+}
+
+impl PostFetchAsync for ExtractorUnit {
+    fn setup_async_post_fetch(
+        self,
+        post_channel: UnboundedSender<Post>,
+        method: PostFetchMethod,
+        length_channel: Sender<u64>,
+    ) -> JoinHandle<Result<u64, ExtractorError>> {
+        spawn(async move {
+            let mut unit = self;
+            match method {
+                PostFetchMethod::Single(p_id) => {
+                    post_channel.send(unit.get_post(p_id).await?)?;
+                    length_channel.send(1).await?;
+                }
+                PostFetchMethod::Multiple(p_ids) => {
+                    for p_id in p_ids {
+                        post_channel.send(unit.get_post(p_id).await?)?;
+                        length_channel.send(1).await?;
+                    }
+                }
+            }
+            Ok(0)
+        })
     }
 }

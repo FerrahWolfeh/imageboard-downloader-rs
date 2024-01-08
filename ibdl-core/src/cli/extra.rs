@@ -10,7 +10,7 @@ use ibdl_common::{
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
-    websites::{Auth, Extractor},
+    imageboards::{Auth, Extractor},
 };
 use owo_colors::OwoColorize;
 

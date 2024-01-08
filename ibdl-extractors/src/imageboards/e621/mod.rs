@@ -20,7 +20,7 @@ use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use crate::{
-    blacklist::BlacklistFilter, error::ExtractorError, websites::e621::models::E621TopLevel,
+    blacklist::BlacklistFilter, error::ExtractorError, imageboards::e621::models::E621TopLevel,
 };
 
 use self::models::E621Post;
