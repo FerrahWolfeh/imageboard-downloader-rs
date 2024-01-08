@@ -116,9 +116,7 @@ impl Cli {
                     return Some(Extension::guess_format(ext));
                 }
             }
-            Commands::Post(_) => {
-                unreachable!()
-            }
+            Commands::Post(_) => {}
         }
         None
     }
