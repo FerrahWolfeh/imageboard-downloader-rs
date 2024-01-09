@@ -186,23 +186,11 @@ impl Queue {
         spawn(async move {
             debug!("Async Downloader thread initialized");
 
-            if output_dir.exists() && output_dir.read_dir()?.next().is_some() {
-                let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
-                    .with_prompt(format!(
-                        "The path {} is not empty or already exists. Do you want to continue?",
-                        output_dir.display().bold().blue().italic()
-                    ))
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
-                if !conf_exists {
-                    println!("{}", "Download cancelled".bold().blue());
-                    std::process::exit(0);
-                }
-            }
-
             let counters = PROGRESS_COUNTERS.get_or_init(|| {
-                ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard)
+                ProgressCounter::initialize(
+                    post_counter.load(Ordering::Relaxed),
+                    self.imageboard.server,
+                )
             });
 
             self.create_out(&output_dir).await?;

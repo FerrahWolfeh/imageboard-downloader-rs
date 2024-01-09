@@ -1,8 +1,11 @@
+use std::process::exit;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use color_eyre::eyre::{bail, Result};
 use color_eyre::owo_colors::OwoColorize;
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
 use ibdl_common::tokio::sync::mpsc::{channel, unbounded_channel};
 use ibdl_common::tokio::{self, join};
 use ibdl_core::async_queue::Queue;
@@ -18,6 +21,23 @@ async fn main() -> Result<()> {
     env_logger::builder().format_timestamp(None).init();
     color_eyre::install()?;
 
+    let dirname = args.generate_save_path()?;
+
+    if dirname.exists() && dirname.read_dir()?.next().is_some() {
+        let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt(format!(
+                "The path {} is not empty or already exists. Do you want to continue?",
+                dirname.display().bold().blue().italic()
+            ))
+            .wait_for_newline(true)
+            .interact()
+            .unwrap();
+        if !conf_exists {
+            println!("{}", "Download cancelled".bold().blue());
+            exit(0);
+        }
+    }
+
     let (channel_tx, channel_rx) = unbounded_channel();
 
     let (length_sender, length_channel) = channel(args.simultaneous_downloads as usize);
@@ -31,8 +51,6 @@ async fn main() -> Result<()> {
         }
         Commands::Post(com) => com.init_extractor(&args, channel_tx, length_sender).await?,
     };
-
-    let dirname = args.generate_save_path()?;
 
     let qw = Queue::new(
         args.imageboard.server,
