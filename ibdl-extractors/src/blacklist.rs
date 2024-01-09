@@ -205,11 +205,14 @@ impl BlacklistFilter {
         }
 
         if !self.disabled {
-            let mut fsize = original_list.len();
+            let fsize = original_list.len();
+
+            let mut bp = 0;
+
             if !self.gbl_tags.is_empty() {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
                 original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
-                fsize = original_list.len(); // Update fsize after the self.gbl_tags block
+                bp = fsize - original_list.len(); // Update fsize after the self.gbl_tags block
             }
             if self.ignore_animated {
                 original_list.retain(|post| {
@@ -217,7 +220,7 @@ impl BlacklistFilter {
                     !(post.tags.contains(&Tag::new("animated", TagType::Meta)) || ve.contains(ext))
                 });
             }
-            let bp = fsize - original_list.len();
+
             debug!("Blacklist removed {} posts", bp);
             removed += bp as u64;
         }
