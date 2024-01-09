@@ -278,7 +278,10 @@ impl Extractor for GelbooruExtractor {
             let posts = self.gelbooru_new_path(it);
 
             return Ok(posts);
+        } else if items["@attributes"].as_object().is_some() {
+            return Ok(vec![]);
         }
+
         Err(ExtractorError::PostMapFailure)
     }
 
