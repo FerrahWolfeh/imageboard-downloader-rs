@@ -1,7 +1,9 @@
 [servers]
 
+# Currently supported server types are ["danbooru", "e621" , "gelbooru", "gelbooru beta 0.2", "moebooru"]
+
 # [servers.danbooru]
-# pretty_name ="Danbooru"                                 # Required
+# pretty_name = "Danbooru"                                # Required
 # server = "danbooru"                                     # Required
 # base_url = "https://danbooru.donmai.us"                 # Required
 # post_url = "https://danbooru.donmai.us/posts/"          # Optional
@@ -10,13 +12,13 @@
 # max_post_limit = 200                                    # Required
 # auth_url = "https://danbooru.donmai.us/profile.json"    # Optional
 
-[servers.gelbooru]
-pretty_name = "Gelbooru"
-server = "gelbooru"
-base_url = "https://gelbooru.com"
-post_url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-post_list_url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-max_post_limit = 100
+# [servers.gelbooru]
+# pretty_name = "Gelbooru"
+# server = "gelbooru"
+# base_url = "https://gelbooru.com"
+# post_url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+# post_list_url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+# max_post_limit = 100
 
 # [servers.yandere]
 # pretty_name = "Yande.re"
