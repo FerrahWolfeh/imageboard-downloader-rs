@@ -40,9 +40,12 @@
                 }
             },
             "args": [
+                "search",
                 "-i",
                 "gelbooru",
-                "kroos_(arknights)"
+                "-o",
+                "/mnt/ram/spk",
+                "sparkle_(honkai:_star_rail)"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -152,32 +155,6 @@
                 "/mnt/Mass/Media/Imageboards",
                 "-d",
                 "1"
-            ],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Test Update",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=imageboard_downloader",
-                    "--package=imageboard_downloader"
-                ],
-                "filter": {
-                    "name": "imageboard_downloader",
-                    "kind": "bin"
-                }
-            },
-            "args": [
-                "mari_(blue_archive)",
-                "-i",
-                "danbooru",
-                "-d",
-                "1",
-                "--update",
-                "--id"
             ],
             "cwd": "${workspaceFolder}"
         },
