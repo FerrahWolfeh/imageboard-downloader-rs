@@ -26,7 +26,7 @@ use crate::{
 
 use self::models::E621Post;
 
-use super::{Auth, Extractor, ServerConfig, SinglePostFetch};
+use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
 mod models;
 mod pool;
@@ -140,6 +140,10 @@ impl Extractor for E621Extractor {
             pool_last_items_first: false,
             server_cfg: config,
         }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {

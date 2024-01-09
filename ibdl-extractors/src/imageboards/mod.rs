@@ -69,6 +69,7 @@ use std::fmt::Display;
 use crate::{auth::ImageboardConfig, extractor_config::ServerConfig};
 use ahash::HashMap;
 use async_trait::async_trait;
+use bitflags::bitflags;
 use ibdl_common::{
     post::{extension::Extension, rating::Rating, Post, PostQueue},
     reqwest::Client,
@@ -89,7 +90,19 @@ pub mod gelbooru;
 
 pub mod moebooru;
 
+pub mod prelude;
+
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
+
+bitflags! {
+    pub struct ExtractorFeatures: u8 {
+        const AsyncFetch = 0b00000001;
+        const TagSearch = 0b00000010;
+        const SinglePostFetch = 0b00000100;
+        const PoolDownload = 0b00001000;
+        const Auth = 0b00010000;
+    }
+}
 
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
 #[async_trait]
@@ -150,6 +163,9 @@ pub trait Extractor {
 
     /// Returns the [`ImageBoards`](ibdl_common::ImageBoards) variant for this extractor
     fn imageboard(&self) -> ImageBoards;
+
+    /// Expose some bitflags to indicate the features this extractor should support
+    fn features() -> ExtractorFeatures;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

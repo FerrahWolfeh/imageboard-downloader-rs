@@ -89,7 +89,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             Some(String::from(
                 "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             )),
-                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
+            "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
             None,
             100,
             None
@@ -107,7 +107,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             Some(String::from(
                 "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
             )),
-                "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1",
+            "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1",
             None,
             1000,
             None
@@ -125,7 +125,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             Some(String::from(
                 "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             )),
-                "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1",
+            "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1",
             None,
             1000,
             None
@@ -164,6 +164,18 @@ pub struct ServerConfig {
     pub pool_idx_url: Option<String>,
     pub max_post_limit: usize,
     pub auth_url: Option<String>,
+}
+
+impl ServerConfig {
+    #[inline]
+    pub fn extractor_features(&self) -> ExtractorFeatures {
+        match self.server {
+            ImageBoards::Danbooru => DanbooruExtractor::features(),
+            ImageBoards::E621 => E621Extractor::features(),
+            ImageBoards::Moebooru => MoebooruExtractor::features(),
+            ImageBoards::Gelbooru | ImageBoards::GelbooruV0_2 => GelbooruExtractor::features(),
+        }
+    }
 }
 
 impl Default for ServerConfig {

@@ -18,7 +18,7 @@ use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
 };
 
-use super::{Extractor, ServerConfig};
+use super::{Extractor, ExtractorFeatures, ServerConfig};
 
 mod models;
 mod unsync;
@@ -115,6 +115,10 @@ impl Extractor for MoebooruExtractor {
             selected_extension: None,
             server_cfg: config,
         }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {

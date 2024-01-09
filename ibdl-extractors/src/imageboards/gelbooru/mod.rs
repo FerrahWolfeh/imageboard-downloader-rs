@@ -29,7 +29,7 @@ use std::time::Duration;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-use super::{Extractor, ServerConfig, SinglePostFetch};
+use super::{Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
 mod unsync;
 
@@ -136,6 +136,10 @@ impl Extractor for GelbooruExtractor {
             selected_extension: None,
             server_cfg: config,
         }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0000_0111) // AsyncFetch + TagSearch + SinglePostFetch
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {

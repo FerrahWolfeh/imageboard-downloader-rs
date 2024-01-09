@@ -6,7 +6,7 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor, ServerConfig, SinglePostFetch};
+use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 use crate::auth::ImageboardConfig;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
@@ -159,6 +159,10 @@ impl Extractor for DanbooruExtractor {
             pool_last_items_first: false,
             server_cfg: config,
         }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
