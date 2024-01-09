@@ -174,11 +174,15 @@
                 }
             },
             "args": [
-                "japanese",
-                "long_fingernails",
+                "search",
                 "-i",
                 "realbooru",
-                "--cbz"
+                "-o",
+                "/mnt/ram/rb",
+                "-l",
+                "10",
+                "--no-animated",
+                "japanese long_fingernails",
             ],
             "cwd": "${workspaceFolder}"
         },
