@@ -392,10 +392,11 @@ impl GelbooruExtractor {
 
         let drop_url = if self.active_imageboard == ImageBoards::GelbooruV0_2 {
             format!(
-                "{}/images/{}/{}",
+                "{}/images/{}/{}.{}",
                 self.server_cfg.base_url,
                 post["directory"].as_str().unwrap(),
-                &file,
+                &md5,
+                ext
             )
         } else {
             post["file_url"].as_str().unwrap().to_string()
