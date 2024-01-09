@@ -177,7 +177,7 @@ impl Extractor for E621Extractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::E621,
+            self.server_cfg.clone(),
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,
             self.disable_blacklist,

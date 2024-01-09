@@ -7,7 +7,6 @@ use ibdl_common::{
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
     },
-    ImageBoards,
 };
 
 use crate::{
@@ -46,7 +45,7 @@ impl AsyncFetch for ExtractorUnit {
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Konachan,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,

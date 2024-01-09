@@ -147,7 +147,7 @@ impl Extractor for MoebooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Konachan,
+            self.server_cfg.clone(),
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,

@@ -40,49 +40,52 @@ use ibdl_common::serde::{self, Deserialize, Serialize};
 use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
 use ibdl_common::tokio::io::AsyncWriteExt;
 use ibdl_common::tokio::time::Instant;
-use ibdl_common::ImageBoards;
+use std::collections::HashMap;
 use std::path::Path;
 use toml::from_str;
+
+use crate::extractor_config::ServerConfig;
 
 use super::error::ExtractorError;
 
 static VIDEO_EXTENSIONS: [&str; 4] = ["mp4", "zip", "webm", "gif"];
 
 const BF_INIT_TEXT: &str = r#"[blacklist]
-global = [] # Place in this array all the tags that will be excluded from all imageboards
+[blacklist.global] 
+tags = [] # Place in this array all the tags that will be excluded from all imageboards
 
 # Place in the following all the tags that will be excluded from specific imageboards 
 
-danbooru = []
+[blacklist.danbooru]
+tags = []
 
-e621 = []
+[blacklist.e621]
+tags = []
 
-realbooru = []
+[blacklist.realbooru]
+tags = []
 
-rule34 = []
+[blacklist.rule34]
+tags = []
 
-gelbooru = []
+[blacklist.gelbooru]
+tags = []
 
-konachan = []
+[blacklist.konachan]
+tags = []
 "#;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
-struct BlacklistCategories {
-    global: Vec<String>,
-    danbooru: Vec<String>,
-    e621: Vec<String>,
-    realbooru: Vec<String>,
-    rule34: Vec<String>,
-    gelbooru: Vec<String>,
-    konachan: Vec<String>,
+struct BlacklistTags {
+    tags: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
 pub struct GlobalBlacklist {
     /// In this array, the user will declare tags that should be excluded from all imageboards
-    blacklist: Option<BlacklistCategories>,
+    blacklist: HashMap<String, BlacklistTags>,
 }
 
 impl GlobalBlacklist {
@@ -116,7 +119,11 @@ impl GlobalBlacklist {
                 })
             }
         };
-        debug!("Global blacklist decoded");
+        debug!("Global blacklist config decoded");
+        debug!(
+            "Global blacklist setup with {} servers",
+            deserialized.blacklist.keys().len() - 1
+        );
         Ok(deserialized)
     }
 }
@@ -131,7 +138,7 @@ pub struct BlacklistFilter {
 
 impl BlacklistFilter {
     pub async fn new(
-        imageboard: ImageBoards,
+        imageboard: ServerConfig,
         auth_tags: &[String],
         selected_ratings: &[Rating],
         disabled: bool,
@@ -144,25 +151,18 @@ impl BlacklistFilter {
 
             let gbl = GlobalBlacklist::get().await?;
 
-            if let Some(tags) = gbl.blacklist {
-                if tags.global.is_empty() {
+            if let Some(global) = gbl.blacklist.get(&"global".to_string()) {
+                if global.tags.is_empty() {
                     debug!("Global blacklist is empty");
                 } else {
-                    gbl_tags.extend(tags.global);
+                    gbl_tags.extend(global.tags.iter().cloned());
                 }
+            }
 
-                let special_tags = match imageboard {
-                    ImageBoards::Danbooru => tags.danbooru,
-                    ImageBoards::E621 => tags.e621,
-                    ImageBoards::Rule34 => tags.rule34,
-                    ImageBoards::Gelbooru => tags.gelbooru,
-                    ImageBoards::Realbooru => tags.realbooru,
-                    ImageBoards::Konachan => tags.konachan,
-                };
-
-                if !special_tags.is_empty() {
-                    debug!("{} blacklist: {:?}", imageboard.to_string(), &special_tags);
-                    gbl_tags.extend(special_tags);
+            if let Some(special) = gbl.blacklist.get(&imageboard.name) {
+                if !special.tags.is_empty() {
+                    debug!("{} blacklist: {:?}", imageboard.pretty_name, &special.tags);
+                    gbl_tags.extend(special.tags.iter().cloned());
                 }
             }
         }
@@ -205,17 +205,17 @@ impl BlacklistFilter {
         }
 
         if !self.disabled {
-            let fsize = original_list.len();
+            let mut fsize = original_list.len();
             if !self.gbl_tags.is_empty() {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
-
                 original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
+                fsize = original_list.len(); // Update fsize after the self.gbl_tags block
             }
             if self.ignore_animated {
                 original_list.retain(|post| {
                     let ext = post.extension.as_str();
                     !(post.tags.contains(&Tag::new("animated", TagType::Meta)) || ve.contains(ext))
-                })
+                });
             }
             let bp = fsize - original_list.len();
             debug!("Blacklist removed {} posts", bp);

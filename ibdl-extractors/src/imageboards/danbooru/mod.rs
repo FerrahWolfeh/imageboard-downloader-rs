@@ -196,7 +196,7 @@ impl Extractor for DanbooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            self.server_cfg.server,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,

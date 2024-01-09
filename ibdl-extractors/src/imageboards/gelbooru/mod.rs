@@ -168,7 +168,7 @@ impl Extractor for GelbooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            self.active_imageboard,
+            self.server_cfg.clone(),
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,

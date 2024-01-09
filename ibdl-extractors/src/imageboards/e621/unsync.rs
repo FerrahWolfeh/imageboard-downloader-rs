@@ -11,7 +11,6 @@ use ibdl_common::{
         task::JoinHandle,
         time::sleep,
     },
-    ImageBoards,
 };
 
 use crate::{
@@ -52,7 +51,7 @@ impl AsyncFetch for ExtractorUnit {
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::E621,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,

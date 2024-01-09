@@ -8,7 +8,6 @@ use ibdl_common::{
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
     },
-    ImageBoards,
 };
 
 use crate::{
@@ -51,7 +50,7 @@ impl AsyncFetch for ExtractorUnit {
         debug!("Async extractor thread initialized");
 
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Danbooru,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
