@@ -10,6 +10,7 @@ use ibdl_common::{
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
+    extractor_config::DEFAULT_SERVERS,
     imageboards::{Auth, Extractor},
 };
 use owo_colors::OwoColorize;
@@ -37,7 +38,7 @@ pub async fn auth_prompt(
             .interact()?;
 
         let mut at = ImageboardConfig::new(
-            imageboard,
+            DEFAULT_SERVERS.get("danbooru").unwrap().clone(), // Gonna leave like this while we still don't have any form of fetching the servers
             username.trim().to_string(),
             api_key.trim().to_string(),
         );

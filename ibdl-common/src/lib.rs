@@ -70,99 +70,99 @@ impl ImageBoards {
         ua
     }
 
-    #[inline]
-    pub fn extractor_user_agent(self) -> String {
-        let app_name = "Rust Imageboard Post Extractor";
-        let variant = match self {
-            ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
-            ImageBoards::E621 => " (by e621 user FerrahWolfeh)",
-            _ => "",
-        };
-        let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
-        debug!("Using user-agent: {}", ua);
-        ua
-    }
+    // #[inline]
+    // pub fn extractor_user_agent(self) -> String {
+    //     let app_name = "Rust Imageboard Post Extractor";
+    //     let variant = match self {
+    //         ImageBoards::Danbooru => " (by danbooru user FerrahWolfeh)",
+    //         ImageBoards::E621 => " (by e621 user FerrahWolfeh)",
+    //         _ => "",
+    //     };
+    //     let ua = format!("{}/{}{}", app_name, env!("CARGO_PKG_VERSION"), variant);
+    //     debug!("Using user-agent: {}", ua);
+    //     ua
+    // }
 
-    /// Returns the base URL for the website.
-    #[inline]
-    pub fn base_url(&self) -> &'static str {
-        match self {
-            ImageBoards::Danbooru => "https://danbooru.donmai.us",
-            ImageBoards::E621 => "https://e621.net",
-            ImageBoards::Rule34 => "https://rule34.xxx",
-            ImageBoards::Konachan => "https://konachan.com",
-            ImageBoards::Realbooru => "https://realbooru.com",
-            ImageBoards::Gelbooru => "https://gelbooru.com",
-        }
-    }
+    // /// Returns the base URL for the website.
+    // #[inline]
+    // pub fn base_url(&self) -> &'static str {
+    //     match self {
+    //         ImageBoards::Danbooru => "https://danbooru.donmai.us",
+    //         ImageBoards::E621 => "https://e621.net",
+    //         ImageBoards::Rule34 => "https://rule34.xxx",
+    //         ImageBoards::Konachan => "https://konachan.com",
+    //         ImageBoards::Realbooru => "https://realbooru.com",
+    //         ImageBoards::Gelbooru => "https://gelbooru.com",
+    //     }
+    // }
 
-    /// Returns the endpoint for the post list with their respective tags.
-    #[inline]
-    pub fn post_url(&self) -> &'static str {
-        match self {
-            ImageBoards::Danbooru => "https://danbooru.donmai.us/posts/",
-            ImageBoards::E621 => "https://e621.net/posts/",
-            ImageBoards::Rule34 => {
-                "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
-            }
-            ImageBoards::Konachan => "",
-            ImageBoards::Realbooru => {
-                "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-            }
-            ImageBoards::Gelbooru => {
-                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-            }
-        }
-    }
+    // /// Returns the endpoint for the post list with their respective tags.
+    // #[inline]
+    // pub fn post_url(&self) -> &'static str {
+    //     match self {
+    //         ImageBoards::Danbooru => "https://danbooru.donmai.us/posts/",
+    //         ImageBoards::E621 => "https://e621.net/posts/",
+    //         ImageBoards::Rule34 => {
+    //             "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //         ImageBoards::Konachan => "",
+    //         ImageBoards::Realbooru => {
+    //             "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //         ImageBoards::Gelbooru => {
+    //             "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //     }
+    // }
 
-    /// Returns the endpoint for the post list with their respective tags.
-    #[inline]
-    pub fn post_list_url(&self) -> &'static str {
-        match self {
-            ImageBoards::Danbooru => "https://danbooru.donmai.us/posts.json",
-            ImageBoards::E621 => "https://e621.net/posts.json",
-            ImageBoards::Rule34 => {
-                "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
-            }
-            ImageBoards::Konachan => "https://konachan.com/post.json",
-            ImageBoards::Realbooru => {
-                "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-            }
-            ImageBoards::Gelbooru => {
-                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
-            }
-        }
-    }
+    // /// Returns the endpoint for the post list with their respective tags.
+    // #[inline]
+    // pub fn post_list_url(&self) -> &'static str {
+    //     match self {
+    //         ImageBoards::Danbooru => "https://danbooru.donmai.us/posts.json",
+    //         ImageBoards::E621 => "https://e621.net/posts.json",
+    //         ImageBoards::Rule34 => {
+    //             "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //         ImageBoards::Konachan => "https://konachan.com/post.json",
+    //         ImageBoards::Realbooru => {
+    //             "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //         ImageBoards::Gelbooru => {
+    //             "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+    //         }
+    //     }
+    // }
 
-    #[inline]
-    pub fn pool_idx_url(self) -> &'static str {
-        match self {
-            ImageBoards::Danbooru => "https://danbooru.donmai.us/pools",
-            ImageBoards::E621 => "https://e621.net/pools",
-            _ => "",
-        }
-    }
+    // #[inline]
+    // pub fn pool_idx_url(self) -> &'static str {
+    //     match self {
+    //         ImageBoards::Danbooru => "https://danbooru.donmai.us/pools",
+    //         ImageBoards::E621 => "https://e621.net/pools",
+    //         _ => "",
+    //     }
+    // }
 
-    /// Returns max number of posts per page a imageboard can have
-    #[inline]
-    pub fn max_post_limit(self) -> usize {
-        match self {
-            ImageBoards::Danbooru => 200,
-            ImageBoards::E621 => 320,
-            ImageBoards::Rule34 | ImageBoards::Realbooru => 1000,
-            ImageBoards::Konachan | ImageBoards::Gelbooru => 100,
-        }
-    }
+    // /// Returns max number of posts per page a imageboard can have
+    // #[inline]
+    // pub fn max_post_limit(self) -> usize {
+    //     match self {
+    //         ImageBoards::Danbooru => 200,
+    //         ImageBoards::E621 => 320,
+    //         ImageBoards::Rule34 | ImageBoards::Realbooru => 1000,
+    //         ImageBoards::Konachan | ImageBoards::Gelbooru => 100,
+    //     }
+    // }
 
-    /// Returns the url used for validating the login input and parsing the user's profile.
-    #[inline]
-    pub fn auth_url(self) -> &'static str {
-        match self {
-            ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
-            ImageBoards::E621 => "https://e621.net/users/",
-            _ => "",
-        }
-    }
+    // /// Returns the url used for validating the login input and parsing the user's profile.
+    // #[inline]
+    // pub fn auth_url(self) -> &'static str {
+    //     match self {
+    //         ImageBoards::Danbooru => "https://danbooru.donmai.us/profile.json",
+    //         ImageBoards::E621 => "https://e621.net/users/",
+    //         _ => "",
+    //     }
+    // }
 
     /// Returns a `PathBuf` pointing to the imageboard's authentication cache.
     ///

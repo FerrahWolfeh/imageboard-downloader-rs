@@ -26,6 +26,7 @@ use ibdl_common::{
 use std::fmt::Display;
 use std::time::Duration;
 
+use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
 use super::{Extractor, MultiWebsite, ServerConfig, SinglePostFetch};
@@ -43,6 +44,7 @@ pub struct GelbooruExtractor {
     map_videos: bool,
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
+    server_cfg: ServerConfig,
 }
 
 #[async_trait]
@@ -57,9 +59,11 @@ impl Extractor for GelbooruExtractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("rule34").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()
-            .user_agent(ImageBoards::Rule34.user_agent())
+            .user_agent(&config.client_user_agent)
             .build()
             .unwrap();
 
@@ -86,24 +90,24 @@ impl Extractor for GelbooruExtractor {
             map_videos,
             excluded_tags: vec![],
             selected_extension: None,
+            server_cfg: config,
         }
     }
 
     #[allow(unused_variables)]
-    fn new_with_config<S, E>(
+    fn new_with_config<S>(
         tags: &[S],
         download_ratings: &[Rating],
         disable_blacklist: bool,
         map_videos: bool,
-        config: ServerConfig<E>,
+        config: ServerConfig,
     ) -> Self
     where
         S: ToString + Display,
-        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()
-            .user_agent(ImageBoards::Rule34.user_agent())
+            .user_agent(&config.client_user_agent)
             .build()
             .unwrap();
 
@@ -120,7 +124,7 @@ impl Extractor for GelbooruExtractor {
         debug!("Tag List: {}", tag_string);
 
         Self {
-            active_imageboard: ImageBoards::Rule34,
+            active_imageboard: config.server,
             client,
             tags: strvec,
             tag_string,
@@ -130,6 +134,7 @@ impl Extractor for GelbooruExtractor {
             map_videos,
             excluded_tags: vec![],
             selected_extension: None,
+            server_cfg: config,
         }
     }
 
@@ -171,7 +176,7 @@ impl Extractor for GelbooruExtractor {
         let mut fvec = if let Some(size) = limit {
             Vec::with_capacity(size as usize)
         } else {
-            Vec::with_capacity(self.active_imageboard.max_post_limit())
+            Vec::with_capacity(self.server_cfg.max_post_limit)
         };
 
         let mut page = 1;
@@ -206,7 +211,7 @@ impl Extractor for GelbooruExtractor {
                 }
             }
 
-            if size < self.active_imageboard.max_post_limit() || page == 100 {
+            if size < self.server_cfg.max_post_limit || page == 100 {
                 break;
             }
 
@@ -240,11 +245,7 @@ impl Extractor for GelbooruExtractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        let url = format!(
-            "{}&tags={}",
-            self.active_imageboard.post_url(),
-            self.tag_string
-        );
+        let url = format!("{}&tags={}", self.server_cfg.post_url, self.tag_string);
 
         let items = self
             .client
@@ -423,7 +424,7 @@ impl SinglePostFetch for GelbooruExtractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}&id={}", self.active_imageboard.post_url(), post_id);
+        let url = format!("{}&id={}", self.server_cfg.post_url, post_id);
 
         let items = self.client.get(&url).send().await?.text().await?;
 

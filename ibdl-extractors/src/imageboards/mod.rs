@@ -66,7 +66,7 @@
 //!
 use std::fmt::Display;
 
-use crate::auth::ImageboardConfig;
+use crate::{auth::ImageboardConfig, extractor_config::ServerConfig};
 use ahash::HashMap;
 use async_trait::async_trait;
 use ibdl_common::{
@@ -109,16 +109,15 @@ pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
     /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
-    fn new_with_config<S, E>(
+    fn new_with_config<S>(
         tags: &[S],
         download_ratings: &[Rating],
         disable_blacklist: bool,
         map_videos: bool,
-        config: ServerConfig<E>,
+        config: ServerConfig,
     ) -> Self
     where
-        S: ToString + Display,
-        E: Extractor + Clone;
+        S: ToString + Display;
 
     /// Searches the tags list on a per-page way. It's relatively the fastest way, but subject to slowdowns since it needs
     /// to iter through all pages manually in order to fetch all posts.
@@ -228,19 +227,4 @@ pub trait PostFetchAsync {
         method: PostFetchMethod,
         length_channel: Sender<u64>,
     ) -> JoinHandle<Result<u64, ExtractorError>>;
-}
-
-#[derive(Debug, Clone)]
-pub struct ServerConfig<E>
-where
-    E: Extractor + Clone,
-{
-    pub server: E,
-    pub extractor_user_agent: String,
-    pub base_url: String,
-    pub post_url: String,
-    pub post_list_url: String,
-    pub pool_idx_url: String,
-    pub max_post_limit: u16,
-    pub auth_url: String,
 }

@@ -5,6 +5,7 @@
 //! - Native blacklist (defined in user profile page)
 //!
 use crate::auth::ImageboardConfig;
+use crate::extractor_config::DEFAULT_SERVERS;
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Client;
@@ -49,6 +50,7 @@ pub struct E621Extractor {
     selected_extension: Option<Extension>,
     pool_id: Option<u32>,
     pool_last_items_first: bool,
+    server_cfg: ServerConfig,
 }
 
 #[async_trait]
@@ -62,8 +64,10 @@ impl Extractor for E621Extractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("e621").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621);
+        let client = client!(config);
 
         let strvec: Vec<String> = tags
             .iter()
@@ -91,22 +95,22 @@ impl Extractor for E621Extractor {
             selected_extension: None,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
     }
 
-    fn new_with_config<S, E>(
+    fn new_with_config<S>(
         tags: &[S],
         download_ratings: &[Rating],
         disable_blacklist: bool,
         map_videos: bool,
-        config: ServerConfig<E>,
+        config: ServerConfig,
     ) -> Self
     where
         S: ToString + Display,
-        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621);
+        let client = client!(config);
 
         let strvec: Vec<String> = tags
             .iter()
@@ -134,6 +138,7 @@ impl Extractor for E621Extractor {
             selected_extension: None,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
     }
 
@@ -247,8 +252,7 @@ impl Extractor for E621Extractor {
         // Check safe mode
         let url = format!(
             "{}?tags={}",
-            ImageBoards::E621.post_list_url(),
-            &self.tag_string
+            self.server_cfg.post_list_url, &self.tag_string
         );
 
         let req = if self.auth_state {
@@ -360,7 +364,7 @@ impl SinglePostFetch for E621Extractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::E621.post_url(), post_id);
+        let url = format!("{}/{}.json", self.server_cfg.post_url, post_id);
 
         // Fetch item list from page
         let req = if self.auth_state {

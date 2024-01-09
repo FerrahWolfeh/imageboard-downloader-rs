@@ -2,7 +2,7 @@ use ahash::HashMap;
 use async_trait::async_trait;
 use ibdl_common::{
     log::{debug, trace},
-    serde_json, ImageBoards,
+    serde_json,
 };
 
 use crate::{error::ExtractorError, imageboards::PoolExtract};
@@ -16,7 +16,7 @@ impl PoolExtract for DanbooruExtractor {
         pool_id: u32,
         limit: Option<u16>,
     ) -> Result<HashMap<u64, usize>, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::Danbooru.pool_idx_url(), pool_id);
+        let url = format!("{}/{}.json", self.server_cfg.pool_idx_url, pool_id);
 
         // Fetch item list from page
         let req = if self.auth_state {

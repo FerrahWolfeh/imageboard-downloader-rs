@@ -68,7 +68,7 @@ use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
 use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
-use ibdl_common::{client, tokio, ImageBoards};
+use ibdl_common::{client, client_imgb, tokio, ImageBoards};
 use md5::compute;
 use once_cell::sync::OnceCell;
 use owo_colors::OwoColorize;
@@ -151,7 +151,7 @@ impl Queue {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client!(imageboard)
+            client_imgb!(imageboard)
         };
 
         let download_fmt = if save_as_cbz && pool_download {

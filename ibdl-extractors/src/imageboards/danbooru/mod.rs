@@ -8,6 +8,7 @@ use self::models::DanbooruPost;
 
 use super::{Auth, Extractor, ServerConfig, SinglePostFetch};
 use crate::auth::ImageboardConfig;
+use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
@@ -44,6 +45,7 @@ pub struct DanbooruExtractor {
     extra_tags: Vec<String>,
     pool_id: Option<u32>,
     pool_last_items_first: bool,
+    server_cfg: ServerConfig,
 }
 
 #[async_trait]
@@ -57,8 +59,10 @@ impl Extractor for DanbooruExtractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("danbooru").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Danbooru);
+        let client = client!(config);
 
         let mut strvec: Vec<String> = tags
             .iter()
@@ -98,22 +102,22 @@ impl Extractor for DanbooruExtractor {
             extra_tags,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
     }
 
-    fn new_with_config<S, E>(
+    fn new_with_config<S>(
         tags: &[S],
         download_ratings: &[Rating],
         disable_blacklist: bool,
         map_videos: bool,
-        config: ServerConfig<E>,
+        config: ServerConfig,
     ) -> Self
     where
         S: ToString + Display,
-        E: Extractor + Clone,
     {
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Danbooru);
+        let client = client!(config);
 
         let mut strvec: Vec<String> = tags
             .iter()
@@ -153,6 +157,7 @@ impl Extractor for DanbooruExtractor {
             extra_tags,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
     }
 
@@ -167,7 +172,7 @@ impl Extractor for DanbooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
-            imageboard: ImageBoards::Danbooru,
+            imageboard: self.server_cfg.server,
             client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
@@ -187,7 +192,7 @@ impl Extractor for DanbooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Danbooru,
+            self.server_cfg.server,
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -251,7 +256,7 @@ impl Extractor for DanbooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
-            imageboard: ImageBoards::Danbooru,
+            imageboard: self.server_cfg.server,
             client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
@@ -262,8 +267,7 @@ impl Extractor for DanbooruExtractor {
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
         let url = format!(
             "{}?tags={}",
-            ImageBoards::Danbooru.post_list_url(),
-            &self.tag_string
+            self.server_cfg.post_list_url, &self.tag_string
         );
 
         // Fetch item list from page
@@ -383,7 +387,7 @@ impl SinglePostFetch for DanbooruExtractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::Danbooru.post_url(), post_id);
+        let url = format!("{}/{}.json", self.server_cfg.post_url, post_id);
 
         // Fetch item list from page
         let req = if self.auth_state {
