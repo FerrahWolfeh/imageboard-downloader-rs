@@ -60,6 +60,7 @@ impl FromStr for ImageBoards {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "gelbooru" => Ok(Self::Gelbooru),
+            "gelbooru_020" => Ok(Self::Realbooru),
             "danbooru" => Ok(Self::Danbooru),
             "e621" => Ok(Self::E621),
             "moebooru" => Ok(Self::Konachan),

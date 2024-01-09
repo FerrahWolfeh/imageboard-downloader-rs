@@ -249,16 +249,14 @@ impl Extractor for GelbooruExtractor {
             return Err(ExtractorError::UnsupportedOperation);
         };
 
-        let url = format!(
-            "{}?tags={}",
-            self.server_cfg.post_list_url.as_ref().unwrap(),
-            &self.tag_string
-        );
-
         let items = self
             .client
-            .get(&url)
-            .query(&[("pid", page), ("limit", 1000)])
+            .get(self.server_cfg.post_list_url.as_ref().unwrap())
+            .query(&[
+                ("tags", &self.tag_string),
+                ("pid", &page.to_string()),
+                ("limit", &1000.to_string()),
+            ])
             .send()
             .await?
             .text()
@@ -404,10 +402,9 @@ impl GelbooruExtractor {
 
         let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
             format!(
-                "https://realbooru.com/images/{}/{}.{}",
+                "https://realbooru.com/images/{}/{}",
                 post["directory"].as_str().unwrap(),
-                &md5,
-                &ext
+                &file,
             )
         } else {
             post["file_url"].as_str().unwrap().to_string()
