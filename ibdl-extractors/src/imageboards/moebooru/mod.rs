@@ -228,16 +228,14 @@ impl Extractor for MoebooruExtractor {
             return Err(ExtractorError::UnsupportedOperation);
         };
 
-        let url = format!(
-            "{}?tags={}",
-            self.server_cfg.post_list_url.as_ref().unwrap(),
-            &self.tag_string
-        );
-
         let items = self
             .client
-            .get(&url)
-            .query(&[("page", page), ("limit", 100)])
+            .get(self.server_cfg.post_list_url.as_ref().unwrap())
+            .query(&[
+                ("page", &page.to_string()),
+                ("limit", &self.server_cfg.max_post_limit.to_string()),
+                ("tags", &self.tag_string),
+            ])
             .send()
             .await?
             .text()

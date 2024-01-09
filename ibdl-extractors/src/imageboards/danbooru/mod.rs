@@ -12,6 +12,7 @@ use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
+use ibdl_common::reqwest::Method;
 use ibdl_common::serde_json;
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
@@ -273,25 +274,23 @@ impl Extractor for DanbooruExtractor {
             return Err(ExtractorError::UnsupportedOperation);
         };
 
-        let url = format!(
-            "{}?tags={}",
-            self.server_cfg.post_list_url.as_ref().unwrap(),
-            &self.tag_string
-        );
+        let mut request = self
+            .client
+            .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        if self.auth_state {
             debug!("[AUTH] Fetching posts from page {}", page);
-            self.client
-                .get(url)
-                .query(&[("page", page), ("limit", 200)])
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key))
         } else {
             debug!("Fetching posts from page {}", page);
-            self.client
-                .get(url)
-                .query(&[("page", page), ("limit", 200)])
         };
+
+        let req = request.query(&[
+            ("page", &page.to_string()),
+            ("limit", &self.server_cfg.max_post_limit.to_string()),
+            ("tags", &self.tag_string),
+        ]);
 
         let post_array = req.send().await?.text().await?;
 

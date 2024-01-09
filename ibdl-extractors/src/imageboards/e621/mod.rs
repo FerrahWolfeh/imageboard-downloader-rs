@@ -8,7 +8,7 @@ use crate::auth::ImageboardConfig;
 use crate::extractor_config::DEFAULT_SERVERS;
 use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::reqwest::Client;
+use ibdl_common::reqwest::{Client, Method};
 use ibdl_common::serde_json;
 use ibdl_common::{
     client, join_tags,
@@ -257,24 +257,23 @@ impl Extractor for E621Extractor {
             return Err(ExtractorError::UnsupportedOperation);
         };
 
-        let url = format!(
-            "{}?tags={}",
-            self.server_cfg.post_list_url.as_ref().unwrap(),
-            &self.tag_string
-        );
+        let mut request = self
+            .client
+            .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
 
-        let req = if self.auth_state {
+        // Fetch item list from page
+        if self.auth_state {
             debug!("[AUTH] Fetching posts from page {}", page);
-            self.client
-                .get(&url)
-                .query(&[("page", page), ("limit", 320)])
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key))
         } else {
             debug!("Fetching posts from page {}", page);
-            self.client
-                .get(&url)
-                .query(&[("page", page), ("limit", 320)])
         };
+
+        let req = request.query(&[
+            ("page", &page.to_string()),
+            ("limit", &self.server_cfg.max_post_limit.to_string()),
+            ("tags", &self.tag_string),
+        ]);
 
         let items = req.send().await?.text().await?;
 

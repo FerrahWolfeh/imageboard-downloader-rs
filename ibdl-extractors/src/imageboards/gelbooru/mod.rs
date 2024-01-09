@@ -259,7 +259,7 @@ impl Extractor for GelbooruExtractor {
             .query(&[
                 ("tags", &self.tag_string),
                 ("pid", &page.to_string()),
-                ("limit", &1000.to_string()),
+                ("limit", &self.server_cfg.max_post_limit.to_string()),
             ])
             .send()
             .await?
@@ -306,23 +306,6 @@ impl Extractor for GelbooruExtractor {
         self
     }
 }
-
-// impl MultiWebsite for GelbooruExtractor {
-//     /// Sets the imageboard to extract posts from
-//     ///
-//     /// If not set, defaults to `ImageBoards::Rule34`
-//     fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
-//     where
-//         Self: std::marker::Sized,
-//     {
-//         self.active_imageboard = match imageboard {
-//             ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
-//             _ => ImageBoards::Gelbooru,
-//         };
-
-//         self
-//     }
-// }
 
 impl GelbooruExtractor {
     fn gelbooru_old_path(&self, list: &[Value]) -> Vec<Post> {
@@ -409,7 +392,8 @@ impl GelbooruExtractor {
 
         let drop_url = if self.active_imageboard == ImageBoards::GelbooruV0_2 {
             format!(
-                "https://realbooru.com/images/{}/{}",
+                "{}/images/{}/{}",
+                self.server_cfg.base_url,
                 post["directory"].as_str().unwrap(),
                 &file,
             )
