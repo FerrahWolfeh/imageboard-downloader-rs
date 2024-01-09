@@ -1,7 +1,8 @@
 // 20002709
 use ibdl_common::post::{extension::Extension, NameType};
 use ibdl_extractors::extractor_config::ServerConfig;
-use std::path::PathBuf;
+use once_cell::sync::OnceCell;
+use std::{collections::HashMap, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
@@ -14,6 +15,8 @@ use self::{
 
 pub mod commands;
 pub(crate) mod extra;
+
+pub static AVAILABLE_SERVERS: OnceCell<HashMap<String, ServerConfig>> = OnceCell::new();
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
