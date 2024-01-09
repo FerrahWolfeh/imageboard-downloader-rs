@@ -36,7 +36,7 @@ pub struct Cli {
 
     /// Specify which website to download from
     ///
-    /// Default websites include: ["danbooru", "e621", "gelbooru", "rule34", "realbooru", "konachan"] [Default: "danbooru"]
+    /// Default websites include: ["danbooru", "e621", "gelbooru", "rule34", "realbooru", "konachan"]
     #[clap(short, long, ignore_case = true, default_value_t = ServerConfig::default(), global = true, value_parser = validate_imageboard)]
     pub imageboard: ServerConfig,
 
