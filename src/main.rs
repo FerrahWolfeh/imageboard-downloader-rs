@@ -10,7 +10,8 @@ use ibdl_common::tokio::sync::mpsc::{channel, unbounded_channel};
 use ibdl_common::tokio::{self, join};
 use ibdl_core::async_queue::Queue;
 use ibdl_core::clap::Parser;
-use ibdl_core::cli::{Cli, Commands};
+use ibdl_core::cli::{Cli, Commands, AVAILABLE_SERVERS};
+use ibdl_extractors::imageboards::ExtractorFeatures;
 use once_cell::sync::Lazy;
 
 static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
@@ -18,6 +19,56 @@ static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Cli = Cli::parse();
+
+    if args.servers {
+        println!(
+            "{}\n----------------",
+            "Available Servers:".underline().bold().blue()
+        );
+
+        for (srv, data) in AVAILABLE_SERVERS.get().unwrap() {
+            let mut features = Vec::with_capacity(4);
+
+            let ext_feat = data.extractor_features();
+
+            if ext_feat.contains(ExtractorFeatures::Auth) {
+                features.push("Auth");
+            }
+
+            if ext_feat.contains(ExtractorFeatures::AsyncFetch) {
+                features.push("Async Fetch");
+            }
+
+            if ext_feat.contains(ExtractorFeatures::TagSearch) {
+                features.push("Tag Search");
+            }
+
+            if ext_feat.contains(ExtractorFeatures::SinglePostFetch) {
+                features.push("Specific Post Fetch");
+            }
+
+            if ext_feat.contains(ExtractorFeatures::PoolDownload) {
+                features.push("Pool Download");
+            }
+
+            println!(
+                "{:<16} - {}:\n - {} {}\n - {} {}\n - {} {}\n - {} {:?}\n",
+                format!("[{}]", srv),
+                data.pretty_name.bold().green(),
+                "API Type:".bold().blue(),
+                data.server.to_string().bold().purple().underline(),
+                "Base URL:".bold().blue(),
+                data.base_url.bold().purple().underline(),
+                "Max Post Limit:".bold().blue(),
+                data.max_post_limit.bold().yellow(),
+                "Available features:".bold().blue(),
+                features,
+            )
+        }
+
+        exit(0)
+    }
+
     env_logger::builder().format_timestamp(None).init();
     color_eyre::install()?;
 

@@ -40,6 +40,10 @@ pub struct Cli {
     #[clap(short, long, ignore_case = true, default_value_t = ServerConfig::default(), global = true, value_parser = validate_imageboard)]
     pub imageboard: ServerConfig,
 
+    /// Print all available servers and exit
+    #[clap(long, global = true)]
+    pub servers: bool,
+
     /// Where to save files (If the path doesn't exist, it will be created.)
     #[clap(short = 'o', value_name = "PATH", help_heading = "SAVE", global = true)]
     pub output: Option<PathBuf>,
