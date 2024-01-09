@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     };
 
     let qw = Queue::new(
-        args.imageboard.server,
+        args.imageboard.clone(),
         args.simultaneous_downloads,
         Some(client),
         args.cbz,

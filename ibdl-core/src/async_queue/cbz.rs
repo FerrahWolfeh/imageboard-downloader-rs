@@ -243,7 +243,7 @@ impl Queue {
 
                 let cli = self.client.clone();
                 let zip = zip.clone();
-                let variant = self.imageboard;
+                let variant = self.imageboard.server;
                 let annotate = self.annotate;
                 let sender = sender.clone();
 

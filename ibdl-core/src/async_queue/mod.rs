@@ -70,6 +70,7 @@ use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceive
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, client_imgb, tokio, ImageBoards};
 use ibdl_extractors::extractor_config::serialize::read_server_cfg_file;
+use ibdl_extractors::extractor_config::ServerConfig;
 use md5::compute;
 use once_cell::sync::OnceCell;
 use owo_colors::OwoColorize;
@@ -131,7 +132,7 @@ impl DownloadFormat {
 
 /// Struct where all the downloading will take place
 pub struct Queue {
-    imageboard: ImageBoards,
+    imageboard: ServerConfig,
     sim_downloads: u8,
     client: Client,
     download_fmt: DownloadFormat,
@@ -142,7 +143,7 @@ pub struct Queue {
 impl Queue {
     /// Set up the queue for download
     pub fn new(
-        imageboard: ImageBoards,
+        imageboard: ServerConfig,
         sim_downloads: u8,
         custom_client: Option<Client>,
         save_as_cbz: bool,
@@ -153,7 +154,7 @@ impl Queue {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client_imgb!(imageboard)
+            client!(imageboard)
         };
 
         let download_fmt = if save_as_cbz && pool_download {
