@@ -7,7 +7,9 @@ use std::{collections::HashMap, fs::read_to_string, io::Write, str::FromStr};
 use std::{fs::File, path::Path};
 use toml;
 
-use super::{ServerConfig, CLIENT_UA_NAME, EXTRACTOR_UA_NAME};
+use crate::extractor_config::{DEFAULT_CLI_UA, DEFAULT_EXT_UA};
+
+use super::ServerConfig;
 
 const SAMPLE_SERVER_TOML: &str = include_str!("sample.toml");
 
@@ -47,8 +49,8 @@ pub fn read_server_cfg_file(path: &Path, smap: &mut HashMap<String, ServerConfig
             name: id.clone(),
             pretty_name: data.pretty_name,
             server: ImageBoards::from_str(&data.server).unwrap(),
-            client_user_agent: format!("{}/{}", CLIENT_UA_NAME, env!("CARGO_PKG_VERSION")),
-            extractor_user_agent: format!("{}/{}", EXTRACTOR_UA_NAME, env!("CARGO_PKG_VERSION")),
+            client_user_agent: DEFAULT_CLI_UA.to_string(),
+            extractor_user_agent: DEFAULT_EXT_UA.to_string(),
             base_url: data.base_url,
             post_url: data.post_url,
             post_list_url: data.post_list_url,

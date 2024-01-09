@@ -199,7 +199,7 @@ impl Pool {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
                 Err(CliError::ExtractorUnsupportedMode)
 
                 // let mut unit = GelbooruExtractor::new(
@@ -227,7 +227,7 @@ impl Pool {
 
                 // Ok((ext_thd, client))
             }
-            ImageBoards::Konachan => {
+            ImageBoards::Moebooru => {
                 Err(CliError::ExtractorUnsupportedMode)
 
                 // let mut unit = MoebooruExtractor::new(

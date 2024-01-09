@@ -80,7 +80,7 @@ impl Extractor for GelbooruExtractor {
         debug!("Tag List: {}", tag_string);
 
         Self {
-            active_imageboard: ImageBoards::Rule34,
+            active_imageboard: ImageBoards::Gelbooru,
             client,
             tags: strvec,
             tag_string,
@@ -403,7 +403,7 @@ impl GelbooruExtractor {
 
         let ext = extract_ext_from_url!(file);
 
-        let drop_url = if self.active_imageboard == ImageBoards::Realbooru {
+        let drop_url = if self.active_imageboard == ImageBoards::GelbooruV0_2 {
             format!(
                 "https://realbooru.com/images/{}/{}",
                 post["directory"].as_str().unwrap(),

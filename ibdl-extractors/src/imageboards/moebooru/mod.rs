@@ -128,7 +128,7 @@ impl Extractor for MoebooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
-            imageboard: ImageBoards::Konachan,
+            imageboard: ImageBoards::Moebooru,
             client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
@@ -205,7 +205,7 @@ impl Extractor for MoebooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
-            imageboard: ImageBoards::Konachan,
+            imageboard: ImageBoards::Moebooru,
             client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
@@ -273,7 +273,7 @@ impl Extractor for MoebooruExtractor {
 
             let unit = Post {
                 id: c.id.unwrap(),
-                website: ImageBoards::Konachan,
+                website: ImageBoards::Moebooru,
                 url,
                 md5: c.md5.clone().unwrap(),
                 extension: ext,
@@ -296,7 +296,7 @@ impl Extractor for MoebooruExtractor {
     }
 
     fn imageboard(&self) -> ImageBoards {
-        ImageBoards::Konachan
+        ImageBoards::Moebooru
     }
 
     fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {

@@ -182,7 +182,7 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
                 let mut unit = GelbooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
@@ -208,7 +208,7 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Konachan => {
+            ImageBoards::Moebooru => {
                 let mut unit = MoebooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
