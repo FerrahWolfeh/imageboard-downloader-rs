@@ -391,9 +391,15 @@ impl GelbooruExtractor {
         let ext = extract_ext_from_url!(file);
 
         let drop_url = if self.active_imageboard == ImageBoards::GelbooruV0_2 {
+            let imgu = if let Some(img_url) = &self.server_cfg.image_url {
+                img_url
+            } else {
+                &self.server_cfg.base_url
+            };
+
             format!(
                 "{}/images/{}/{}.{}",
-                self.server_cfg.base_url,
+                imgu,
                 post["directory"].as_str().unwrap(),
                 &md5,
                 ext

@@ -11,6 +11,7 @@
 # pool_idx_url = "https://danbooru.donmai.us/pools"       # Optional
 # max_post_limit = 200                                    # Required
 # auth_url = "https://danbooru.donmai.us/profile.json"    # Optional
+# image_url = "http://abcdefg.com"                        # Website specific
 
 # [servers.gelbooru]
 # pretty_name = "Gelbooru"

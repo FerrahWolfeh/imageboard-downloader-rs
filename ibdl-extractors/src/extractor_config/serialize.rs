@@ -30,6 +30,7 @@ struct Server {
     pool_idx_url: Option<String>,
     max_post_limit: usize,
     auth_url: Option<String>,
+    image_url: Option<String>,
 }
 
 pub fn read_server_cfg_file(path: &Path, smap: &mut HashMap<String, ServerConfig>) {
@@ -57,6 +58,7 @@ pub fn read_server_cfg_file(path: &Path, smap: &mut HashMap<String, ServerConfig
             pool_idx_url: data.pool_idx_url,
             max_post_limit: data.max_post_limit,
             auth_url: data.auth_url,
+            image_url: data.image_url,
         };
         smap.insert(id, config);
     }

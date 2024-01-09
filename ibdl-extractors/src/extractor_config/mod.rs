@@ -58,7 +58,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "https://danbooru.donmai.us/posts.json",
             Some(String::from("https://danbooru.donmai.us/pools")),
             200,
-            Some(String::from("https://danbooru.donmai.us/profile.json"))
+            Some(String::from("https://danbooru.donmai.us/profile.json")),
+            None
         ),
     );
     hmap.insert(
@@ -74,7 +75,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "https://e621.net/posts.json",
             Some(String::from("https://e621.net/pools")),
             320,
-            Some(String::from("https://e621.net/users/"))
+            Some(String::from("https://e621.net/users/")),
+            None
         ),
     );
     hmap.insert(
@@ -92,6 +94,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
             None,
             100,
+            None,
             None
         ),
     );
@@ -110,6 +113,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1",
             None,
             1000,
+            None,
             None
         ),
     );
@@ -128,6 +132,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "http://realbooru.com/index.php?page=dapi&s=post&q=index&json=1",
             None,
             1000,
+            None,
             None
         ),
     );
@@ -144,6 +149,7 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "https://konachan.com/post.json",
             None,
             100,
+            None,
             None
         ),
     );
@@ -164,6 +170,7 @@ pub struct ServerConfig {
     pub pool_idx_url: Option<String>,
     pub max_post_limit: usize,
     pub auth_url: Option<String>,
+    pub image_url: Option<String>,
 }
 
 impl ServerConfig {
@@ -192,6 +199,7 @@ impl Default for ServerConfig {
             pool_idx_url: Some(String::from("https://danbooru.donmai.us/pools")),
             max_post_limit: 200,
             auth_url: Some(String::from("https://danbooru.donmai.us/profile.json")),
+            image_url: None,
         }
     }
 }
