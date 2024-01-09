@@ -1,15 +1,16 @@
 // 20002709
-use ibdl_common::{
-    post::{extension::Extension, NameType},
-    ImageBoards,
-};
+use ibdl_common::post::{extension::Extension, NameType};
+use ibdl_extractors::extractor_config::ServerConfig;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::{generate_output_path_precise, ImageBoardArg};
+use crate::generate_output_path_precise;
 
-use self::commands::{pool::Pool, post::Post, search::TagSearch};
+use self::{
+    commands::{pool::Pool, post::Post, search::TagSearch},
+    extra::validate_imageboard,
+};
 
 pub mod commands;
 pub(crate) mod extra;
@@ -31,8 +32,10 @@ pub struct Cli {
     pub mode: Commands,
 
     /// Specify which website to download from
-    #[clap(short, long, value_enum, ignore_case = true, default_value_t = ImageBoardArg(ImageBoards::Danbooru), global = true,)]
-    pub imageboard: ImageBoardArg,
+    ///
+    /// Default websites include: ["danbooru", "e621", "gelbooru", "rule34", "realbooru", "konachan"] [Default: "danbooru"]
+    #[clap(short, long, ignore_case = true, default_value_t = ServerConfig::default(), global = true, value_parser = validate_imageboard)]
+    pub imageboard: ServerConfig,
 
     /// Where to save files (If the path doesn't exist, it will be created.)
     #[clap(short = 'o', value_name = "PATH", help_heading = "SAVE", global = true)]

@@ -139,13 +139,14 @@ impl Pool {
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         let ratings = self.selected_ratings();
 
-        match *args.imageboard {
+        match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new(
+                let mut unit = DanbooruExtractor::new_with_config(
                     &[""],
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -169,8 +170,14 @@ impl Pool {
                 Ok((ext_thd, client))
             }
             ImageBoards::E621 => {
-                let mut unit =
-                    E621Extractor::new(&[""], &ratings, self.disable_blacklist, !self.no_animated);
+                let mut unit = E621Extractor::new_with_config(
+                    &[""],
+                    &ratings,
+                    self.disable_blacklist,
+                    !self.no_animated,
+                    args.imageboard.clone(),
+                );
+
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 unit.exclude_tags(&self.exclude);

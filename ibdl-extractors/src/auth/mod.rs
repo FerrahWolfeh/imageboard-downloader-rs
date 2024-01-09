@@ -35,6 +35,9 @@ pub enum Error {
     /// Indicates a failed attempt to serialize the config file to `bincode`.
     #[error("Failed to encode config file")]
     ConfigEncodeError,
+
+    #[error("This imageboard does not support authentication.")]
+    AuthUnsupported,
 }
 
 /// Struct that defines all user configuration for a specific imageboard.
@@ -101,9 +104,17 @@ impl ImageboardConfig {
             pub blacklisted_tags: Option<String>,
         }
 
+        if self.imageboard.auth_url.is_none() {
+            return Err(Error::AuthUnsupported);
+        }
+
         let url = match self.imageboard.server {
-            ImageBoards::Danbooru => self.imageboard.auth_url.to_string(),
-            ImageBoards::E621 => format!("{}{}.json", self.imageboard.auth_url, self.username),
+            ImageBoards::Danbooru => self.imageboard.auth_url.as_ref().unwrap().to_string(),
+            ImageBoards::E621 => format!(
+                "{}{}.json",
+                self.imageboard.auth_url.as_ref().unwrap(),
+                self.username
+            ),
             _ => String::new(),
         };
 
@@ -147,7 +158,8 @@ impl ImageboardConfig {
     /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), Error> {
-        let config_path = ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.name));
+        let config_path =
+            ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.pretty_name));
         let mut cfg_cache = OpenOptions::new()
             .create(true)
             .truncate(true)

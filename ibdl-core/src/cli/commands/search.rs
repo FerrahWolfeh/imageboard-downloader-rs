@@ -127,13 +127,14 @@ impl TagSearch {
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         let ratings = self.selected_ratings();
 
-        match *args.imageboard {
+        match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new(
+                let mut unit = DanbooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -155,11 +156,12 @@ impl TagSearch {
                 Ok((ext_thd, client))
             }
             ImageBoards::E621 => {
-                let mut unit = E621Extractor::new(
+                let mut unit = E621Extractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -181,15 +183,15 @@ impl TagSearch {
                 Ok((ext_thd, client))
             }
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-                let mut unit = GelbooruExtractor::new(
+                let mut unit = GelbooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
 
-                unit.exclude_tags(&self.exclude)
-                    .set_imageboard(*args.imageboard);
+                unit.exclude_tags(&self.exclude);
 
                 if let Some(ext) = args.get_extension() {
                     unit.force_extension(ext);
@@ -207,11 +209,12 @@ impl TagSearch {
                 Ok((ext_thd, client))
             }
             ImageBoards::Konachan => {
-                let mut unit = MoebooruExtractor::new(
+                let mut unit = MoebooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 let client = unit.client();
 

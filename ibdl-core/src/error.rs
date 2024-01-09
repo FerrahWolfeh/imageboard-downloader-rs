@@ -77,6 +77,12 @@ pub enum CliError {
     #[error("This operation is currently unsupported for this imageboard")]
     ExtractorUnsupportedMode,
 
+    #[error("Failed to read server config")]
+    ServerConfigSerializeFail,
+
+    #[error("Selected server does not exist.")]
+    ServerNotExists,
+
     #[error("No posts given")]
     NoPostsInInput,
 }

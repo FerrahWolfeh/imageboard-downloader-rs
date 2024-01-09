@@ -53,6 +53,9 @@ pub enum ExtractorError {
     #[error("Impossible execution path")]
     ImpossibleBehavior,
 
+    #[error("Unsupported operation for this server")]
+    UnsupportedOperation,
+
     #[error("Error sending length data to progress counter: {source}")]
     SendLengthFail {
         #[from]

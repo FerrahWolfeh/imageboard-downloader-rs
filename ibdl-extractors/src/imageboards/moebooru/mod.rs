@@ -220,10 +220,14 @@ impl Extractor for MoebooruExtractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        // Get URL
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
         let url = format!(
             "{}?tags={}",
-            self.server_cfg.post_list_url, &self.tag_string
+            self.server_cfg.post_list_url.as_ref().unwrap(),
+            &self.tag_string
         );
 
         let items = self

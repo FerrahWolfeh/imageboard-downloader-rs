@@ -3,6 +3,7 @@ use std::{
     fs::create_dir_all,
     io,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 // Public Exports
@@ -49,6 +50,20 @@ impl ToString for ImageBoards {
             ImageBoards::Realbooru => String::from("realbooru"),
             ImageBoards::Konachan => String::from("konachan"),
             ImageBoards::Gelbooru => String::from("gelbooru"),
+        }
+    }
+}
+
+impl FromStr for ImageBoards {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "gelbooru" => Ok(Self::Gelbooru),
+            "danbooru" => Ok(Self::Danbooru),
+            "e621" => Ok(Self::E621),
+            "moebooru" => Ok(Self::Konachan),
+            _ => Err(String::from("Invalid imageboard type.")),
         }
     }
 }

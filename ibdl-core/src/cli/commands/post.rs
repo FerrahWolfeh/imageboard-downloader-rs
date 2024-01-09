@@ -50,9 +50,15 @@ impl Post {
         channel_tx: UnboundedSender<Pst>,
         length_tx: Sender<u64>,
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
-        match *args.imageboard {
+        match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new(&[""], &[], true, true);
+                let mut unit = DanbooruExtractor::new_with_config(
+                    &[""],
+                    &[],
+                    true,
+                    true,
+                    args.imageboard.clone(),
+                );
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 let client = unit.client();
@@ -95,7 +101,8 @@ impl Post {
                 Ok((ext_thd, client))
             }
             ImageBoards::E621 => {
-                let mut unit = E621Extractor::new(&[""], &[], true, true);
+                let mut unit =
+                    E621Extractor::new_with_config(&[""], &[], true, true, args.imageboard.clone());
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 let client = unit.client();
@@ -137,9 +144,13 @@ impl Post {
                 Ok((ext_thd, client))
             }
             ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-                let mut unit = GelbooruExtractor::new(&[""], &[], true, true);
-
-                unit.set_imageboard(*args.imageboard);
+                let unit = GelbooruExtractor::new_with_config(
+                    &[""],
+                    &[],
+                    true,
+                    true,
+                    args.imageboard.clone(),
+                );
 
                 let client = unit.client();
                 let ext_thd = {

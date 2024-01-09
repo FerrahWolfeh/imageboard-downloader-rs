@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     let dirname = args.generate_save_path()?;
 
     let qw = Queue::new(
-        *args.imageboard,
+        args.imageboard.server,
         args.simultaneous_downloads,
         Some(client),
         args.cbz,

@@ -16,7 +16,15 @@ impl PoolExtract for E621Extractor {
         pool_id: u32,
         limit: Option<u16>,
     ) -> Result<HashMap<u64, usize>, ExtractorError> {
-        let url = format!("{}/{}.json", self.server_cfg.pool_idx_url, pool_id);
+        if self.server_cfg.pool_idx_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.pool_idx_url.as_ref().unwrap(),
+            pool_id
+        );
 
         // Fetch item list from page
         let req = if self.auth_state {

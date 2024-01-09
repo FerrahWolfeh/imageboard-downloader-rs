@@ -249,10 +249,14 @@ impl Extractor for E621Extractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        // Check safe mode
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
         let url = format!(
             "{}?tags={}",
-            self.server_cfg.post_list_url, &self.tag_string
+            self.server_cfg.post_list_url.as_ref().unwrap(),
+            &self.tag_string
         );
 
         let req = if self.auth_state {
@@ -364,7 +368,15 @@ impl SinglePostFetch for E621Extractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}/{}.json", self.server_cfg.post_url, post_id);
+        if self.server_cfg.post_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.post_url.as_ref().unwrap(),
+            post_id
+        );
 
         // Fetch item list from page
         let req = if self.auth_state {

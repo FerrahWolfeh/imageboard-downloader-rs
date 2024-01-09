@@ -160,6 +160,7 @@ pub trait Auth {
 }
 
 /// Indicates that the extractor is capable of extracting from multiple websites that share a similar API
+#[deprecated]
 pub trait MultiWebsite {
     /// Changes the state of the internal active imageboard. If not set, the extractor should default to something, but never `panic`.
     fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self

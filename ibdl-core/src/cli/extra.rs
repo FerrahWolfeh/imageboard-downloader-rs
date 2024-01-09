@@ -1,8 +1,13 @@
-use std::{io, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env, io,
+    path::{Path, PathBuf},
+};
 
 use dialoguer::{theme::ColorfulTheme, Input, Password};
 use ibdl_common::{
     bincode::deserialize,
+    directories::ProjectDirs,
     log::{debug, warn},
     reqwest::Client,
     tokio::fs::{read, remove_file},
@@ -10,10 +15,14 @@ use ibdl_common::{
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
-    extractor_config::DEFAULT_SERVERS,
+    extractor_config::{serialize::read_server_cfg_file, ServerConfig, DEFAULT_SERVERS},
     imageboards::{Auth, Extractor},
 };
+use once_cell::sync::OnceCell;
 use owo_colors::OwoColorize;
+use std::fs;
+
+pub static AVAILABLE_SERVERS: OnceCell<HashMap<String, ServerConfig>> = OnceCell::new();
 
 use crate::error::CliError;
 
@@ -94,4 +103,41 @@ pub async fn read_config_from_fs(
     };
     debug!("Running without authentication");
     Ok(None)
+}
+
+pub fn get_servers() -> Result<(), CliError> {
+    let mut servers = DEFAULT_SERVERS.clone();
+
+    let cfg_path = PathBuf::from(env::var("IBDL_SERVER_CFG").unwrap_or({
+        let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+        cdir.config_dir().to_string_lossy().to_string()
+    }));
+
+    if !cfg_path.exists() {
+        fs::create_dir_all(&cfg_path)?;
+    }
+
+    let cfg_path = cfg_path.join(Path::new("servers.toml"));
+
+    read_server_cfg_file(&cfg_path, &mut servers);
+
+    AVAILABLE_SERVERS.get_or_init(|| servers);
+
+    Ok(())
+}
+
+pub fn validate_imageboard(input: &str) -> Result<ServerConfig, String> {
+    get_servers().unwrap();
+
+    let servers = AVAILABLE_SERVERS.get().unwrap();
+
+    if let Some(server) = servers.get(input) {
+        Ok(server.clone())
+    } else {
+        Err(format!(
+            "Invalid imageboard: {}. Allowed imageboards are: {:?}",
+            input,
+            servers.keys()
+        ))
+    }
 }

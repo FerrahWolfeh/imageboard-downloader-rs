@@ -29,7 +29,7 @@ use std::time::Duration;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-use super::{Extractor, MultiWebsite, ServerConfig, SinglePostFetch};
+use super::{Extractor, ServerConfig, SinglePostFetch};
 
 mod unsync;
 
@@ -245,7 +245,15 @@ impl Extractor for GelbooruExtractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        let url = format!("{}&tags={}", self.server_cfg.post_url, self.tag_string);
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}?tags={}",
+            self.server_cfg.post_list_url.as_ref().unwrap(),
+            &self.tag_string
+        );
 
         let items = self
             .client
@@ -294,22 +302,22 @@ impl Extractor for GelbooruExtractor {
     }
 }
 
-impl MultiWebsite for GelbooruExtractor {
-    /// Sets the imageboard to extract posts from
-    ///
-    /// If not set, defaults to `ImageBoards::Rule34`
-    fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
-    where
-        Self: std::marker::Sized,
-    {
-        self.active_imageboard = match imageboard {
-            ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
-            _ => ImageBoards::Gelbooru,
-        };
+// impl MultiWebsite for GelbooruExtractor {
+//     /// Sets the imageboard to extract posts from
+//     ///
+//     /// If not set, defaults to `ImageBoards::Rule34`
+//     fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
+//     where
+//         Self: std::marker::Sized,
+//     {
+//         self.active_imageboard = match imageboard {
+//             ImageBoards::Gelbooru | ImageBoards::Realbooru | ImageBoards::Rule34 => imageboard,
+//             _ => ImageBoards::Gelbooru,
+//         };
 
-        self
-    }
-}
+//         self
+//     }
+// }
 
 impl GelbooruExtractor {
     fn gelbooru_old_path(&self, list: &[Value]) -> Vec<Post> {
@@ -424,7 +432,15 @@ impl SinglePostFetch for GelbooruExtractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}&id={}", self.server_cfg.post_url, post_id);
+        if self.server_cfg.post_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.post_url.as_ref().unwrap(),
+            post_id
+        );
 
         let items = self.client.get(&url).send().await?.text().await?;
 

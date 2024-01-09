@@ -69,6 +69,7 @@ use ibdl_common::tokio::spawn;
 use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, client_imgb, tokio, ImageBoards};
+use ibdl_extractors::extractor_config::serialize::read_server_cfg_file;
 use md5::compute;
 use once_cell::sync::OnceCell;
 use owo_colors::OwoColorize;
@@ -87,6 +88,7 @@ use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
 
+use crate::cli::extra::get_servers;
 use crate::progress_bars::ProgressCounter;
 
 use crate::error::QueueError;
