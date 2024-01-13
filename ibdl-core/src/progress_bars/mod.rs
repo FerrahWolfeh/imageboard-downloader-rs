@@ -84,7 +84,7 @@ impl ProgressCounter {
     /// About the same as `initialize`, but accepts predefined styles instead.
     pub fn initialize_custom_style(len: u64, style: ProgressStyle) -> Self {
         let bar = ProgressBar::new(len).with_style(style);
-        bar.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
+        bar.set_draw_target(ProgressDrawTarget::stderr());
         bar.enable_steady_tick(Duration::from_millis(100));
 
         // Initialize the bars
