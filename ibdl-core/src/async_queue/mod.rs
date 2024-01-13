@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 //! Queue used specifically to download, filter and save posts found by an [`Extractor`](ibdl-extractors::websites).
 //!
 //! # Example usage
@@ -55,44 +54,24 @@
 mod cbz;
 mod folder;
 
-use dialoguer::theme::ColorfulTheme;
-use dialoguer::Confirm;
-use futures::stream::iter;
-use futures::StreamExt;
-use ibdl_common::log::{debug, trace};
+use crate::error::QueueError;
+use crate::progress_bars::ProgressCounter;
+use ibdl_common::log::debug;
 use ibdl_common::post::error::PostError;
-use ibdl_common::post::rating::Rating;
-use ibdl_common::post::tags::TagType;
-use ibdl_common::post::{NameType, Post, PostQueue};
+use ibdl_common::post::{NameType, Post};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceiver};
+use ibdl_common::tokio::sync::mpsc::{channel, Receiver, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
-use ibdl_common::{client, client_imgb, tokio, ImageBoards};
-use ibdl_extractors::extractor_config::serialize::read_server_cfg_file;
+use ibdl_common::{client, tokio};
 use ibdl_extractors::extractor_config::ServerConfig;
-use md5::compute;
 use once_cell::sync::OnceCell;
-use owo_colors::OwoColorize;
-use std::convert::TryInto;
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::sync::Mutex;
-use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
-use tokio::io::{AsyncWriteExt, BufWriter};
-use tokio::task::{self, spawn_blocking};
+use tokio::fs::{create_dir_all, OpenOptions};
+use tokio::io::AsyncWriteExt;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use zip::write::FileOptions;
-use zip::CompressionMethod;
-use zip::ZipWriter;
-
-use crate::cli::extra::get_servers;
-use crate::progress_bars::ProgressCounter;
-
-use crate::error::QueueError;
 
 static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
 
