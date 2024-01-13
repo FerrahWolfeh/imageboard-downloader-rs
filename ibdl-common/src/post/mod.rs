@@ -11,7 +11,7 @@ use std::{cmp::Ordering, fmt::Debug, ops::Not};
 
 use crate::ImageBoards;
 
-use self::{rating::Rating, tags::Tag};
+use self::{extension::Extension, rating::Rating, tags::Tag};
 
 pub mod error;
 pub mod extension;
@@ -73,7 +73,7 @@ pub struct Post {
     /// The original file extension provided by the imageboard.
     ///
     /// ```https://konachan.com``` (Moebooru) and some other imageboards don't provide this field. So, additional work is required to get the file extension from the url
-    pub extension: String,
+    pub extension: Extension,
     /// Rating of the post. Can be:
     ///
     /// * `Rating::Safe` for SFW posts
@@ -128,7 +128,7 @@ impl Post {
             NameType::MD5 => self.md5.to_string(),
         };
 
-        format!("{}.{}", name, self.extension)
+        format!("{}.{}", name, self.extension.to_string())
     }
 
     /// Get the generic name of the post. Can be it's MD5 hash or ID
@@ -142,6 +142,6 @@ impl Post {
 
     #[inline]
     pub fn seq_file_name(&self, num_digits: usize) -> String {
-        format!("{:0num_digits$}.{}", self.id, self.extension)
+        format!("{:0num_digits$}.{}", self.id, self.extension.to_string())
     }
 }

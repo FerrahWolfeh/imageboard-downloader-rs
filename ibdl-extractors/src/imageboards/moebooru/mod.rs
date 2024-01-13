@@ -271,7 +271,7 @@ impl Extractor for MoebooruExtractor {
                 website: ImageBoards::Moebooru,
                 url,
                 md5: c.md5.clone().unwrap(),
-                extension: ext,
+                extension: Extension::guess_format(&ext),
                 tags,
                 rating: Rating::from_rating_str(&c.rating),
             };

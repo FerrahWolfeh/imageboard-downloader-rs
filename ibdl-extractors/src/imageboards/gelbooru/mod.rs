@@ -358,7 +358,7 @@ impl GelbooruExtractor {
             website: self.active_imageboard,
             md5: post["md5"].as_str().unwrap().to_string(),
             url,
-            extension,
+            extension: Extension::guess_format(&extension),
             tags,
             rating: Rating::from_rating_str(post["rating"].as_str().unwrap()),
         }
@@ -405,7 +405,7 @@ impl GelbooruExtractor {
             website: self.active_imageboard,
             url: drop_url,
             md5,
-            extension: ext,
+            extension: Extension::guess_format(&ext),
             rating,
             tags,
         }

@@ -296,7 +296,7 @@ impl Extractor for E621Extractor {
                 website: ImageBoards::E621,
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
-                extension: c.file.ext.clone().unwrap(),
+                extension: Extension::guess_format(&c.file.ext.clone().unwrap()),
                 tags: tag_list,
                 rating: Rating::from_rating_str(&c.rating),
             };
@@ -351,7 +351,7 @@ impl SinglePostFetch for E621Extractor {
                 website: ImageBoards::E621,
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
-                extension: c.file.ext.clone().unwrap(),
+                extension: Extension::guess_format(&c.file.ext.clone().unwrap()),
                 tags: tag_list,
                 rating: Rating::from_rating_str(&c.rating),
             };

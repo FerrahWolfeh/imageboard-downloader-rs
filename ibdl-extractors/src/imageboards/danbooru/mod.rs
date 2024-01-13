@@ -317,7 +317,7 @@ impl Extractor for DanbooruExtractor {
                 website: ImageBoards::Danbooru,
                 md5: c.md5.unwrap(),
                 url: c.file_url.unwrap(),
-                extension: c.file_ext.unwrap(),
+                extension: Extension::guess_format(&c.file_ext.unwrap()),
                 tags: tag_list,
                 rating,
             }
@@ -375,7 +375,7 @@ impl SinglePostFetch for DanbooruExtractor {
             website: ImageBoards::Danbooru,
             md5: parsed_json.md5.unwrap(),
             url: parsed_json.file_url.unwrap(),
-            extension: parsed_json.file_ext.unwrap(),
+            extension: Extension::guess_format(&parsed_json.file_ext.unwrap()),
             tags: tag_list,
             rating,
         };

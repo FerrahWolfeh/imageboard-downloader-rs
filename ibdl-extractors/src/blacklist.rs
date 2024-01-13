@@ -187,7 +187,7 @@ impl BlacklistFilter {
         let start = Instant::now();
         if let Some(ext) = self.extension {
             debug!("Selecting only posts with extension {:?}", ext.to_string());
-            original_list.retain(|post| ext == Extension::guess_format(&post.extension));
+            original_list.retain(|post| ext == post.extension);
         }
 
         if !self.selected_ratings.is_empty() {
@@ -214,7 +214,7 @@ impl BlacklistFilter {
             if self.ignore_animated {
                 original_list.retain(|post| {
                     !(post.tags.contains(&Tag::new("animated", TagType::Meta))
-                        || Extension::guess_format(&post.extension).is_video())
+                        || post.extension.is_video())
                 });
             }
 

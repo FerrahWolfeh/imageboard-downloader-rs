@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 use super::error::PostError;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Extension {
     AVIF,
     JXL,
