@@ -443,7 +443,7 @@ impl SinglePostFetch for GelbooruExtractor {
 
         let mtx = self.map_posts(items)?;
 
-        if let Some(post) = mtx.get(0) {
+        if let Some(post) = mtx.first() {
             let end_iter = start_point.elapsed();
 
             debug!("Post mapping took {:?}", end_iter);
