@@ -1,6 +1,7 @@
 use ahash::AHashSet;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ibdl_common::post::{
+    extension::Extension,
     rating::Rating,
     tags::{Tag, TagType},
     Post,
@@ -191,7 +192,7 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
             website: ibdl_common::ImageBoards::Danbooru,
             url: "".to_string(),
             md5,
-            extension: ext,
+            extension: Extension::guess_format(&ext),
             rating,
             tags,
         };
