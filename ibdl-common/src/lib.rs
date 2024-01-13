@@ -1,3 +1,8 @@
+#![deny(clippy::nursery)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::struct_field_names)]
 use std::{
     env,
     fs::create_dir_all,
@@ -40,11 +45,11 @@ pub enum ImageBoards {
 impl ToString for ImageBoards {
     fn to_string(&self) -> String {
         match self {
-            ImageBoards::Danbooru => String::from("Danbooru"),
-            ImageBoards::E621 => String::from("e621"),
-            ImageBoards::GelbooruV0_2 => String::from("Gelbooru Beta V0.2.0"),
-            ImageBoards::Moebooru => String::from("Moebooru"),
-            ImageBoards::Gelbooru => String::from("Gelbooru"),
+            Self::Danbooru => String::from("Danbooru"),
+            Self::E621 => String::from("e621"),
+            Self::GelbooruV0_2 => String::from("Gelbooru Beta V0.2.0"),
+            Self::Moebooru => String::from("Moebooru"),
+            Self::Gelbooru => String::from("Gelbooru"),
         }
     }
 }

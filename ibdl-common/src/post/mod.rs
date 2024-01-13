@@ -30,8 +30,8 @@ impl Not for NameType {
 
     fn not(self) -> Self::Output {
         match self {
-            NameType::ID => NameType::MD5,
-            NameType::MD5 => NameType::ID,
+            Self::ID => Self::MD5,
+            Self::MD5 => Self::ID,
         }
     }
 }

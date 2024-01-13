@@ -17,7 +17,7 @@ pub enum Extension {
 
 impl Extension {
     pub fn guess_format(s: &str) -> Self {
-        let uu = Extension::from_str(s);
+        let uu = Self::from_str(s);
         if uu.is_err() {
             return Self::Unknown;
         }
@@ -47,14 +47,14 @@ impl FromStr for Extension {
 impl ToString for Extension {
     fn to_string(&self) -> String {
         match self {
-            Extension::JPG => String::from("jpg"),
-            Extension::PNG => String::from("png"),
-            Extension::WEBP => String::from("webp"),
-            Extension::GIF => String::from("gif"),
-            Extension::WEBM => String::from("webm"),
-            Extension::MP4 => String::from("mp4"),
-            Extension::Ugoira => String::from("zip"),
-            Extension::Unknown => String::from("bin"),
+            Self::JPG => String::from("jpg"),
+            Self::PNG => String::from("png"),
+            Self::WEBP => String::from("webp"),
+            Self::GIF => String::from("gif"),
+            Self::WEBM => String::from("webm"),
+            Self::MP4 => String::from("mp4"),
+            Self::Ugoira => String::from("zip"),
+            Self::Unknown => String::from("bin"),
         }
     }
 }
