@@ -155,11 +155,8 @@ impl Queue {
                 name.bold().yellow().italic(),
                 "MD5 mismatch. Redownloading...".bold().red()
             ))?;
-
-            Ok(false)
-        } else {
-            Ok(false)
         }
+        Ok(false)
     }
 
     async fn fetch(

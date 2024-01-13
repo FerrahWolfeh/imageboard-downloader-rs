@@ -60,7 +60,7 @@ pub async fn auth_prompt(
 
 pub async fn auth_imgboard<E>(ask: bool, extractor: &mut E) -> Result<(), CliError>
 where
-    E: Auth + Extractor,
+    E: Auth + Extractor + Send,
 {
     let imageboard = extractor.imageboard();
     let client = extractor.client();
@@ -128,13 +128,14 @@ pub fn get_servers<'a>() -> &'a HashMap<String, ServerConfig> {
 pub fn validate_imageboard(input: &str) -> Result<ServerConfig, String> {
     let servers = get_servers();
 
-    if let Some(server) = servers.get(input) {
-        Ok(server.clone())
-    } else {
-        Err(format!(
-            "Invalid imageboard: {}. Allowed imageboards are: {:?}",
-            input,
-            servers.keys()
-        ))
-    }
+    servers.get(input).map_or_else(
+        || {
+            Err(format!(
+                "Invalid imageboard: {}. Allowed imageboards are: {:?}",
+                input,
+                servers.keys()
+            ))
+        },
+        |server| Ok(server.clone()),
+    )
 }

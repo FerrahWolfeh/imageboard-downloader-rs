@@ -110,22 +110,22 @@ enum DownloadFormat {
 
 impl DownloadFormat {
     #[inline]
-    pub fn download_cbz(&self) -> bool {
+    pub const fn download_cbz(&self) -> bool {
         match self {
-            DownloadFormat::Cbz => true,
-            DownloadFormat::CbzPool => true,
-            DownloadFormat::Folder => false,
-            DownloadFormat::FolderPool => false,
+            Self::Cbz => true,
+            Self::CbzPool => true,
+            Self::Folder => false,
+            Self::FolderPool => false,
         }
     }
 
     #[inline]
-    pub fn download_pool(&self) -> bool {
+    pub const fn download_pool(&self) -> bool {
         match self {
-            DownloadFormat::Cbz => false,
-            DownloadFormat::CbzPool => true,
-            DownloadFormat::Folder => false,
-            DownloadFormat::FolderPool => true,
+            Self::Cbz => false,
+            Self::CbzPool => true,
+            Self::Folder => false,
+            Self::FolderPool => true,
         }
     }
 }

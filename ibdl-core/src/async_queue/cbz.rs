@@ -79,16 +79,15 @@ impl Queue {
             let mut un_mut = zip.lock().unwrap();
 
             debug!("Writing {} to cbz file", filename);
-            match un_mut.start_file(filename, options) {
-                Ok(_) => {}
-                Err(error) => {
-                    return Err(PostError::ZipFileWriteError {
-                        message: error.to_string(),
-                    })
-                }
-            };
+            if let Err(error) = un_mut.start_file(filename, options) {
+                return Err(PostError::ZipFileWriteError {
+                    message: error.to_string(),
+                });
+            }
 
             un_mut.write_all(&fvec)?;
+
+            drop(un_mut);
 
             Ok(())
         })
@@ -160,29 +159,28 @@ impl Queue {
             let mut un_mut = zip.lock().unwrap();
 
             debug!("Writing {} to cbz file", filename);
-            match un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options) {
-                Ok(_) => {}
-                Err(error) => {
-                    return Err(PostError::ZipFileWriteError {
-                        message: error.to_string(),
-                    })
-                }
+            if let Err(error) =
+                un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options)
+            {
+                drop(un_mut);
+                return Err(PostError::ZipFileWriteError {
+                    message: error.to_string(),
+                });
             };
 
             un_mut.write_all(&fvec)?;
 
             if annotate {
                 debug!("Writing caption for {} to cbz file", filename);
-                match un_mut.start_file(
+                if let Err(error) = un_mut.start_file(
                     format!("{}/{}.txt", post.rating.to_string(), post.name(name_type)),
                     cap_options,
                 ) {
-                    Ok(_) => {}
-                    Err(error) => {
-                        return Err(PostError::ZipFileWriteError {
-                            message: error.to_string(),
-                        })
-                    }
+                    drop(un_mut);
+
+                    return Err(PostError::ZipFileWriteError {
+                        message: error.to_string(),
+                    });
                 };
 
                 let tag_list = Vec::from_iter(
@@ -197,6 +195,8 @@ impl Queue {
                 let f1 = prompt.replace('_', " ");
 
                 un_mut.write_all(f1.as_bytes())?;
+
+                drop(un_mut);
             }
             Ok(())
         })
@@ -211,11 +211,13 @@ impl Queue {
         &self,
         zip: Arc<Mutex<ZipWriter<File>>>,
     ) -> Result<(), QueueError> {
-        let mut z_1 = zip.lock().unwrap();
-        z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
-        z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
-        z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
-        z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
+        {
+            let mut z_1 = zip.lock().unwrap();
+            z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
+            z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
+            z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
+            z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
+        }
 
         Ok(())
     }
@@ -262,9 +264,11 @@ impl Queue {
             .for_each(|_| async {})
             .await;
 
-        let mut mtx = zip.lock().unwrap();
+        {
+            let mut mtx = zip.lock().unwrap();
 
-        mtx.finish()?;
+            mtx.finish()?;
+        }
         Ok(())
     }
 }

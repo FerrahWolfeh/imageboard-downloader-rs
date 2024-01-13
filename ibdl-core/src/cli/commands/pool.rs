@@ -114,10 +114,9 @@ impl Pool {
     fn selected_ratings(&self) -> Vec<Rating> {
         let mut ratings: Vec<Rating> = Vec::with_capacity(4);
         if self.rating.is_empty() {
-            if self.safe_mode {
-                ratings.push(Rating::Safe);
-            } else {
-                ratings.push(Rating::Safe);
+            ratings.push(Rating::Safe);
+
+            if !self.safe_mode {
                 ratings.push(Rating::Questionable);
                 ratings.push(Rating::Explicit)
             }

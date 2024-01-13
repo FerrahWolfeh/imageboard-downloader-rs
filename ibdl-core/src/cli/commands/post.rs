@@ -73,15 +73,16 @@ impl Post {
                     } else if let Some(path) = &self.post_file {
                         let posts = fs::read_to_string(&path).await?;
                         let ids = Vec::from_iter(posts.lines().filter_map(|line| {
-                            if let Ok(id) = line.parse::<u32>() {
-                                Some(id)
-                            } else {
-                                warn!(
-                                    "Failed to parse line {} into a post id",
-                                    line.bright_blue().bold()
-                                );
-                                None
-                            }
+                            line.parse::<u32>().map_or_else(
+                                |_| {
+                                    warn!(
+                                        "Failed to parse line {} into a post id",
+                                        line.bright_blue().bold()
+                                    );
+                                    None
+                                },
+                                Some,
+                            )
                         }));
 
                         if ids.is_empty() {
@@ -116,15 +117,16 @@ impl Post {
                     } else if let Some(path) = &self.post_file {
                         let posts = fs::read_to_string(&path).await?;
                         let ids = Vec::from_iter(posts.lines().filter_map(|line| {
-                            if let Ok(id) = line.parse::<u32>() {
-                                Some(id)
-                            } else {
-                                warn!(
-                                    "Failed to parse line {} into a post id",
-                                    line.bright_blue().bold()
-                                );
-                                None
-                            }
+                            line.parse::<u32>().map_or_else(
+                                |_| {
+                                    warn!(
+                                        "Failed to parse line {} into a post id",
+                                        line.bright_blue().bold()
+                                    );
+                                    None
+                                },
+                                Some,
+                            )
                         }));
 
                         if ids.is_empty() {
@@ -163,15 +165,16 @@ impl Post {
                     } else if let Some(path) = &self.post_file {
                         let posts = fs::read_to_string(&path).await?;
                         let ids = Vec::from_iter(posts.lines().filter_map(|line| {
-                            if let Ok(id) = line.parse::<u32>() {
-                                Some(id)
-                            } else {
-                                warn!(
-                                    "Failed to parse line {} into a post id",
-                                    line.bright_blue().bold()
-                                );
-                                None
-                            }
+                            line.parse::<u32>().map_or_else(
+                                |_| {
+                                    warn!(
+                                        "Failed to parse line {} into a post id",
+                                        line.bright_blue().bold()
+                                    );
+                                    None
+                                },
+                                Some,
+                            )
                         }));
 
                         if ids.is_empty() {

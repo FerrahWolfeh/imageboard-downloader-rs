@@ -26,15 +26,15 @@ impl BarTemplates {
     #[inline]
     pub fn new(imageboard: ImageBoards) -> Self {
         match imageboard {
-            ImageBoards::E621 => BarTemplates {
+            ImageBoards::E621 => Self {
                 main: "{spinner:.yellow.bold} {elapsed_precise:.bold} {wide_bar:.blue/white.dim} {percent:.bold}  {pos:.yellow} (eta. {eta})",
                 download: "{spinner:.blue.bold} {bar:40.yellow/white.dim} {percent:.bold} | {byte_progress:21.blue} @ {bytes_per_sec:>13.yellow} (eta. {eta:<4.blue})",
             },
-            ImageBoards::GelbooruV0_2 => BarTemplates {
+            ImageBoards::GelbooruV0_2 => Self {
                 main: "{spinner:.red.bold} {elapsed_precise:.bold} {wide_bar:.red/white.dim} {percent:.bold}  {pos:.bold} (eta. {eta})", 
                 download: "{spinner:.red.bold} {bar:40.red/white.dim} {percent:.bold} | {byte_progress:21.bold.green} @ {bytes_per_sec:>13.red} (eta. {eta:<4})",
             },
-            _ => BarTemplates::default(),
+            _ => Self::default(),
         }
     }
 }

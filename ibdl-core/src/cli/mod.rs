@@ -106,7 +106,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn name_type(&self) -> NameType {
+    pub const fn name_type(&self) -> NameType {
         if self.save_file_as_id {
             NameType::ID
         } else {
