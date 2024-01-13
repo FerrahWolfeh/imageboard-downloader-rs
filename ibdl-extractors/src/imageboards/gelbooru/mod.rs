@@ -47,7 +47,6 @@ pub struct GelbooruExtractor {
 }
 
 impl Extractor for GelbooruExtractor {
-    #[allow(unused_variables)]
     fn new<S>(
         tags: &[S],
         download_ratings: &[Rating],
@@ -92,7 +91,6 @@ impl Extractor for GelbooruExtractor {
         }
     }
 
-    #[allow(unused_variables)]
     fn new_with_config<S>(
         tags: &[S],
         download_ratings: &[Rating],
