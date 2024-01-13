@@ -1,5 +1,4 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
@@ -36,7 +35,6 @@ pub struct MoebooruExtractor {
     server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for MoebooruExtractor {
     fn new<S>(
         tags: &[S],

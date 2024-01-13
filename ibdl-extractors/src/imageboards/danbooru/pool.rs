@@ -1,5 +1,4 @@
 use ahash::HashMap;
-use async_trait::async_trait;
 use ibdl_common::{
     log::{debug, trace},
     serde_json,
@@ -9,7 +8,6 @@ use crate::{error::ExtractorError, imageboards::PoolExtract};
 
 use super::{models::DanbooruPoolList, DanbooruExtractor};
 
-#[async_trait]
 impl PoolExtract for DanbooruExtractor {
     async fn fetch_pool_idxs(
         &mut self,

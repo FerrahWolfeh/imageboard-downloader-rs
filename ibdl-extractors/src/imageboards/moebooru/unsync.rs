@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
     post::Post,
@@ -20,7 +19,6 @@ use super::MoebooruExtractor;
 // A quick alias so I can copy paste stuff faster
 type ExtractorUnit = MoebooruExtractor;
 
-#[async_trait]
 impl AsyncFetch for ExtractorUnit {
     #[inline]
     fn setup_fetch_thread(

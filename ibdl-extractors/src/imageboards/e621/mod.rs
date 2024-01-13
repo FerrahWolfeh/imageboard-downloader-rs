@@ -6,7 +6,6 @@
 //!
 use crate::auth::ImageboardConfig;
 use crate::extractor_config::DEFAULT_SERVERS;
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::{Client, Method};
 use ibdl_common::serde_json;
@@ -53,7 +52,6 @@ pub struct E621Extractor {
     server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for E621Extractor {
     fn new<S>(
         tags: &[S],
@@ -332,7 +330,6 @@ impl Extractor for E621Extractor {
     }
 }
 
-#[async_trait]
 impl Auth for E621Extractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
         let mut cfg = config;
@@ -347,7 +344,6 @@ impl Auth for E621Extractor {
     }
 }
 
-#[async_trait]
 impl SinglePostFetch for E621Extractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
         let c: E621Post = serde_json::from_str::<E621Post>(raw_json.as_str())?;

@@ -1,5 +1,4 @@
 use ahash::HashMap;
-use async_trait::async_trait;
 use ibdl_common::{
     log::{debug, trace},
     serde_json,
@@ -9,7 +8,6 @@ use crate::{error::ExtractorError, imageboards::PoolExtract};
 
 use super::{models::E621PoolList, E621Extractor};
 
-#[async_trait]
 impl PoolExtract for E621Extractor {
     async fn fetch_pool_idxs(
         &mut self,

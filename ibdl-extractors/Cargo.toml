@@ -13,7 +13,6 @@ documentation = "https://docs.rs/ibdl-extractors"
 ibdl-common = { version = "1.6.0", path = "../ibdl-common" }
 thiserror = "1.0.47"
 thiserror-impl = "1.0.47"
-async-trait = "0.1.73"
 rayon = "1.7.0"
 toml = "0.8.8"
 once_cell = "1.19"

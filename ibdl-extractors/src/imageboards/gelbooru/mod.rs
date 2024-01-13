@@ -11,7 +11,6 @@
 // This is to search all tags and their meanings.
 // Gotta do an enum based on this thing.
 
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
@@ -47,7 +46,6 @@ pub struct GelbooruExtractor {
     server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for GelbooruExtractor {
     #[allow(unused_variables)]
     fn new<S>(
@@ -420,7 +418,6 @@ impl GelbooruExtractor {
     }
 }
 
-#[async_trait]
 impl SinglePostFetch for GelbooruExtractor {
     fn map_post(&self, _raw_json: String) -> Result<Post, ExtractorError> {
         unimplemented!();

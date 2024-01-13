@@ -10,7 +10,6 @@ use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 use crate::auth::ImageboardConfig;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Method;
 use ibdl_common::serde_json;
@@ -49,7 +48,6 @@ pub struct DanbooruExtractor {
     server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for DanbooruExtractor {
     fn new<S>(
         tags: &[S],
@@ -353,7 +351,6 @@ impl Extractor for DanbooruExtractor {
     }
 }
 
-#[async_trait]
 impl Auth for DanbooruExtractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
         let mut cfg = config;
@@ -367,7 +364,6 @@ impl Auth for DanbooruExtractor {
     }
 }
 
-#[async_trait]
 impl SinglePostFetch for DanbooruExtractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
         let parsed_json: DanbooruPost = serde_json::from_str::<DanbooruPost>(raw_json.as_str())?;
