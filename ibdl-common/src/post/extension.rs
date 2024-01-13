@@ -5,6 +5,8 @@ use super::error::PostError;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Extension {
+    AVIF,
+    JXL,
     JPG,
     PNG,
     WEBP,
@@ -23,13 +25,17 @@ impl Extension {
         }
         uu.unwrap()
     }
+
+    pub const fn is_video(&self) -> bool {
+        matches!(self, Self::GIF | Self::WEBM | Self::MP4 | Self::Ugoira)
+    }
 }
 
 impl FromStr for Extension {
     type Err = PostError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.to_lowercase().as_str() {
             "jpg" | "jpeg" | "jfif" => Ok(Self::JPG),
             "png" | "apng" => Ok(Self::PNG),
             "webp" => Ok(Self::WEBP),
@@ -37,6 +43,8 @@ impl FromStr for Extension {
             "mp4" => Ok(Self::MP4),
             "gif" => Ok(Self::GIF),
             "zip" => Ok(Self::Ugoira),
+            "jxl" => Ok(Self::JXL),
+            "avif" => Ok(Self::AVIF),
             _ => Err(PostError::UnknownExtension {
                 message: s.to_string(),
             }),
@@ -55,6 +63,8 @@ impl ToString for Extension {
             Self::MP4 => String::from("mp4"),
             Self::Ugoira => String::from("zip"),
             Self::Unknown => String::from("bin"),
+            Self::AVIF => String::from("avif"),
+            Self::JXL => String::from("jxl"),
         }
     }
 }

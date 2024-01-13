@@ -48,8 +48,6 @@ use crate::extractor_config::ServerConfig;
 
 use super::error::ExtractorError;
 
-static VIDEO_EXTENSIONS: [&str; 4] = ["mp4", "zip", "webm", "gif"];
-
 const BF_INIT_TEXT: &str = r"[blacklist]
 [blacklist.global] 
 tags = [] # Place in this array all the tags that will be excluded from all imageboards
@@ -186,8 +184,6 @@ impl BlacklistFilter {
         let original_size = original_list.len();
         let mut removed = 0;
 
-        let ve = AHashSet::from(VIDEO_EXTENSIONS);
-
         let start = Instant::now();
         if let Some(ext) = self.extension {
             debug!("Selecting only posts with extension {:?}", ext.to_string());
@@ -217,8 +213,8 @@ impl BlacklistFilter {
 
             if self.ignore_animated {
                 original_list.retain(|post| {
-                    let ext = post.extension.as_str();
-                    !(post.tags.contains(&Tag::new("animated", TagType::Meta)) || ve.contains(ext))
+                    !(post.tags.contains(&Tag::new("animated", TagType::Meta))
+                        || Extension::guess_format(&post.extension).is_video())
                 });
             }
 
