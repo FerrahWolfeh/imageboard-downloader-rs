@@ -95,11 +95,11 @@ pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 
 bitflags! {
     pub struct ExtractorFeatures: u8 {
-        const AsyncFetch = 0b00000001;
-        const TagSearch = 0b00000010;
-        const SinglePostFetch = 0b00000100;
-        const PoolDownload = 0b00001000;
-        const Auth = 0b00010000;
+        const AsyncFetch = 0b0000_0001;
+        const TagSearch = 0b0000_0010;
+        const SinglePostFetch = 0b0000_0100;
+        const PoolDownload = 0b0000_1000;
+        const Auth = 0b0001_0000;
     }
 }
 

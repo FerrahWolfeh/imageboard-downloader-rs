@@ -61,7 +61,7 @@ impl AsyncFetch for ExtractorUnit {
         let mut pool_idxs = HashMap::with_capacity(512);
 
         if let Some(p_id) = self.pool_id {
-            self.tag_string = format!("pool:{}", p_id);
+            self.tag_string = format!("pool:{p_id}");
             pool_idxs = self.fetch_pool_idxs(p_id, limit).await?;
         }
 
@@ -73,11 +73,7 @@ impl AsyncFetch for ExtractorUnit {
         debug!("Async extractor thread initialized");
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             let posts = self.get_post_list(position).await?;
             let size = posts.len();
@@ -102,7 +98,7 @@ impl AsyncFetch for ExtractorUnit {
                 has_posts = true;
             }
 
-            for i in list.iter_mut() {
+            for i in &mut list {
                 if let Some(num) = limit {
                     if total_posts_sent >= num {
                         break;

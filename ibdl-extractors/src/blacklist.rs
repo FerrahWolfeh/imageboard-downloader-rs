@@ -50,7 +50,7 @@ use super::error::ExtractorError;
 
 static VIDEO_EXTENSIONS: [&str; 4] = ["mp4", "zip", "webm", "gif"];
 
-const BF_INIT_TEXT: &str = r#"[blacklist]
+const BF_INIT_TEXT: &str = r"[blacklist]
 [blacklist.global] 
 tags = [] # Place in this array all the tags that will be excluded from all imageboards
 
@@ -73,7 +73,7 @@ tags = []
 
 [blacklist.konachan]
 tags = []
-"#;
+";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
@@ -111,14 +111,13 @@ impl GlobalBlacklist {
         }
 
         let gbl_string = read_to_string(&dir).await?;
-        let deserialized = match from_str::<Self>(&gbl_string) {
-            Ok(data) => data,
-            Err(_) => {
-                return Err(ExtractorError::BlacklistDecodeError {
-                    path: dir.display().to_string(),
-                })
-            }
+
+        let Ok(deserialized) = from_str::<Self>(&gbl_string) else {
+            return Err(ExtractorError::BlacklistDecodeError {
+                path: dir.display().to_string(),
+            });
         };
+
         debug!("Global blacklist config decoded");
         debug!(
             "Global blacklist setup with {} servers",
@@ -180,6 +179,7 @@ impl BlacklistFilter {
     }
 
     #[inline]
+    #[must_use]
     pub fn filter(&self, list: Vec<Post>) -> (u64, Vec<Post>) {
         let mut original_list = list;
 
@@ -191,7 +191,7 @@ impl BlacklistFilter {
         let start = Instant::now();
         if let Some(ext) = self.extension {
             debug!("Selecting only posts with extension {:?}", ext.to_string());
-            original_list.retain(|post| ext == Extension::guess_format(&post.extension))
+            original_list.retain(|post| ext == Extension::guess_format(&post.extension));
         }
 
         if !self.selected_ratings.is_empty() {
@@ -207,13 +207,14 @@ impl BlacklistFilter {
         if !self.disabled {
             let fsize = original_list.len();
 
-            let mut bp = 0;
-
-            if !self.gbl_tags.is_empty() {
+            let bp = if !self.gbl_tags.is_empty() {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
                 original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
-                bp = fsize - original_list.len(); // Update fsize after the self.gbl_tags block
-            }
+                fsize - original_list.len()
+            } else {
+                0
+            };
+
             if self.ignore_animated {
                 original_list.retain(|post| {
                     let ext = post.extension.as_str();

@@ -4,7 +4,7 @@
 //! - Authentication
 //! - Native blacklist (defined in user profile page)
 //!
-use crate::auth::ImageboardConfig;
+use crate::auth::{AuthState, ImageboardConfig};
 use crate::extractor_config::DEFAULT_SERVERS;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::{Client, Method};
@@ -39,7 +39,7 @@ pub struct E621Extractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
-    auth_state: bool,
+    auth_state: AuthState,
     auth: ImageboardConfig,
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
@@ -83,7 +83,7 @@ impl Extractor for E621Extractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -126,7 +126,7 @@ impl Extractor for E621Extractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -184,20 +184,15 @@ impl Extractor for E621Extractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(320)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             let posts = self.get_post_list(position).await?;
             let size = posts.len();
@@ -260,9 +255,9 @@ impl Extractor for E621Extractor {
             .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
 
         // Fetch item list from page
-        if self.auth_state {
+        if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching posts from page {}", page);
-            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key));
         } else {
             debug!("Fetching posts from page {}", page);
         };
@@ -338,7 +333,7 @@ impl Auth for E621Extractor {
             .append(&mut cfg.user_data.blacklisted_tags);
 
         self.auth = cfg;
-        self.auth_state = true;
+        self.auth_state = AuthState::Authenticated;
 
         Ok(())
     }
@@ -378,7 +373,7 @@ impl SinglePostFetch for E621Extractor {
         );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post {}", post_id);
             self.client
                 .get(url)

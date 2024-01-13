@@ -184,11 +184,7 @@ impl Extractor for GelbooruExtractor {
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n - 1
-            } else {
-                page - 1
-            };
+            let position = start_page.map_or(page - 1, |n| page + n - 1);
 
             let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
@@ -264,7 +260,7 @@ impl Extractor for GelbooruExtractor {
             .text()
             .await?;
 
-        Ok(self.map_posts(items)?)
+        self.map_posts(items)
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
@@ -389,11 +385,11 @@ impl GelbooruExtractor {
         let ext = extract_ext_from_url!(file);
 
         let drop_url = if self.active_imageboard == ImageBoards::GelbooruV0_2 {
-            let imgu = if let Some(img_url) = &self.server_cfg.image_url {
-                img_url
-            } else {
-                &self.server_cfg.base_url
-            };
+            let imgu = self
+                .server_cfg
+                .image_url
+                .as_ref()
+                .map_or(&self.server_cfg.base_url, |img_url| img_url);
 
             format!(
                 "{}/images/{}/{}.{}",
@@ -440,14 +436,15 @@ impl SinglePostFetch for GelbooruExtractor {
 
         let mtx = self.map_posts(items)?;
 
-        if let Some(post) = mtx.first() {
-            let end_iter = start_point.elapsed();
+        mtx.first().map_or_else(
+            || Err(ExtractorError::ZeroPosts),
+            |post| {
+                let end_iter = start_point.elapsed();
 
-            debug!("Post mapping took {:?}", end_iter);
-            Ok(post.clone())
-        } else {
-            Err(ExtractorError::ZeroPosts)
-        }
+                debug!("Post mapping took {:?}", end_iter);
+                Ok(post.clone())
+            },
+        )
     }
 
     async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {

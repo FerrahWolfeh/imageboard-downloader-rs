@@ -33,7 +33,10 @@ struct Server {
     image_url: Option<String>,
 }
 
-pub fn read_server_cfg_file(path: &Path, smap: &mut HashMap<String, ServerConfig>) {
+pub fn read_server_cfg_file<S: std::hash::BuildHasher>(
+    path: &Path,
+    smap: &mut HashMap<String, ServerConfig, S>,
+) {
     if !path.exists() {
         let mut sample_toml = File::create(path).unwrap();
         sample_toml
@@ -63,5 +66,5 @@ pub fn read_server_cfg_file(path: &Path, smap: &mut HashMap<String, ServerConfig
         smap.insert(id, config);
     }
 
-    debug!("Configured servers: {:?}", smap)
+    debug!("Configured servers: {:?}", smap);
 }

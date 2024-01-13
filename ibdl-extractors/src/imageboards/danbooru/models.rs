@@ -29,27 +29,27 @@ impl DanbooruPost {
     pub fn map_tags(&self) -> Vec<Tag> {
         let mut tags = Vec::with_capacity(64);
         if let Some(tagstr) = &self.tag_string_artist {
-            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::Author)))
+            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::Author)));
         }
         if let Some(tagstr) = &self.tag_string_copyright {
             tags.extend(
                 tagstr
                     .split(' ')
                     .map(|tag| Tag::new(tag, TagType::Copyright)),
-            )
+            );
         }
         if let Some(tagstr) = &self.tag_string_character {
             tags.extend(
                 tagstr
                     .split(' ')
                     .map(|tag| Tag::new(tag, TagType::Character)),
-            )
+            );
         }
         if let Some(tagstr) = &self.tag_string_general {
-            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::General)))
+            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::General)));
         }
         if let Some(tagstr) = &self.tag_string_meta {
-            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::Meta)))
+            tags.extend(tagstr.split(' ').map(|tag| Tag::new(tag, TagType::Meta)));
         }
 
         tags

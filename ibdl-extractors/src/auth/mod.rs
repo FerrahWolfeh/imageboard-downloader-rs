@@ -15,6 +15,23 @@ use ibdl_common::serde::{self, Deserialize, Serialize};
 
 use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AuthState {
+    Authenticated,
+    NotAuthenticated,
+}
+
+impl AuthState {
+    #[inline]
+    #[must_use]
+    pub const fn is_auth(&self) -> bool {
+        match self {
+            Self::Authenticated => true,
+            Self::NotAuthenticated => false,
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum Error {
     /// Indicates that login credentials are incorrect.

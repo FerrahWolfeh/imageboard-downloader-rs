@@ -154,20 +154,15 @@ impl Extractor for MoebooruExtractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(100)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(100),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();

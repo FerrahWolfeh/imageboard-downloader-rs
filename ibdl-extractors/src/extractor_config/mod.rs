@@ -175,6 +175,7 @@ pub struct ServerConfig {
 
 impl ServerConfig {
     #[inline]
+    #[must_use]
     pub fn extractor_features(&self) -> ExtractorFeatures {
         match self.server {
             ImageBoards::Danbooru => DanbooruExtractor::features(),

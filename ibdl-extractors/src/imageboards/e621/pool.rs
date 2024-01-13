@@ -25,7 +25,7 @@ impl PoolExtract for E621Extractor {
         );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post ids from pool {}", pool_id);
             self.client
                 .get(url)
@@ -40,15 +40,18 @@ impl PoolExtract for E621Extractor {
         let mut mtx = self.parse_pool_ids(post_array)?;
 
         if self.pool_last_items_first {
-            mtx.reverse()
+            mtx.reverse();
         }
 
         if let Some(limit_post) = limit {
-            mtx.truncate(limit_post as usize)
+            mtx.truncate(limit_post as usize);
         }
 
-        let position_map =
-            HashMap::from_iter(mtx.iter().enumerate().map(|(position, id)| (*id, position)));
+        let position_map = mtx
+            .iter()
+            .enumerate()
+            .map(|(position, id)| (*id, position))
+            .collect::<HashMap<u64, usize>>();
 
         trace!("Pool post positions: {:#?}", position_map);
         debug!("Pool size: {}", position_map.len());

@@ -7,7 +7,7 @@
 use self::models::DanbooruPost;
 
 use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
-use crate::auth::ImageboardConfig;
+use crate::auth::{AuthState, ImageboardConfig};
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use ibdl_common::post::extension::Extension;
@@ -34,7 +34,7 @@ pub struct DanbooruExtractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
-    auth_state: bool,
+    auth_state: AuthState,
     auth: ImageboardConfig,
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
@@ -71,12 +71,11 @@ impl Extractor for DanbooruExtractor {
             })
             .collect();
 
-        let mut extra_tags = Vec::with_capacity(strvec.len().saturating_sub(2));
-
-        if strvec.len() > 2 {
-            let extra = strvec.split_off(1);
-            extra_tags = extra;
-        }
+        let extra_tags = if strvec.len() > 2 {
+            strvec.split_off(1)
+        } else {
+            Vec::with_capacity(strvec.len().saturating_sub(2))
+        };
 
         debug!("Tag List: {:?}", strvec);
         if !extra_tags.is_empty() {
@@ -90,7 +89,7 @@ impl Extractor for DanbooruExtractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -126,12 +125,11 @@ impl Extractor for DanbooruExtractor {
             })
             .collect();
 
-        let mut extra_tags = Vec::with_capacity(strvec.len().saturating_sub(2));
-
-        if strvec.len() > 2 {
-            let extra = strvec.split_off(1);
-            extra_tags = extra;
-        }
+        let extra_tags = if strvec.len() > 2 {
+            strvec.split_off(1)
+        } else {
+            Vec::with_capacity(strvec.len().saturating_sub(2))
+        };
 
         debug!("Tag List: {:?}", strvec);
         if !extra_tags.is_empty() {
@@ -145,7 +143,7 @@ impl Extractor for DanbooruExtractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -204,20 +202,15 @@ impl Extractor for DanbooruExtractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(200)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             debug!("Scanning page {}", position);
 
@@ -277,9 +270,9 @@ impl Extractor for DanbooruExtractor {
             .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
 
         // Fetch item list from page
-        if self.auth_state {
+        if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching posts from page {}", page);
-            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key));
         } else {
             debug!("Fetching posts from page {}", page);
         };
@@ -330,7 +323,7 @@ impl Extractor for DanbooruExtractor {
             }
         });
 
-        Ok(Vec::from_iter(mapper_iter))
+        Ok(mapper_iter.collect::<Vec<Post>>())
     }
 
     fn client(&self) -> Client {
@@ -359,7 +352,7 @@ impl Auth for DanbooruExtractor {
             .append(&mut cfg.user_data.blacklisted_tags);
 
         self.auth = cfg;
-        self.auth_state = true;
+        self.auth_state = AuthState::Authenticated;
         Ok(())
     }
 }
@@ -402,7 +395,7 @@ impl SinglePostFetch for DanbooruExtractor {
         );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post {}", post_id);
             self.client
                 .get(url)
