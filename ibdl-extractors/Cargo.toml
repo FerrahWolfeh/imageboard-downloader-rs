@@ -2,6 +2,7 @@
 name = "ibdl-extractors"
 version = "1.8.0"
 edition = "2021"
+rust-version = "1.75"
 description = "Imageboard post extractors used in imageboard_downloader"
 license = "MIT"
 repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"

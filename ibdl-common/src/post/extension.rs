@@ -4,22 +4,28 @@ use serde::{Deserialize, Serialize};
 
 use super::error::PostError;
 
+/// Enum representing the 8 possible extensions a downloaded post can have.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Extension {
     AVIF,
     JXL,
+    /// The `JPG` variant also encompasses the other extensions a jpeg might have, including `.jpg`, `.jpeg` and `.jfif`
     JPG,
+    /// The `PNG` variant can also include the rare `.apng` whenever it's present.
     PNG,
     WEBP,
     GIF,
     WEBM,
     MP4,
+    /// Pixiv Ugoira is usually downloaded as a zip file with all frames without any additional metadata.
     Ugoira,
+    /// Used for any file whose extension is unknown or not currently supported by this library.
     Unknown,
 }
 
 impl Extension {
+    /// Naive and simple way of recognizing the extension of a post to use in [`Post`](crate::post::Post). This function never fails.
     pub fn guess_format(s: &str) -> Self {
         let uu = Self::from_str(s);
         if uu.is_err() {
