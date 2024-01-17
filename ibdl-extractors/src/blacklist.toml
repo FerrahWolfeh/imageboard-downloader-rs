@@ -1,0 +1,27 @@
+[blacklist]
+
+[blacklist.global] 
+tags = [] # Place in this array all the tags that will be excluded from all imageboards
+
+# Place in the following all the tags that will be excluded from specific imageboards 
+
+[blacklist.danbooru]
+tags = []
+
+[blacklist.e621]
+tags = []
+
+[blacklist.realbooru]
+tags = []
+
+[blacklist.rule34]
+tags = []
+
+[blacklist.gelbooru]
+tags = []
+
+[blacklist.konachan]
+tags = []
+
+#[blacklist.custom_server]
+#tags = []

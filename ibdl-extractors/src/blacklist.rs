@@ -31,7 +31,7 @@
 //! any of the tags set in the blacklist, it will be removed from the download queue.
 use ahash::AHashSet;
 use ibdl_common::directories::ProjectDirs;
-use ibdl_common::log::debug;
+use ibdl_common::log::{debug, warn};
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::tags::{Tag, TagType};
@@ -48,30 +48,7 @@ use crate::extractor_config::ServerConfig;
 
 use super::error::ExtractorError;
 
-const BF_INIT_TEXT: &str = r"[blacklist]
-[blacklist.global] 
-tags = [] # Place in this array all the tags that will be excluded from all imageboards
-
-# Place in the following all the tags that will be excluded from specific imageboards 
-
-[blacklist.danbooru]
-tags = []
-
-[blacklist.e621]
-tags = []
-
-[blacklist.realbooru]
-tags = []
-
-[blacklist.rule34]
-tags = []
-
-[blacklist.gelbooru]
-tags = []
-
-[blacklist.konachan]
-tags = []
-";
+const BF_INIT_TEXT: &str = include_str!("./blacklist.toml");
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]
@@ -119,7 +96,7 @@ impl GlobalBlacklist {
         debug!("Global blacklist config decoded");
         debug!(
             "Global blacklist setup with {} servers",
-            deserialized.blacklist.keys().len() - 1
+            deserialized.blacklist.keys().len().saturating_sub(1)
         );
         Ok(deserialized)
     }
@@ -148,13 +125,16 @@ impl BlacklistFilter {
 
             let gbl = GlobalBlacklist::get().await?;
 
-            if let Some(global) = gbl.blacklist.get(&"global".to_string()) {
-                if global.tags.is_empty() {
-                    debug!("Global blacklist is empty");
-                } else {
-                    gbl_tags.extend(global.tags.iter().cloned());
-                }
-            }
+            gbl.blacklist.get("global").map_or_else(
+                || warn!("Global blacklist config has no [blacklist.global] section!"),
+                |global| {
+                    if global.tags.is_empty() {
+                        debug!("Global blacklist is empty");
+                    } else {
+                        gbl_tags.extend(global.tags.iter().cloned());
+                    }
+                },
+            );
 
             if let Some(special) = gbl.blacklist.get(&imageboard.name) {
                 if !special.tags.is_empty() {
