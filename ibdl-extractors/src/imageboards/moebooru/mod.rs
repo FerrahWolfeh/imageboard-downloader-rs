@@ -119,6 +119,10 @@ impl Extractor for MoebooruExtractor {
         ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
     }
 
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
+    }
+
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = Self::get_post_list(self, page).await?;
 

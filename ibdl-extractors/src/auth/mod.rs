@@ -172,7 +172,7 @@ impl ImageboardConfig {
         Ok(())
     }
 
-    /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
+    /// Generates a bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), Error> {
         let config_path =

@@ -27,7 +27,7 @@ use super::AVAILABLE_SERVERS;
 
 pub async fn auth_prompt(
     auth_state: bool,
-    imageboard: ImageBoards,
+    imageboard: &ServerConfig,
     client: &Client,
 ) -> Result<(), CliError> {
     if auth_state {
@@ -46,7 +46,7 @@ pub async fn auth_prompt(
             .interact()?;
 
         let mut at = ImageboardConfig::new(
-            DEFAULT_SERVERS.get("danbooru").unwrap().clone(), // Gonna leave like this while we still don't have any form of fetching the servers
+            get_servers().get(&imageboard.name).unwrap().clone(),
             username.trim().to_string(),
             api_key.trim().to_string(),
         );
@@ -62,11 +62,11 @@ pub async fn auth_imgboard<E>(ask: bool, extractor: &mut E) -> Result<(), CliErr
 where
     E: Auth + Extractor + Send,
 {
-    let imageboard = extractor.imageboard();
+    let imageboard = extractor.config();
     let client = extractor.client();
-    auth_prompt(ask, imageboard, &client).await?;
+    auth_prompt(ask, &imageboard, &client).await?;
 
-    if let Some(creds) = read_config_from_fs(imageboard).await? {
+    if let Some(creds) = read_config_from_fs(&imageboard).await? {
         extractor.auth(creds).await?;
         return Ok(());
     }
@@ -78,7 +78,7 @@ where
 ///
 /// Returns `None` if the file is corrupted or does not exist.
 pub async fn read_config_from_fs(
-    imageboard: ImageBoards,
+    imageboard: &ServerConfig,
 ) -> Result<Option<ImageboardConfig>, io::Error> {
     let cfg_path = ImageBoards::auth_cache_dir()?.join(PathBuf::from(imageboard.to_string()));
     if let Ok(config_auth) = read(&cfg_path).await {

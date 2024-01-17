@@ -170,6 +170,9 @@ pub trait Extractor {
 
     /// Expose some bitflags to indicate the features this extractor should support
     fn features() -> ExtractorFeatures;
+
+    /// Return the current configured [server](crate::extractor_config) for this extractor
+    fn config(&self) -> ServerConfig;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist

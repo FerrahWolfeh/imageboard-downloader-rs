@@ -162,6 +162,10 @@ impl Extractor for DanbooruExtractor {
         ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
     }
 
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
+    }
+
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = Self::get_post_list(self, page).await?;
 
