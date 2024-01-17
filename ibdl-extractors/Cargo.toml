@@ -1,6 +1,6 @@
 [package]
 name = "ibdl-extractors"
-version = "1.8.0"
+version = "1.9.0"
 edition = "2021"
 rust-version = "1.75"
 description = "Imageboard post extractors used in imageboard_downloader"
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/ibdl-extractors"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ibdl-common = { version = "1.6.0", path = "../ibdl-common" }
+ibdl-common = { version = "1.8.0", path = "../ibdl-common" }
 thiserror = "1.0.47"
 thiserror-impl = "1.0.47"
 rayon = "1.7.0"
