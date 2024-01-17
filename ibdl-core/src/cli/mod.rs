@@ -103,6 +103,16 @@ pub struct Cli {
         global = true
     )]
     pub annotate: bool,
+
+    /// Always overwrite output
+    #[clap(
+        short = 'y',
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE",
+        global = true
+    )]
+    pub overwrite: bool,
 }
 
 impl Cli {

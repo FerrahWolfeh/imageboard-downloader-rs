@@ -29,7 +29,9 @@ async fn main() -> Result<()> {
 
     let dirname = args.generate_save_path()?;
 
-    if dirname.exists() && (dirname.is_file() || dirname.read_dir()?.next().is_some()) {
+    if (dirname.exists() && (dirname.is_file() || dirname.read_dir()?.next().is_some()))
+        && !args.overwrite
+    {
         let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
             .with_prompt(format!(
                 "The path {} is not empty or already exists. Do you want to continue?",
