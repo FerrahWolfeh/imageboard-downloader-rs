@@ -49,7 +49,6 @@
 //!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
-//mod summary;
 
 mod cbz;
 mod folder;

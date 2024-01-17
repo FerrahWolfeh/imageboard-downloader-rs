@@ -25,8 +25,8 @@ pub struct TagSearch {
 
     /// Set a max number of posts to download.
     ///
-    /// [max: 65535]
-    #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
+    /// [max: 1000]
+    #[clap(short, long, value_parser(clap::value_parser!(u16).range(1..=1000)), help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 
     /// Disable blacklist filtering
