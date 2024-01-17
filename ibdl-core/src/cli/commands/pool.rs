@@ -198,59 +198,8 @@ impl Pool {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru | ImageBoards::Moebooru => {
                 Err(CliError::ExtractorUnsupportedMode)
-
-                // let mut unit = GelbooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-
-                // unit.exclude_tags(&args.exclude)
-                //     .set_imageboard(*args.imageboard);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let client = unit.client();
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
-            }
-            ImageBoards::Moebooru => {
-                Err(CliError::ExtractorUnsupportedMode)
-
-                // let mut unit = MoebooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-                // let client = unit.client();
-
-                // unit.exclude_tags(&args.exclude);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
             }
         }
     }
