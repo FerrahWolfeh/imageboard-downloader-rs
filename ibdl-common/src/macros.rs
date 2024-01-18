@@ -2,6 +2,16 @@
 macro_rules! client {
     ($x:expr) => {{
         Client::builder()
+            .user_agent(&$x.client_user_agent)
+            .build()
+            .unwrap()
+    }};
+}
+
+#[macro_export]
+macro_rules! client_imgb {
+    ($x:expr) => {{
+        Client::builder()
             .user_agent($x.user_agent())
             .build()
             .unwrap()

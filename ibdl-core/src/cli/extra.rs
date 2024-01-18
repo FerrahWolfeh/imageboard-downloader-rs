@@ -1,8 +1,13 @@
-use std::{io, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env, io,
+    path::{Path, PathBuf},
+};
 
 use dialoguer::{theme::ColorfulTheme, Input, Password};
 use ibdl_common::{
     bincode::deserialize,
+    directories::ProjectDirs,
     log::{debug, warn},
     reqwest::Client,
     tokio::fs::{read, remove_file},
@@ -10,15 +15,19 @@ use ibdl_common::{
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
-    websites::{Auth, Extractor},
+    extractor_config::{serialize::read_server_cfg_file, ServerConfig, DEFAULT_SERVERS},
+    imageboards::{Auth, Extractor},
 };
 use owo_colors::OwoColorize;
+use std::fs;
 
 use crate::error::CliError;
 
+use super::AVAILABLE_SERVERS;
+
 pub async fn auth_prompt(
     auth_state: bool,
-    imageboard: ImageBoards,
+    imageboard: &ServerConfig,
     client: &Client,
 ) -> Result<(), CliError> {
     if auth_state {
@@ -37,7 +46,7 @@ pub async fn auth_prompt(
             .interact()?;
 
         let mut at = ImageboardConfig::new(
-            imageboard,
+            get_servers().get(&imageboard.name).unwrap().clone(),
             username.trim().to_string(),
             api_key.trim().to_string(),
         );
@@ -51,13 +60,13 @@ pub async fn auth_prompt(
 
 pub async fn auth_imgboard<E>(ask: bool, extractor: &mut E) -> Result<(), CliError>
 where
-    E: Auth + Extractor,
+    E: Auth + Extractor + Send,
 {
-    let imageboard = extractor.imageboard();
+    let imageboard = extractor.config();
     let client = extractor.client();
-    auth_prompt(ask, imageboard, &client).await?;
+    auth_prompt(ask, &imageboard, &client).await?;
 
-    if let Some(creds) = read_config_from_fs(imageboard).await? {
+    if let Some(creds) = read_config_from_fs(&imageboard).await? {
         extractor.auth(creds).await?;
         return Ok(());
     }
@@ -69,7 +78,7 @@ where
 ///
 /// Returns `None` if the file is corrupted or does not exist.
 pub async fn read_config_from_fs(
-    imageboard: ImageBoards,
+    imageboard: &ServerConfig,
 ) -> Result<Option<ImageboardConfig>, io::Error> {
     let cfg_path = ImageBoards::auth_cache_dir()?.join(PathBuf::from(imageboard.to_string()));
     if let Ok(config_auth) = read(&cfg_path).await {
@@ -93,4 +102,40 @@ pub async fn read_config_from_fs(
     };
     debug!("Running without authentication");
     Ok(None)
+}
+
+pub fn get_servers<'a>() -> &'a HashMap<String, ServerConfig> {
+    AVAILABLE_SERVERS.get_or_init(|| {
+        let mut servers = DEFAULT_SERVERS.clone();
+
+        let cfg_path = PathBuf::from(env::var("IBDL_SERVER_CFG").unwrap_or({
+            let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
+            cdir.config_dir().to_string_lossy().to_string()
+        }));
+
+        if !cfg_path.exists() {
+            fs::create_dir_all(&cfg_path).unwrap();
+        }
+
+        let cfg_path = cfg_path.join(Path::new("servers.toml"));
+
+        read_server_cfg_file(&cfg_path, &mut servers);
+
+        servers
+    })
+}
+
+pub fn validate_imageboard(input: &str) -> Result<ServerConfig, String> {
+    let servers = get_servers();
+
+    servers.get(input).map_or_else(
+        || {
+            Err(format!(
+                "Invalid imageboard: {}. Allowed imageboards are: {:?}",
+                input,
+                servers.keys()
+            ))
+        },
+        |server| Ok(server.clone()),
+    )
 }

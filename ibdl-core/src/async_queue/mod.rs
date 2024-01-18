@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 //! Queue used specifically to download, filter and save posts found by an [`Extractor`](ibdl-extractors::websites).
 //!
 //! # Example usage
@@ -50,46 +49,28 @@
 //!     qw.download(output, id).await.unwrap(); // Start downloading
 //! }
 //! ```
-//mod summary;
 
 mod cbz;
 mod folder;
 
-use dialoguer::theme::ColorfulTheme;
-use dialoguer::Confirm;
-use futures::stream::iter;
-use futures::StreamExt;
-use ibdl_common::log::{debug, trace};
+use crate::error::QueueError;
+use crate::progress_bars::ProgressCounter;
+use ibdl_common::log::debug;
 use ibdl_common::post::error::PostError;
-use ibdl_common::post::rating::Rating;
-use ibdl_common::post::tags::TagType;
-use ibdl_common::post::{NameType, Post, PostQueue};
+use ibdl_common::post::{NameType, Post};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedReceiver};
+use ibdl_common::tokio::sync::mpsc::{channel, Receiver, UnboundedReceiver};
 use ibdl_common::tokio::task::JoinHandle;
-use ibdl_common::{client, tokio, ImageBoards};
-use md5::compute;
+use ibdl_common::{client, tokio};
+use ibdl_extractors::extractor_config::ServerConfig;
 use once_cell::sync::OnceCell;
-use owo_colors::OwoColorize;
-use std::convert::TryInto;
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::sync::Mutex;
-use tokio::fs::{create_dir_all, read, remove_file, rename, OpenOptions};
-use tokio::io::{AsyncWriteExt, BufWriter};
-use tokio::task::{self, spawn_blocking};
+use tokio::fs::{create_dir_all, OpenOptions};
+use tokio::io::AsyncWriteExt;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use zip::write::FileOptions;
-use zip::CompressionMethod;
-use zip::ZipWriter;
-
-use crate::progress_bars::ProgressCounter;
-
-use crate::error::QueueError;
 
 static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
 
@@ -107,29 +88,29 @@ enum DownloadFormat {
 
 impl DownloadFormat {
     #[inline]
-    pub fn download_cbz(&self) -> bool {
+    pub const fn download_cbz(&self) -> bool {
         match self {
-            DownloadFormat::Cbz => true,
-            DownloadFormat::CbzPool => true,
-            DownloadFormat::Folder => false,
-            DownloadFormat::FolderPool => false,
+            Self::Cbz => true,
+            Self::CbzPool => true,
+            Self::Folder => false,
+            Self::FolderPool => false,
         }
     }
 
     #[inline]
-    pub fn download_pool(&self) -> bool {
+    pub const fn download_pool(&self) -> bool {
         match self {
-            DownloadFormat::Cbz => false,
-            DownloadFormat::CbzPool => true,
-            DownloadFormat::Folder => false,
-            DownloadFormat::FolderPool => true,
+            Self::Cbz => false,
+            Self::CbzPool => true,
+            Self::Folder => false,
+            Self::FolderPool => true,
         }
     }
 }
 
 /// Struct where all the downloading will take place
 pub struct Queue {
-    imageboard: ImageBoards,
+    imageboard: ServerConfig,
     sim_downloads: u8,
     client: Client,
     download_fmt: DownloadFormat,
@@ -140,7 +121,7 @@ pub struct Queue {
 impl Queue {
     /// Set up the queue for download
     pub fn new(
-        imageboard: ImageBoards,
+        imageboard: ServerConfig,
         sim_downloads: u8,
         custom_client: Option<Client>,
         save_as_cbz: bool,
@@ -184,23 +165,11 @@ impl Queue {
         spawn(async move {
             debug!("Async Downloader thread initialized");
 
-            if output_dir.exists() {
-                let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
-                    .with_prompt(format!(
-                        "File {} already exists. Do you want to overwrite it?",
-                        output_dir.display().bold().blue().italic()
-                    ))
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
-                if !conf_exists {
-                    println!("{}", "Download cancelled".bold().blue());
-                    std::process::exit(0);
-                }
-            }
-
             let counters = PROGRESS_COUNTERS.get_or_init(|| {
-                ProgressCounter::initialize(post_counter.load(Ordering::Relaxed), self.imageboard)
+                ProgressCounter::initialize(
+                    post_counter.load(Ordering::Relaxed),
+                    self.imageboard.server,
+                )
             });
 
             self.create_out(&output_dir).await?;

@@ -1,7 +1,4 @@
-use std::time::Duration;
-
 use ahash::{HashMap, HashMapExt};
-use async_trait::async_trait;
 use ibdl_common::{
     log::debug,
     post::Post,
@@ -9,25 +6,22 @@ use ibdl_common::{
         spawn,
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
-        time::sleep,
     },
-    ImageBoards,
 };
 
 use crate::{
     blacklist::BlacklistFilter,
     error::ExtractorError,
-    websites::{
+    imageboards::{
         AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
     },
 };
 
-use super::E621Extractor;
+use super::DanbooruExtractor;
 
 // A quick alias so I can copy paste stuff faster
-type ExtractorUnit = E621Extractor;
+type ExtractorUnit = DanbooruExtractor;
 
-#[async_trait]
 impl AsyncFetch for ExtractorUnit {
     #[inline]
     fn setup_fetch_thread(
@@ -51,8 +45,10 @@ impl AsyncFetch for ExtractorUnit {
         limit: Option<u16>,
         post_counter: Option<Sender<u64>>,
     ) -> Result<u64, ExtractorError> {
+        debug!("Async extractor thread initialized");
+
         let blacklist = BlacklistFilter::new(
-            ImageBoards::E621,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -64,7 +60,7 @@ impl AsyncFetch for ExtractorUnit {
         let mut pool_idxs = HashMap::with_capacity(512);
 
         if let Some(p_id) = self.pool_id {
-            self.tag_string = format!("pool:{}", p_id);
+            self.tag_string = format!("pool:{p_id}");
             pool_idxs = self.fetch_pool_idxs(p_id, limit).await?;
         }
 
@@ -73,16 +69,10 @@ impl AsyncFetch for ExtractorUnit {
 
         let mut page = 1;
 
-        debug!("Async extractor thread initialized");
-
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
-            let posts = self.get_post_list(position).await?;
+            let mut posts = self.get_post_list(position).await?;
             let size = posts.len();
 
             if size == 0 {
@@ -93,11 +83,19 @@ impl AsyncFetch for ExtractorUnit {
                 break;
             }
 
-            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
-                let (removed, posts) = blacklist.filter(posts);
-                self.total_removed += removed;
+            if !self.extra_tags.is_empty() {
+                posts.retain(|post| {
+                    post.tags
+                        .iter()
+                        .all(|tag| self.extra_tags.contains(&tag.tag()))
+                });
+            }
+
+            let mut list = if self.disable_blacklist || self.download_ratings.is_empty() {
                 posts
             } else {
+                let (removed, posts) = blacklist.filter(posts);
+                self.total_removed += removed;
                 posts
             };
 
@@ -105,7 +103,7 @@ impl AsyncFetch for ExtractorUnit {
                 has_posts = true;
             }
 
-            for i in list.iter_mut() {
+            for i in &mut list {
                 if let Some(num) = limit {
                     if total_posts_sent >= num {
                         break;
@@ -135,14 +133,11 @@ impl AsyncFetch for ExtractorUnit {
             }
 
             if page == 100 {
+                debug!("Max number of pages reached");
                 break;
             }
 
             page += 1;
-
-            //debounce
-            debug!("Debouncing API calls by 500 ms");
-            sleep(Duration::from_millis(500)).await;
         }
 
         debug!("Terminating thread.");

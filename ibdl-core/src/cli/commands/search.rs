@@ -5,11 +5,11 @@ use ibdl_common::{
     tokio::sync::mpsc::{Sender, UnboundedSender},
     ImageBoards,
 };
-use ibdl_extractors::prelude::*;
-use ibdl_extractors::websites::{
+use ibdl_extractors::imageboards::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
     moebooru::MoebooruExtractor,
 };
+use ibdl_extractors::prelude::*;
 
 use crate::{
     cli::{extra::auth_imgboard, Cli},
@@ -25,8 +25,8 @@ pub struct TagSearch {
 
     /// Set a max number of posts to download.
     ///
-    /// [max: 65535]
-    #[clap(short, long, value_parser, help_heading = "DOWNLOAD")]
+    /// [max: 1000]
+    #[clap(short, long, value_parser(clap::value_parser!(u16).range(1..=1000)), help_heading = "DOWNLOAD")]
     pub limit: Option<u16>,
 
     /// Disable blacklist filtering
@@ -102,10 +102,9 @@ impl TagSearch {
     fn selected_ratings(&self) -> Vec<Rating> {
         let mut ratings: Vec<Rating> = Vec::with_capacity(4);
         if self.rating.is_empty() {
-            if self.safe_mode {
-                ratings.push(Rating::Safe);
-            } else {
-                ratings.push(Rating::Safe);
+            ratings.push(Rating::Safe);
+
+            if !self.safe_mode {
                 ratings.push(Rating::Questionable);
                 ratings.push(Rating::Explicit)
             }
@@ -127,13 +126,14 @@ impl TagSearch {
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         let ratings = self.selected_ratings();
 
-        match *args.imageboard {
+        match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new(
+                let mut unit = DanbooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -155,11 +155,12 @@ impl TagSearch {
                 Ok((ext_thd, client))
             }
             ImageBoards::E621 => {
-                let mut unit = E621Extractor::new(
+                let mut unit = E621Extractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -180,16 +181,16 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
-                let mut unit = GelbooruExtractor::new(
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
+                let mut unit = GelbooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
 
-                unit.exclude_tags(&self.exclude)
-                    .set_imageboard(*args.imageboard);
+                unit.exclude_tags(&self.exclude);
 
                 if let Some(ext) = args.get_extension() {
                     unit.force_extension(ext);
@@ -206,12 +207,13 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Konachan => {
-                let mut unit = MoebooruExtractor::new(
+            ImageBoards::Moebooru => {
+                let mut unit = MoebooruExtractor::new_with_config(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 let client = unit.client();
 

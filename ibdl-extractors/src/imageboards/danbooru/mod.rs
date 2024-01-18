@@ -6,11 +6,12 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor, SinglePostFetch};
-use crate::auth::ImageboardConfig;
+use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
+use crate::auth::{AuthState, ImageboardConfig};
+use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
+use ibdl_common::reqwest::Method;
 use ibdl_common::serde_json;
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
@@ -33,7 +34,7 @@ pub struct DanbooruExtractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
-    auth_state: bool,
+    auth_state: AuthState,
     auth: ImageboardConfig,
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
@@ -44,9 +45,9 @@ pub struct DanbooruExtractor {
     extra_tags: Vec<String>,
     pool_id: Option<u32>,
     pool_last_items_first: bool,
+    server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for DanbooruExtractor {
     fn new<S>(
         tags: &[S],
@@ -57,8 +58,10 @@ impl Extractor for DanbooruExtractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("danbooru").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Danbooru);
+        let client = client!(config);
 
         let mut strvec: Vec<String> = tags
             .iter()
@@ -68,12 +71,11 @@ impl Extractor for DanbooruExtractor {
             })
             .collect();
 
-        let mut extra_tags = Vec::with_capacity(strvec.len().saturating_sub(2));
-
-        if strvec.len() > 2 {
-            let extra = strvec.split_off(1);
-            extra_tags = extra;
-        }
+        let extra_tags = if strvec.len() > 2 {
+            strvec.split_off(1)
+        } else {
+            Vec::with_capacity(strvec.len().saturating_sub(2))
+        };
 
         debug!("Tag List: {:?}", strvec);
         if !extra_tags.is_empty() {
@@ -87,7 +89,7 @@ impl Extractor for DanbooruExtractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -98,7 +100,70 @@ impl Extractor for DanbooruExtractor {
             extra_tags,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
+    }
+
+    fn new_with_config<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig,
+    ) -> Self
+    where
+        S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(config);
+
+        let mut strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        let extra_tags = if strvec.len() > 2 {
+            strvec.split_off(1)
+        } else {
+            Vec::with_capacity(strvec.len().saturating_sub(2))
+        };
+
+        debug!("Tag List: {:?}", strvec);
+        if !extra_tags.is_empty() {
+            debug!("Extra tags: {:?}", extra_tags);
+        }
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            auth_state: AuthState::NotAuthenticated,
+            auth: ImageboardConfig::default(),
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+            extra_tags,
+            pool_id: None,
+            pool_last_items_first: false,
+            server_cfg: config,
+        }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
@@ -112,7 +177,7 @@ impl Extractor for DanbooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
-            imageboard: ImageBoards::Danbooru,
+            imageboard: self.server_cfg.server,
             client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
@@ -132,7 +197,7 @@ impl Extractor for DanbooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Danbooru,
+            self.server_cfg.clone(),
             &self.excluded_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -141,20 +206,15 @@ impl Extractor for DanbooruExtractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(200)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             debug!("Scanning page {}", position);
 
@@ -196,7 +256,7 @@ impl Extractor for DanbooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
-            imageboard: ImageBoards::Danbooru,
+            imageboard: self.server_cfg.server,
             client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
@@ -205,25 +265,27 @@ impl Extractor for DanbooruExtractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        let url = format!(
-            "{}?tags={}",
-            ImageBoards::Danbooru.post_list_url(),
-            &self.tag_string
-        );
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let mut request = self
+            .client
+            .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching posts from page {}", page);
-            self.client
-                .get(url)
-                .query(&[("page", page), ("limit", 200)])
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key));
         } else {
             debug!("Fetching posts from page {}", page);
-            self.client
-                .get(url)
-                .query(&[("page", page), ("limit", 200)])
         };
+
+        let req = request.query(&[
+            ("page", &page.to_string()),
+            ("limit", &self.server_cfg.max_post_limit.to_string()),
+            ("tags", &self.tag_string),
+        ]);
 
         let post_array = req.send().await?.text().await?;
 
@@ -259,13 +321,13 @@ impl Extractor for DanbooruExtractor {
                 website: ImageBoards::Danbooru,
                 md5: c.md5.unwrap(),
                 url: c.file_url.unwrap(),
-                extension: c.file_ext.unwrap(),
+                extension: Extension::guess_format(&c.file_ext.unwrap()),
                 tags: tag_list,
                 rating,
             }
         });
 
-        Ok(Vec::from_iter(mapper_iter))
+        Ok(mapper_iter.collect::<Vec<Post>>())
     }
 
     fn client(&self) -> Client {
@@ -286,7 +348,6 @@ impl Extractor for DanbooruExtractor {
     }
 }
 
-#[async_trait]
 impl Auth for DanbooruExtractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
         let mut cfg = config;
@@ -295,12 +356,11 @@ impl Auth for DanbooruExtractor {
             .append(&mut cfg.user_data.blacklisted_tags);
 
         self.auth = cfg;
-        self.auth_state = true;
+        self.auth_state = AuthState::Authenticated;
         Ok(())
     }
 }
 
-#[async_trait]
 impl SinglePostFetch for DanbooruExtractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
         let parsed_json: DanbooruPost = serde_json::from_str::<DanbooruPost>(raw_json.as_str())?;
@@ -319,7 +379,7 @@ impl SinglePostFetch for DanbooruExtractor {
             website: ImageBoards::Danbooru,
             md5: parsed_json.md5.unwrap(),
             url: parsed_json.file_url.unwrap(),
-            extension: parsed_json.file_ext.unwrap(),
+            extension: Extension::guess_format(&parsed_json.file_ext.unwrap()),
             tags: tag_list,
             rating,
         };
@@ -328,10 +388,18 @@ impl SinglePostFetch for DanbooruExtractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::Danbooru.post_url(), post_id);
+        if self.server_cfg.post_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.post_url.as_ref().unwrap(),
+            post_id
+        );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post {}", post_id);
             self.client
                 .get(url)

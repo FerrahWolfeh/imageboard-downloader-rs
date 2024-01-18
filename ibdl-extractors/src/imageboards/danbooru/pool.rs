@@ -1,25 +1,31 @@
 use ahash::HashMap;
-use async_trait::async_trait;
 use ibdl_common::{
     log::{debug, trace},
-    serde_json, ImageBoards,
+    serde_json,
 };
 
-use crate::{error::ExtractorError, websites::PoolExtract};
+use crate::{error::ExtractorError, imageboards::PoolExtract};
 
-use super::{models::E621PoolList, E621Extractor};
+use super::{models::DanbooruPoolList, DanbooruExtractor};
 
-#[async_trait]
-impl PoolExtract for E621Extractor {
+impl PoolExtract for DanbooruExtractor {
     async fn fetch_pool_idxs(
         &mut self,
         pool_id: u32,
         limit: Option<u16>,
     ) -> Result<HashMap<u64, usize>, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::E621.pool_idx_url(), pool_id);
+        if self.server_cfg.pool_idx_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.pool_idx_url.as_ref().unwrap(),
+            pool_id
+        );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post ids from pool {}", pool_id);
             self.client
                 .get(url)
@@ -34,15 +40,18 @@ impl PoolExtract for E621Extractor {
         let mut mtx = self.parse_pool_ids(post_array)?;
 
         if self.pool_last_items_first {
-            mtx.reverse()
+            mtx.reverse();
         }
 
         if let Some(limit_post) = limit {
-            mtx.truncate(limit_post as usize)
+            mtx.truncate(limit_post as usize);
         }
 
-        let position_map =
-            HashMap::from_iter(mtx.iter().enumerate().map(|(position, id)| (*id, position)));
+        let position_map = mtx
+            .iter()
+            .enumerate()
+            .map(|(position, id)| (*id, position))
+            .collect::<HashMap<u64, usize>>();
 
         trace!("Pool post positions: {:#?}", position_map);
         debug!("Pool size: {}", position_map.len());
@@ -50,7 +59,8 @@ impl PoolExtract for E621Extractor {
     }
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError> {
-        let parsed_json: E621PoolList = serde_json::from_str::<E621PoolList>(raw_json.as_str())?;
+        let parsed_json: DanbooruPoolList =
+            serde_json::from_str::<DanbooruPoolList>(raw_json.as_str())?;
 
         Ok(parsed_json.post_ids)
     }

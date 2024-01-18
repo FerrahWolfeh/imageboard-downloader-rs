@@ -13,6 +13,25 @@ use ibdl_common::ImageBoards;
 
 use ibdl_common::serde::{self, Deserialize, Serialize};
 
+use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AuthState {
+    Authenticated,
+    NotAuthenticated,
+}
+
+impl AuthState {
+    #[inline]
+    #[must_use]
+    pub const fn is_auth(&self) -> bool {
+        match self {
+            Self::Authenticated => true,
+            Self::NotAuthenticated => false,
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum Error {
     /// Indicates that login credentials are incorrect.
@@ -33,6 +52,9 @@ pub enum Error {
     /// Indicates a failed attempt to serialize the config file to `bincode`.
     #[error("Failed to encode config file")]
     ConfigEncodeError,
+
+    #[error("This imageboard does not support authentication.")]
+    AuthUnsupported,
 }
 
 /// Struct that defines all user configuration for a specific imageboard.
@@ -41,7 +63,7 @@ pub enum Error {
 pub struct ImageboardConfig {
     /// Used as a identification tag for handling the cache outside of a imageboard downloader
     /// struct.
-    imageboard: ImageBoards,
+    imageboard: ServerConfig,
     pub username: String,
     pub api_key: String,
     pub user_data: UserData,
@@ -62,7 +84,7 @@ pub struct UserData {
 impl Default for ImageboardConfig {
     fn default() -> Self {
         Self {
-            imageboard: ImageBoards::Danbooru,
+            imageboard: DEFAULT_SERVERS.get("danbooru").unwrap().clone(),
             username: String::new(),
             api_key: String::new(),
             user_data: UserData {
@@ -76,7 +98,7 @@ impl Default for ImageboardConfig {
 
 impl ImageboardConfig {
     #[must_use]
-    pub fn new(imageboard: ImageBoards, username: String, api_key: String) -> Self {
+    pub fn new(imageboard: ServerConfig, username: String, api_key: String) -> Self {
         Self {
             imageboard,
             username,
@@ -99,13 +121,21 @@ impl ImageboardConfig {
             pub blacklisted_tags: Option<String>,
         }
 
-        let url = match self.imageboard {
-            ImageBoards::Danbooru => self.imageboard.auth_url().to_string(),
-            ImageBoards::E621 => format!("{}{}.json", self.imageboard.auth_url(), self.username),
+        if self.imageboard.auth_url.is_none() {
+            return Err(Error::AuthUnsupported);
+        }
+
+        let url = match self.imageboard.server {
+            ImageBoards::Danbooru => self.imageboard.auth_url.as_ref().unwrap().to_string(),
+            ImageBoards::E621 => format!(
+                "{}{}.json",
+                self.imageboard.auth_url.as_ref().unwrap(),
+                self.username
+            ),
             _ => String::new(),
         };
 
-        debug!("Authenticating to {}", self.imageboard.to_string());
+        debug!("Authenticating to {}", self.imageboard.base_url);
 
         let req = client
             .get(url)
@@ -142,11 +172,11 @@ impl ImageboardConfig {
         Ok(())
     }
 
-    /// Generates a zstd-compressed bincode file that contains all the data from `self` and saves
+    /// Generates a bincode file that contains all the data from `self` and saves
     /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
     async fn write_cache(&self) -> Result<(), Error> {
         let config_path =
-            ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.to_string()));
+            ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.pretty_name));
         let mut cfg_cache = OpenOptions::new()
             .create(true)
             .truncate(true)

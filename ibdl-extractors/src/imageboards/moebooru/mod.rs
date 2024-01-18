@@ -1,5 +1,4 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
-use async_trait::async_trait;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
@@ -13,11 +12,12 @@ use ibdl_common::{
 };
 use std::fmt::Display;
 
+use crate::extractor_config::DEFAULT_SERVERS;
 use crate::{
-    blacklist::BlacklistFilter, error::ExtractorError, websites::moebooru::models::KonachanPost,
+    blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
 };
 
-use super::Extractor;
+use super::{Extractor, ExtractorFeatures, ServerConfig};
 
 mod models;
 mod unsync;
@@ -32,9 +32,9 @@ pub struct MoebooruExtractor {
     map_videos: bool,
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
+    server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for MoebooruExtractor {
     fn new<S>(
         tags: &[S],
@@ -45,8 +45,10 @@ impl Extractor for MoebooruExtractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("konachan").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::Konachan);
+        let client = client!(config);
 
         let strvec: Vec<String> = tags
             .iter()
@@ -70,7 +72,55 @@ impl Extractor for MoebooruExtractor {
             map_videos,
             excluded_tags: vec![],
             selected_extension: None,
+            server_cfg: config,
         }
+    }
+
+    fn new_with_config<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig,
+    ) -> Self
+    where
+        S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(config);
+
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+            server_cfg: config,
+        }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
@@ -84,7 +134,7 @@ impl Extractor for MoebooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
-            imageboard: ImageBoards::Konachan,
+            imageboard: ImageBoards::Moebooru,
             client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
@@ -99,7 +149,7 @@ impl Extractor for MoebooruExtractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::Konachan,
+            self.server_cfg.clone(),
             &Vec::default(),
             &self.download_ratings,
             self.disable_blacklist,
@@ -108,20 +158,15 @@ impl Extractor for MoebooruExtractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(100)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(100),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             let posts = Self::get_post_list(self, position).await?;
             let size = posts.len();
@@ -161,7 +206,7 @@ impl Extractor for MoebooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
-            imageboard: ImageBoards::Konachan,
+            imageboard: ImageBoards::Moebooru,
             client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
@@ -176,17 +221,18 @@ impl Extractor for MoebooruExtractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        // Get URL
-        let url = format!(
-            "{}?tags={}",
-            ImageBoards::Konachan.post_list_url(),
-            &self.tag_string
-        );
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
 
         let items = self
             .client
-            .get(&url)
-            .query(&[("page", page), ("limit", 100)])
+            .get(self.server_cfg.post_list_url.as_ref().unwrap())
+            .query(&[
+                ("page", &page.to_string()),
+                ("limit", &self.server_cfg.max_post_limit.to_string()),
+                ("tags", &self.tag_string),
+            ])
             .send()
             .await?
             .text()
@@ -226,10 +272,10 @@ impl Extractor for MoebooruExtractor {
 
             let unit = Post {
                 id: c.id.unwrap(),
-                website: ImageBoards::Konachan,
+                website: ImageBoards::Moebooru,
                 url,
                 md5: c.md5.clone().unwrap(),
-                extension: ext,
+                extension: Extension::guess_format(&ext),
                 tags,
                 rating: Rating::from_rating_str(&c.rating),
             };
@@ -249,7 +295,7 @@ impl Extractor for MoebooruExtractor {
     }
 
     fn imageboard(&self) -> ImageBoards {
-        ImageBoards::Konachan
+        ImageBoards::Moebooru
     }
 
     fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {

@@ -1,18 +1,22 @@
 // 20002709
-use ibdl_common::{
-    post::{extension::Extension, NameType},
-    ImageBoards,
-};
-use std::path::PathBuf;
+use ibdl_common::post::{extension::Extension, NameType};
+use ibdl_extractors::extractor_config::ServerConfig;
+use once_cell::sync::OnceCell;
+use std::{collections::HashMap, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
-use crate::{generate_output_path_precise, ImageBoardArg};
+use crate::generate_output_path_precise;
 
-use self::commands::{pool::Pool, post::Post, search::TagSearch};
+use self::{
+    commands::{pool::Pool, post::Post, search::TagSearch},
+    extra::validate_imageboard,
+};
 
 pub mod commands;
 pub(crate) mod extra;
+
+pub static AVAILABLE_SERVERS: OnceCell<HashMap<String, ServerConfig>> = OnceCell::new();
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -31,8 +35,14 @@ pub struct Cli {
     pub mode: Commands,
 
     /// Specify which website to download from
-    #[clap(short, long, value_enum, ignore_case = true, default_value_t = ImageBoardArg(ImageBoards::Danbooru), global = true,)]
-    pub imageboard: ImageBoardArg,
+    ///
+    /// Default websites include: ["danbooru", "e621", "gelbooru", "rule34", "realbooru", "konachan"]
+    #[clap(short, long, ignore_case = true, default_value_t = ServerConfig::default(), global = true, value_parser = validate_imageboard)]
+    pub imageboard: ServerConfig,
+
+    /// Print all available servers and exit
+    #[clap(long, global = true)]
+    pub servers: bool,
 
     /// Where to save files (If the path doesn't exist, it will be created.)
     #[clap(short = 'o', value_name = "PATH", help_heading = "SAVE", global = true)]
@@ -93,10 +103,20 @@ pub struct Cli {
         global = true
     )]
     pub annotate: bool,
+
+    /// Always overwrite output
+    #[clap(
+        short = 'y',
+        value_parser,
+        default_value_t = false,
+        help_heading = "SAVE",
+        global = true
+    )]
+    pub overwrite: bool,
 }
 
 impl Cli {
-    pub fn name_type(&self) -> NameType {
+    pub const fn name_type(&self) -> NameType {
         if self.save_file_as_id {
             NameType::ID
         } else {

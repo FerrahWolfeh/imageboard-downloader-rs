@@ -6,8 +6,8 @@ use ibdl_common::{
     ImageBoards,
 };
 use ibdl_extractors::{
+    imageboards::{danbooru::DanbooruExtractor, e621::E621Extractor},
     prelude::*,
-    websites::{danbooru::DanbooruExtractor, e621::E621Extractor},
 };
 
 use crate::{
@@ -114,10 +114,9 @@ impl Pool {
     fn selected_ratings(&self) -> Vec<Rating> {
         let mut ratings: Vec<Rating> = Vec::with_capacity(4);
         if self.rating.is_empty() {
-            if self.safe_mode {
-                ratings.push(Rating::Safe);
-            } else {
-                ratings.push(Rating::Safe);
+            ratings.push(Rating::Safe);
+
+            if !self.safe_mode {
                 ratings.push(Rating::Questionable);
                 ratings.push(Rating::Explicit)
             }
@@ -139,13 +138,14 @@ impl Pool {
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         let ratings = self.selected_ratings();
 
-        match *args.imageboard {
+        match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new(
+                let mut unit = DanbooruExtractor::new_with_config(
                     &[""],
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
 
@@ -169,8 +169,14 @@ impl Pool {
                 Ok((ext_thd, client))
             }
             ImageBoards::E621 => {
-                let mut unit =
-                    E621Extractor::new(&[""], &ratings, self.disable_blacklist, !self.no_animated);
+                let mut unit = E621Extractor::new_with_config(
+                    &[""],
+                    &ratings,
+                    self.disable_blacklist,
+                    !self.no_animated,
+                    args.imageboard.clone(),
+                );
+
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 unit.exclude_tags(&self.exclude);
@@ -192,59 +198,8 @@ impl Pool {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::Rule34 | ImageBoards::Realbooru | ImageBoards::Gelbooru => {
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru | ImageBoards::Moebooru => {
                 Err(CliError::ExtractorUnsupportedMode)
-
-                // let mut unit = GelbooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-
-                // unit.exclude_tags(&args.exclude)
-                //     .set_imageboard(*args.imageboard);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let client = unit.client();
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
-            }
-            ImageBoards::Konachan => {
-                Err(CliError::ExtractorUnsupportedMode)
-
-                // let mut unit = MoebooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-                // let client = unit.client();
-
-                // unit.exclude_tags(&args.exclude);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
             }
         }
     }

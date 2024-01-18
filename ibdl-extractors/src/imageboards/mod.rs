@@ -64,11 +64,11 @@
 //!```
 //!
 //!
-use std::fmt::Display;
+use std::{fmt::Display, future::Future};
 
-use crate::auth::ImageboardConfig;
+use crate::{auth::ImageboardConfig, extractor_config::ServerConfig};
 use ahash::HashMap;
-use async_trait::async_trait;
+use bitflags::bitflags;
 use ibdl_common::{
     post::{extension::Extension, rating::Rating, Post, PostQueue},
     reqwest::Client,
@@ -89,10 +89,21 @@ pub mod gelbooru;
 
 pub mod moebooru;
 
+pub mod prelude;
+
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 
+bitflags! {
+    pub struct ExtractorFeatures: u8 {
+        const AsyncFetch = 0b0000_0001;
+        const TagSearch = 0b0000_0010;
+        const SinglePostFetch = 0b0000_0100;
+        const PoolDownload = 0b0000_1000;
+        const Auth = 0b0001_0000;
+    }
+}
+
 /// This trait should be the only common public interface all extractors should expose aside from some other website-specific configuration.
-#[async_trait]
 pub trait Extractor {
     /// Sets up the extractor unit with the tags supplied.
     ///
@@ -106,16 +117,32 @@ pub trait Extractor {
     where
         S: ToString + Display;
 
+    /// Sets up the extractor unit with the tags supplied.
+    ///
+    /// Will ignore `safe_mode` state if the imageboard doesn't have a safe variant.
+    fn new_with_config<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig,
+    ) -> Self
+    where
+        S: ToString + Display;
+
     /// Searches the tags list on a per-page way. It's relatively the fastest way, but subject to slowdowns since it needs
     /// to iter through all pages manually in order to fetch all posts.
-    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError>;
+    fn search(
+        &mut self,
+        page: u16,
+    ) -> impl Future<Output = Result<PostQueue, ExtractorError>> + Send;
 
     /// Searches all posts from all pages with given tags, it's the most pratical one, but slower on startup since it will search all pages by itself until it finds no more posts.
-    async fn full_search(
+    fn full_search(
         &mut self,
         start_page: Option<u16>,
         limit: Option<u16>,
-    ) -> Result<PostQueue, ExtractorError>;
+    ) -> impl Future<Output = Result<PostQueue, ExtractorError>> + Send;
 
     /// Adds additional tags to the [blacklist filter](ibdl_extractors::blacklist::BlacklistFilter)
     fn exclude_tags(&mut self, tags: &[String]) -> &mut Self;
@@ -124,7 +151,10 @@ pub trait Extractor {
     fn force_extension(&mut self, extension: Extension) -> &mut Self;
 
     /// Pretty similar to `search`, but instead returns the raw post list instead of a [`PostQueue`](ibdl_common::post::PostQueue)
-    async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError>;
+    fn get_post_list(
+        &self,
+        page: u16,
+    ) -> impl Future<Output = Result<Vec<Post>, ExtractorError>> + Send;
 
     /// This is a separate lower level function to map posts by feeding a custom JSON object obtained through other means.
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError>;
@@ -137,16 +167,25 @@ pub trait Extractor {
 
     /// Returns the [`ImageBoards`](ibdl_common::ImageBoards) variant for this extractor
     fn imageboard(&self) -> ImageBoards;
+
+    /// Expose some bitflags to indicate the features this extractor should support
+    fn features() -> ExtractorFeatures;
+
+    /// Return the current configured [server](crate::extractor_config) for this extractor
+    fn config(&self) -> ServerConfig;
 }
 
 /// Authentication capability for imageboard websites. Implies the Extractor is able to use a user-defined blacklist
-#[async_trait]
 pub trait Auth {
     /// Authenticates to the imageboard using the supplied [`Config`](crate::auth::ImageboardConfig)
-    async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError>;
+    fn auth(
+        &mut self,
+        config: ImageboardConfig,
+    ) -> impl Future<Output = Result<(), ExtractorError>> + Send;
 }
 
 /// Indicates that the extractor is capable of extracting from multiple websites that share a similar API
+#[deprecated]
 pub trait MultiWebsite {
     /// Changes the state of the internal active imageboard. If not set, the extractor should default to something, but never `panic`.
     fn set_imageboard(&mut self, imageboard: ImageBoards) -> &mut Self
@@ -155,16 +194,15 @@ pub trait MultiWebsite {
 }
 
 /// Capability for the extractor asynchronously send posts through a [`unbounded_channel`](ibdl_common::tokio::sync::mpsc::unbounded_channel) to another thread.
-#[async_trait]
 pub trait AsyncFetch {
     /// Simliar to [`full_search`](Extractor::full_search) in functionality, but instead of returning a [`PostQueue`](ibdl_common::post::PostQueue), sends posts asynchronously through a channel.
-    async fn async_fetch(
+    fn async_fetch(
         &mut self,
         sender_channel: UnboundedSender<Post>,
         start_page: Option<u16>,
         limit: Option<u16>,
         post_counter: Option<Sender<u64>>,
-    ) -> Result<u64, ExtractorError>;
+    ) -> impl Future<Output = Result<u64, ExtractorError>> + Send;
 
     /// High-level convenience thread builder for [`async_fetch`](crate::websites::AsyncFetch::async_fetch)
     fn setup_fetch_thread(
@@ -176,13 +214,12 @@ pub trait AsyncFetch {
     ) -> JoinHandle<Result<u64, ExtractorError>>;
 }
 
-#[async_trait]
 pub trait PoolExtract {
-    async fn fetch_pool_idxs(
+    fn fetch_pool_idxs(
         &mut self,
         pool_id: u32,
         limit: Option<u16>,
-    ) -> Result<HashMap<u64, usize>, ExtractorError>;
+    ) -> impl Future<Output = Result<HashMap<u64, usize>, ExtractorError>> + Send;
 
     fn parse_pool_ids(&self, raw_json: String) -> Result<Vec<u64>, ExtractorError>;
 
@@ -195,16 +232,21 @@ pub enum PostFetchMethod {
     Multiple(Vec<u32>),
 }
 
-#[async_trait]
 pub trait SinglePostFetch {
     /// This is a separate lower level function to map a single post by feeding the imageboard's post representation.
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError>;
 
     /// Fetch one single post from the imageboard.
-    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError>;
+    fn get_post(
+        &mut self,
+        post_id: u32,
+    ) -> impl Future<Output = Result<Post, ExtractorError>> + Send;
 
     /// Fetch n posts from the imageboard.
-    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError>;
+    fn get_posts(
+        &mut self,
+        posts: &[u32],
+    ) -> impl Future<Output = Result<Vec<Post>, ExtractorError>> + Send;
 }
 
 pub trait PostFetchAsync {

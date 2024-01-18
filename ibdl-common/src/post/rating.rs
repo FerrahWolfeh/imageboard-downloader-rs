@@ -27,10 +27,10 @@ pub enum Rating {
 impl ToString for Rating {
     fn to_string(&self) -> String {
         match self {
-            Rating::Safe => String::from("Safe"),
-            Rating::Questionable => String::from("Questionable"),
-            Rating::Explicit => String::from("Explicit"),
-            Rating::Unknown => String::from("Unknown"),
+            Self::Safe => String::from("Safe"),
+            Self::Questionable => String::from("Questionable"),
+            Self::Explicit => String::from("Explicit"),
+            Self::Unknown => String::from("Unknown"),
         }
     }
 }

@@ -1,3 +1,8 @@
+#![deny(clippy::nursery)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::struct_field_names)]
 pub use clap;
 use clap::ValueEnum;
 use ibdl_common::{post::rating::Rating, ImageBoards};
@@ -46,74 +51,6 @@ impl ValueEnum for RatingArg {
 
 impl Deref for RatingArg {
     type Target = Rating;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl ValueEnum for ImageBoardArg {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[
-            Self(ImageBoards::Danbooru),
-            Self(ImageBoards::E621),
-            Self(ImageBoards::Rule34),
-            Self(ImageBoards::Gelbooru),
-            Self(ImageBoards::Realbooru),
-            Self(ImageBoards::Konachan),
-        ]
-    }
-
-    fn to_possible_value(&self) -> ::std::option::Option<clap::builder::PossibleValue> {
-        match self.0 {
-            ImageBoards::Danbooru => {
-                Some(
-                    clap::builder::PossibleValue::new("danbooru")
-                        .help(
-                            "Represents the website https://danbooru.donmai.us or it's safe variant https://safebooru.donmai.us",
-                        ),
-                )
-            }
-            ImageBoards::E621 => {
-                Some(
-                    clap::builder::PossibleValue::new("e621")
-                        .help(
-                            "Represents the website https://e621.net or it's safe variant https://e926.net",
-                        ),
-                )
-            }
-            ImageBoards::Rule34 => {
-                Some(
-                    clap::builder::PossibleValue::new("rule34")
-                        .help("Represents the website https://rule34.xxx"),
-                )
-            }
-            ImageBoards::Realbooru => {
-                Some(
-                    clap::builder::PossibleValue::new("realbooru")
-                        .help("Represents the website http://realbooru.com"),
-                )
-            }
-            ImageBoards::Konachan => {
-                Some(
-                    clap::builder::PossibleValue::new("konachan")
-                        .help(
-                            "Represents the website https://konachan.com or it's safe variant https://konachan.net",
-                        ),
-                )
-            }
-            ImageBoards::Gelbooru => {
-                Some(
-                    clap::builder::PossibleValue::new("gelbooru")
-                        .help("Represents the website https://gelbooru.com"),
-                )
-            }
-        }
-    }
-}
-
-impl Deref for ImageBoardArg {
-    type Target = ImageBoards;
 
     fn deref(&self) -> &Self::Target {
         &self.0

@@ -4,7 +4,7 @@ members = ["ibdl-common", "ibdl-core", "ibdl-extractors"]
 [package]
 name = "imageboard_downloader"
 authors = ["Ferrah Aiko Wolf <ferrahwolfeh@proton.me>"]
-version = "1.6.2"
+version = "1.7.0"
 edition = "2021"
 description = "Cli utility to bulk download images from popular imageboard sites (Boorus) using their APIs"
 license = "MIT"
@@ -18,16 +18,17 @@ include = ["**/*.rs", "Cargo.toml"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-env_logger = "0.10.0"
+env_logger = "0.10"
 ibdl-core = { version = "1.6.2", path = "./ibdl-core" }
 ibdl-extractors = { version = "1.8.0", path = "./ibdl-extractors" }
 ibdl-common = { version = "1.6.0", path = "./ibdl-common" }
 color-eyre = "0.6.2"
-once_cell = "1.18.0"
+once_cell = "1.19.0"
+dialoguer = "0.11.0"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }
-ahash = { version = "0.8.3", features = ["serde"] }
+ahash = { version = "0.8.7", features = ["serde"] }
 rand = "0.8.5"
 
 [[bench]]

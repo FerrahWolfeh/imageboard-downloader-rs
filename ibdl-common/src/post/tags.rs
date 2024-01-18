@@ -32,11 +32,11 @@ impl Tag {
         self.tag.clone()
     }
 
-    pub fn tag_type(&self) -> TagType {
+    pub const fn tag_type(&self) -> TagType {
         self.tag_type
     }
 
-    pub fn is_prompt_tag(&self) -> bool {
+    pub const fn is_prompt_tag(&self) -> bool {
         match self.tag_type {
             TagType::Author | TagType::Copyright | TagType::Lore | TagType::Meta => false,
             TagType::Character | TagType::Species | TagType::General | TagType::Any => true,

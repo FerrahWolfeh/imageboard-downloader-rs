@@ -38,7 +38,7 @@ impl Queue {
                 let cli = self.client.clone();
                 let output = output_dir.clone();
                 let file_path = output_dir.join(d.file_name(self.name_type));
-                let variant = self.imageboard;
+                let variant = self.imageboard.server;
                 let sender_chn = sender.clone();
 
                 task::spawn(async move {
@@ -155,11 +155,8 @@ impl Queue {
                 name.bold().yellow().italic(),
                 "MD5 mismatch. Redownloading...".bold().red()
             ))?;
-
-            Ok(false)
-        } else {
-            Ok(false)
         }
+        Ok(false)
     }
 
     async fn fetch(

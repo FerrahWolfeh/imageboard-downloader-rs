@@ -4,10 +4,10 @@
 //! - Authentication
 //! - Native blacklist (defined in user profile page)
 //!
-use crate::auth::ImageboardConfig;
-use async_trait::async_trait;
+use crate::auth::{AuthState, ImageboardConfig};
+use crate::extractor_config::DEFAULT_SERVERS;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::reqwest::Client;
+use ibdl_common::reqwest::{Client, Method};
 use ibdl_common::serde_json;
 use ibdl_common::{
     client, join_tags,
@@ -20,12 +20,12 @@ use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use crate::{
-    blacklist::BlacklistFilter, error::ExtractorError, websites::e621::models::E621TopLevel,
+    blacklist::BlacklistFilter, error::ExtractorError, imageboards::e621::models::E621TopLevel,
 };
 
 use self::models::E621Post;
 
-use super::{Auth, Extractor, SinglePostFetch};
+use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
 mod models;
 mod pool;
@@ -39,7 +39,7 @@ pub struct E621Extractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
-    auth_state: bool,
+    auth_state: AuthState,
     auth: ImageboardConfig,
     download_ratings: Vec<Rating>,
     disable_blacklist: bool,
@@ -49,9 +49,9 @@ pub struct E621Extractor {
     selected_extension: Option<Extension>,
     pool_id: Option<u32>,
     pool_last_items_first: bool,
+    server_cfg: ServerConfig,
 }
 
-#[async_trait]
 impl Extractor for E621Extractor {
     fn new<S>(
         tags: &[S],
@@ -62,8 +62,10 @@ impl Extractor for E621Extractor {
     where
         S: ToString + Display,
     {
+        let config = DEFAULT_SERVERS.get("e621").unwrap().clone();
+
         // Use common client for all connections with a set User-Agent
-        let client = client!(ImageBoards::E621);
+        let client = client!(config);
 
         let strvec: Vec<String> = tags
             .iter()
@@ -81,7 +83,7 @@ impl Extractor for E621Extractor {
             client,
             tags: strvec,
             tag_string,
-            auth_state: false,
+            auth_state: AuthState::NotAuthenticated,
             auth: ImageboardConfig::default(),
             download_ratings: download_ratings.to_vec(),
             disable_blacklist,
@@ -91,7 +93,59 @@ impl Extractor for E621Extractor {
             selected_extension: None,
             pool_id: None,
             pool_last_items_first: false,
+            server_cfg: config,
         }
+    }
+
+    fn new_with_config<S>(
+        tags: &[S],
+        download_ratings: &[Rating],
+        disable_blacklist: bool,
+        map_videos: bool,
+        config: ServerConfig,
+    ) -> Self
+    where
+        S: ToString + Display,
+    {
+        // Use common client for all connections with a set User-Agent
+        let client = client!(config);
+
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
+
+        Self {
+            client,
+            tags: strvec,
+            tag_string,
+            auth_state: AuthState::NotAuthenticated,
+            auth: ImageboardConfig::default(),
+            download_ratings: download_ratings.to_vec(),
+            disable_blacklist,
+            total_removed: 0,
+            map_videos,
+            excluded_tags: vec![],
+            selected_extension: None,
+            pool_id: None,
+            pool_last_items_first: false,
+            server_cfg: config,
+        }
+    }
+
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
@@ -125,7 +179,7 @@ impl Extractor for E621Extractor {
         limit: Option<u16>,
     ) -> Result<PostQueue, ExtractorError> {
         let blacklist = BlacklistFilter::new(
-            ImageBoards::E621,
+            self.server_cfg.clone(),
             &self.auth.user_data.blacklisted_tags,
             &self.download_ratings,
             self.disable_blacklist,
@@ -134,20 +188,15 @@ impl Extractor for E621Extractor {
         )
         .await?;
 
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(320)
-        };
+        let mut fvec = limit.map_or_else(
+            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            |size| Vec::with_capacity(size as usize),
+        );
 
         let mut page = 1;
 
         loop {
-            let position = if let Some(n) = start_page {
-                page + n
-            } else {
-                page
-            };
+            let position = start_page.map_or(page, |n| page + n);
 
             let posts = self.get_post_list(position).await?;
             let size = posts.len();
@@ -201,25 +250,27 @@ impl Extractor for E621Extractor {
     }
 
     async fn get_post_list(&self, page: u16) -> Result<Vec<Post>, ExtractorError> {
-        // Check safe mode
-        let url = format!(
-            "{}?tags={}",
-            ImageBoards::E621.post_list_url(),
-            &self.tag_string
-        );
+        if self.server_cfg.post_list_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
 
-        let req = if self.auth_state {
+        let mut request = self
+            .client
+            .request(Method::GET, self.server_cfg.post_list_url.as_ref().unwrap());
+
+        // Fetch item list from page
+        if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching posts from page {}", page);
-            self.client
-                .get(&url)
-                .query(&[("page", page), ("limit", 320)])
-                .basic_auth(&self.auth.username, Some(&self.auth.api_key))
+            request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key));
         } else {
             debug!("Fetching posts from page {}", page);
-            self.client
-                .get(&url)
-                .query(&[("page", page), ("limit", 320)])
         };
+
+        let req = request.query(&[
+            ("page", &page.to_string()),
+            ("limit", &self.server_cfg.max_post_limit.to_string()),
+            ("tags", &self.tag_string),
+        ]);
 
         let items = req.send().await?.text().await?;
 
@@ -249,7 +300,7 @@ impl Extractor for E621Extractor {
                 website: ImageBoards::E621,
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
-                extension: c.file.ext.clone().unwrap(),
+                extension: Extension::guess_format(&c.file.ext.clone().unwrap()),
                 tags: tag_list,
                 rating: Rating::from_rating_str(&c.rating),
             };
@@ -278,7 +329,6 @@ impl Extractor for E621Extractor {
     }
 }
 
-#[async_trait]
 impl Auth for E621Extractor {
     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
         let mut cfg = config;
@@ -287,13 +337,12 @@ impl Auth for E621Extractor {
             .append(&mut cfg.user_data.blacklisted_tags);
 
         self.auth = cfg;
-        self.auth_state = true;
+        self.auth_state = AuthState::Authenticated;
 
         Ok(())
     }
 }
 
-#[async_trait]
 impl SinglePostFetch for E621Extractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
         let c: E621Post = serde_json::from_str::<E621Post>(raw_json.as_str())?;
@@ -306,7 +355,7 @@ impl SinglePostFetch for E621Extractor {
                 website: ImageBoards::E621,
                 url: c.file.url.clone().unwrap(),
                 md5: c.file.md5.clone().unwrap(),
-                extension: c.file.ext.clone().unwrap(),
+                extension: Extension::guess_format(&c.file.ext.clone().unwrap()),
                 tags: tag_list,
                 rating: Rating::from_rating_str(&c.rating),
             };
@@ -317,10 +366,18 @@ impl SinglePostFetch for E621Extractor {
     }
 
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        let url = format!("{}/{}.json", ImageBoards::E621.post_url(), post_id);
+        if self.server_cfg.post_url.is_none() {
+            return Err(ExtractorError::UnsupportedOperation);
+        };
+
+        let url = format!(
+            "{}/{}.json",
+            self.server_cfg.post_url.as_ref().unwrap(),
+            post_id
+        );
 
         // Fetch item list from page
-        let req = if self.auth_state {
+        let req = if self.auth_state.is_auth() {
             debug!("[AUTH] Fetching post {}", post_id);
             self.client
                 .get(url)
