@@ -16,10 +16,9 @@ It is a cross-platform tool with speed, simple cli interface and multiple simult
 - [x] Multiple simultaneous downloads.
 - [x] Authentication and user blacklist.
 - [x] Download limit.
-- [ ] Custom Imageboards (IN PROGRESS. See https://github.com/FerrahWolfeh/imageboard-downloader-rs/pull/7)
+- [x] Custom websites support.
 - [x] Global blacklist. [See more](docs/Global_Blacklist.md)
 - [x] Store downloads in `cbz` file. [See more](docs/CBZ.md)
-- ~~[x] Update already downloaded galleries.~~ (DEPRECATED)
 
 ## Installation
 
