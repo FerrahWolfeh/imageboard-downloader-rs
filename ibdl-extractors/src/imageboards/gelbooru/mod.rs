@@ -269,6 +269,9 @@ impl Extractor for GelbooruExtractor {
             .text()
             .await?;
 
+        #[cfg(debug_assertions)]
+        debug!("{}", items);
+
         self.map_posts(items)
     }
 

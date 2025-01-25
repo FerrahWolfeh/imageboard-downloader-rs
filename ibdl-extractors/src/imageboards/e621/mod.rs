@@ -284,6 +284,9 @@ impl Extractor for E621Extractor {
 
         let items = req.send().await?.text().await?;
 
+        #[cfg(debug_assertions)]
+        debug!("{}", items);
+
         let start_point = Instant::now();
 
         let pl = self.map_posts(items)?;
@@ -398,6 +401,9 @@ impl SinglePostFetch for E621Extractor {
         };
 
         let post_array = req.send().await?.text().await?;
+
+        #[cfg(debug_assertions)]
+        debug!("{}", post_array);
 
         let start_point = Instant::now();
 
