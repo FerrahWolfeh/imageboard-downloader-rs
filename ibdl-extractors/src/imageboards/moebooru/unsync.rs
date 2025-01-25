@@ -20,21 +20,6 @@ use super::MoebooruExtractor;
 type ExtractorUnit = MoebooruExtractor;
 
 impl AsyncFetch for ExtractorUnit {
-    #[inline]
-    fn setup_fetch_thread(
-        self,
-        sender_channel: UnboundedSender<Post>,
-        start_page: Option<u16>,
-        limit: Option<u16>,
-        post_counter: Option<Sender<u64>>,
-    ) -> JoinHandle<Result<u64, ExtractorError>> {
-        spawn(async move {
-            let mut ext = self;
-            ext.async_fetch(sender_channel, start_page, limit, post_counter)
-                .await
-        })
-    }
-
     async fn async_fetch(
         &mut self,
         sender_channel: UnboundedSender<Post>,
@@ -115,5 +100,20 @@ impl AsyncFetch for ExtractorUnit {
 
         debug!("Terminating thread.");
         Ok(self.total_removed)
+    }
+
+    #[inline]
+    fn setup_fetch_thread(
+        self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+        post_counter: Option<Sender<u64>>,
+    ) -> JoinHandle<Result<u64, ExtractorError>> {
+        spawn(async move {
+            let mut ext = self;
+            ext.async_fetch(sender_channel, start_page, limit, post_counter)
+                .await
+        })
     }
 }

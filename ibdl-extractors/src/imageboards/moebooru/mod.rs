@@ -115,14 +115,6 @@ impl Extractor for MoebooruExtractor {
         }
     }
 
-    fn features() -> ExtractorFeatures {
-        ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
-    }
-
-    fn config(&self) -> ServerConfig {
-        self.server_cfg.clone()
-    }
-
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = self.get_post_list(page, None).await?;
 
@@ -215,6 +207,11 @@ impl Extractor for MoebooruExtractor {
         Ok(fin)
     }
 
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
+
     fn force_extension(&mut self, extension: Extension) -> &mut Self {
         self.selected_extension = Some(extension);
         self
@@ -230,11 +227,11 @@ impl Extractor for MoebooruExtractor {
         };
 
         let page_post_count = {
-            limit.map_or(self.server_cfg.max_post_limit as u16, |count| {
-                if count < self.server_cfg.max_post_limit as u16 {
+            limit.map_or(self.server_cfg.max_post_limit, |count| {
+                if count < self.server_cfg.max_post_limit{
                     count
                 } else {
-                    self.server_cfg.max_post_limit as u16
+                    self.server_cfg.max_post_limit
                 }
             })
         };
@@ -312,8 +309,11 @@ impl Extractor for MoebooruExtractor {
         ImageBoards::Moebooru
     }
 
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
-        self.excluded_tags = tags.to_vec();
-        self
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 }

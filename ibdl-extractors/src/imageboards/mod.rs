@@ -92,6 +92,7 @@ pub mod gelbooru;
 pub mod moebooru;
 
 pub mod prelude;
+mod common;
 
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 

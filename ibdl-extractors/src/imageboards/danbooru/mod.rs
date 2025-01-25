@@ -158,14 +158,6 @@ impl Extractor for DanbooruExtractor {
         }
     }
 
-    fn features() -> ExtractorFeatures {
-        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
-    }
-
-    fn config(&self) -> ServerConfig {
-        self.server_cfg.clone()
-    }
-
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = self.get_post_list(page, None).await?;
 
@@ -184,11 +176,6 @@ impl Extractor for DanbooruExtractor {
         };
 
         Ok(qw)
-    }
-
-    fn force_extension(&mut self, extension: Extension) -> &mut Self {
-        self.selected_extension = Some(extension);
-        self
     }
 
     async fn full_search(
@@ -262,6 +249,16 @@ impl Extractor for DanbooruExtractor {
             tags: self.tags.clone(),
         };
         Ok(fin)
+    }
+
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
+
+    fn force_extension(&mut self, extension: Extension) -> &mut Self {
+        self.selected_extension = Some(extension);
+        self
     }
 
     async fn get_post_list(
@@ -356,9 +353,12 @@ impl Extractor for DanbooruExtractor {
         ImageBoards::Danbooru
     }
 
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
-        self.excluded_tags = tags.to_vec();
-        self
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0001_1111) // AsyncFetch + TagSearch + SinglePostDownload + PoolDownload + Auth (Everything)
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 }
 
