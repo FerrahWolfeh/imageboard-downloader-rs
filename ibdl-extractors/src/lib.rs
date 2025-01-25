@@ -14,3 +14,4 @@ pub mod error;
 pub mod extractor_config;
 pub mod imageboards;
 pub mod prelude;
+mod test;
