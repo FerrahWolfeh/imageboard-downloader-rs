@@ -3,9 +3,9 @@
 //! In general, most imageboard websites also classify posts considering how explicit they are
 //!
 //! Posts are usually classified into 4 special tags:
-//! * `Safe` or `General`: Posts that don't involve nothing suggestive. Usually normal fanart.
-//! * `Questionable` or `Sensitive`: Posts that involve nude/semi-nude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
-//! * `Explicit`: Posts that are explicity pornographic or have other sensitive content such as gore, etc.
+//! * `Safe` or `General`: Posts that don't involve anything suggestive. Usually normal fanart.
+//! * `Questionable` or `Sensitive`: Posts that involve nude/seminude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
+//! * `Explicit`: Posts that are explicitly pornographic or have other sensitive content such as gore, etc.
 //!
 
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use std::fmt::Display;
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default,
 )]
 pub enum Rating {
-    /// Represents posts that are don't involve nothing suggestive or sensitive.
+    /// Represents posts that are don't involve anything suggestive or sensitive.
     Safe,
     /// Represents posts that have some degree of nudity or sexually suggestive elements.
     Questionable,
