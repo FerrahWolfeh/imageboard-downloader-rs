@@ -65,7 +65,7 @@ impl AsyncFetch for ExtractorUnit {
         loop {
             let position = start_page.map_or(page - 1, |n| page + n - 1);
 
-            let posts = self.get_post_list(position).await?;
+            let posts = self.get_post_list(position, limit).await?;
             let size = posts.len();
 
             if size == 0 {

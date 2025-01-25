@@ -154,6 +154,7 @@ pub trait Extractor {
     fn get_post_list(
         &self,
         page: u16,
+        limit: Option<u16>,
     ) -> impl Future<Output = Result<Vec<Post>, ExtractorError>> + Send;
 
     /// This is a separate lower level function to map posts by feeding a custom JSON object obtained through other means.
