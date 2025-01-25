@@ -183,12 +183,12 @@ impl BlacklistFilter {
         if !self.disabled {
             let fsize = original_list.len();
 
-            let bp = if !self.gbl_tags.is_empty() {
+            let bp = if self.gbl_tags.is_empty() {
+                0
+            } else {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
                 original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
                 fsize - original_list.len()
-            } else {
-                0
             };
 
             if self.ignore_animated {

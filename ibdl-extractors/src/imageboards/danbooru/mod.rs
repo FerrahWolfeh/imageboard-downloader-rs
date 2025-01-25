@@ -207,7 +207,7 @@ impl Extractor for DanbooruExtractor {
         .await?;
 
         let mut fvec = limit.map_or_else(
-            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            || Vec::with_capacity(self.server_cfg.max_post_limit as usize),
             |size| Vec::with_capacity(size as usize),
         );
 
@@ -264,7 +264,11 @@ impl Extractor for DanbooruExtractor {
         Ok(fin)
     }
 
-    async fn get_post_list(&self, page: u16, limit: Option<u16>) -> Result<Vec<Post>, ExtractorError> {
+    async fn get_post_list(
+        &self,
+        page: u16,
+        limit: Option<u16>,
+    ) -> Result<Vec<Post>, ExtractorError> {
         if self.server_cfg.post_list_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
         };
@@ -280,16 +284,16 @@ impl Extractor for DanbooruExtractor {
         } else {
             debug!("Fetching posts from page {}", page);
         };
-        
-        let page_post_count = {if let Some(count) = limit {
-            if count < self.server_cfg.max_post_limit as u16 {
-                count
-            } else {
-                self.server_cfg.max_post_limit as u16
-            }
-        } else {
-            self.server_cfg.max_post_limit as u16
-        }};
+
+        let page_post_count = {
+            limit.map_or(self.server_cfg.max_post_limit as u16, |count| {
+                if count < self.server_cfg.max_post_limit as u16 {
+                    count
+                } else {
+                    self.server_cfg.max_post_limit as u16
+                }
+            })
+        };
 
         let req = request.query(&[
             ("page", &page.to_string()),

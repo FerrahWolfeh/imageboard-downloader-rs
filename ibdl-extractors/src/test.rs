@@ -1,17 +1,15 @@
 #![cfg(test)]
+use crate::extractor_config::DEFAULT_SERVERS;
 use crate::imageboards::danbooru::DanbooruExtractor;
 use crate::imageboards::Extractor;
-use ibdl_common::{
-    post::{rating::Rating},
-    tokio, ImageBoards,
-};
-use crate::extractor_config::DEFAULT_SERVERS;
+use ibdl_common::{post::rating::Rating, tokio, ImageBoards};
 
 #[tokio::test]
 async fn danbooru_test_post_api() {
     let server_config = DEFAULT_SERVERS.get("danbooru").unwrap().clone();
 
-    let extractor = DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
+    let extractor =
+        DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
 
     let post_list = extractor.get_post_list(1, None).await;
 
@@ -65,7 +63,8 @@ async fn e621_test_post_api() {
 async fn gelbooru_test_post_api() {
     let server_config = DEFAULT_SERVERS.get("gelbooru").unwrap().clone();
 
-    let extractor = DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
+    let extractor =
+        DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
 
     let post_list = extractor.get_post_list(1, None).await;
 
@@ -92,7 +91,8 @@ async fn gelbooru_test_post_api() {
 async fn gelbooru_v0_2_test_post_api() {
     let server_config = DEFAULT_SERVERS.get("realbooru").unwrap().clone();
 
-    let extractor = DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
+    let extractor =
+        DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
 
     let post_list = extractor.get_post_list(1, None).await;
 
@@ -119,7 +119,8 @@ async fn gelbooru_v0_2_test_post_api() {
 async fn moebooru_test_post_api() {
     let server_config = DEFAULT_SERVERS.get("konachan").unwrap().clone();
 
-    let extractor = DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
+    let extractor =
+        DanbooruExtractor::new_with_config(&["1girl"], &[], false, false, server_config);
 
     let post_list = extractor.get_post_list(1, None).await;
 

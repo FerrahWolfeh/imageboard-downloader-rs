@@ -64,6 +64,8 @@
 //!```
 //!
 //!
+#![deny(clippy::nursery)]
+//#![deny(clippy::pedantic)]
 use std::{fmt::Display, future::Future};
 
 use crate::{auth::ImageboardConfig, extractor_config::ServerConfig};

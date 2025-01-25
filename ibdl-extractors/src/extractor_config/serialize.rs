@@ -28,7 +28,7 @@ struct Server {
     post_url: Option<String>,
     post_list_url: Option<String>,
     pool_idx_url: Option<String>,
-    max_post_limit: usize,
+    max_post_limit: u16,
     auth_url: Option<String>,
     image_url: Option<String>,
 }

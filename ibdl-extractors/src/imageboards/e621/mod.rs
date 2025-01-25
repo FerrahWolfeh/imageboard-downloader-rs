@@ -19,10 +19,10 @@ use std::fmt::Display;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
+use crate::imageboards::e621::models::E621SinglePostTopLevel;
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::e621::models::E621TopLevel,
 };
-use crate::imageboards::e621::models::E621SinglePostTopLevel;
 
 use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
@@ -188,7 +188,7 @@ impl Extractor for E621Extractor {
         .await?;
 
         let mut fvec = limit.map_or_else(
-            || Vec::with_capacity(self.server_cfg.max_post_limit),
+            || Vec::with_capacity(self.server_cfg.max_post_limit as usize),
             |size| Vec::with_capacity(size as usize),
         );
 
@@ -248,7 +248,11 @@ impl Extractor for E621Extractor {
         Ok(fin)
     }
 
-    async fn get_post_list(&self, page: u16, limit: Option<u16>) -> Result<Vec<Post>, ExtractorError> {
+    async fn get_post_list(
+        &self,
+        page: u16,
+        limit: Option<u16>,
+    ) -> Result<Vec<Post>, ExtractorError> {
         if self.server_cfg.post_list_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
         };
@@ -264,16 +268,16 @@ impl Extractor for E621Extractor {
         } else {
             debug!("Fetching posts from page {}", page);
         };
-        
-        let page_post_count = {if let Some(count) = limit {
-            if count < self.server_cfg.max_post_limit as u16 {
-                count
-            } else {
-                self.server_cfg.max_post_limit as u16
-            }
-        } else {
-            self.server_cfg.max_post_limit as u16
-        }};
+
+        let page_post_count = {
+            limit.map_or(self.server_cfg.max_post_limit as u16, |count| {
+                if count < self.server_cfg.max_post_limit as u16 {
+                    count
+                } else {
+                    self.server_cfg.max_post_limit as u16
+                }
+            })
+        };
 
         let req = request.query(&[
             ("page", &page.to_string()),
@@ -357,7 +361,8 @@ impl Auth for E621Extractor {
 
 impl SinglePostFetch for E621Extractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
-        let c: E621SinglePostTopLevel = serde_json::from_str::<E621SinglePostTopLevel>(raw_json.as_str())?;
+        let c: E621SinglePostTopLevel =
+            serde_json::from_str::<E621SinglePostTopLevel>(raw_json.as_str())?;
 
         if c.post.file.url.is_some() {
             let tag_list = c.post.tags.map_tags();

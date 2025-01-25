@@ -168,7 +168,7 @@ pub struct ServerConfig {
     pub post_url: Option<String>,
     pub post_list_url: Option<String>,
     pub pool_idx_url: Option<String>,
-    pub max_post_limit: usize,
+    pub max_post_limit: u16,
     pub auth_url: Option<String>,
     pub image_url: Option<String>,
 }
