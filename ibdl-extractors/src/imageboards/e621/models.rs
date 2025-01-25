@@ -11,6 +11,12 @@ pub struct E621TopLevel {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "self::serde")]
+pub struct E621SinglePostTopLevel {
+    pub post: E621Post,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "self::serde")]
 pub struct E621Post {
     pub id: Option<u64>,
     pub file: E621File,

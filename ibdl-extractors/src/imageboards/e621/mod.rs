@@ -22,8 +22,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::e621::models::E621TopLevel,
 };
-
-use self::models::E621Post;
+use crate::imageboards::e621::models::E621SinglePostTopLevel;
 
 use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
@@ -358,19 +357,19 @@ impl Auth for E621Extractor {
 
 impl SinglePostFetch for E621Extractor {
     fn map_post(&self, raw_json: String) -> Result<Post, ExtractorError> {
-        let c: E621Post = serde_json::from_str::<E621Post>(raw_json.as_str())?;
+        let c: E621SinglePostTopLevel = serde_json::from_str::<E621SinglePostTopLevel>(raw_json.as_str())?;
 
-        if c.file.url.is_some() {
-            let tag_list = c.tags.map_tags();
+        if c.post.file.url.is_some() {
+            let tag_list = c.post.tags.map_tags();
 
             let unit = Post {
-                id: c.id.unwrap(),
+                id: c.post.id.unwrap(),
                 website: ImageBoards::E621,
-                url: c.file.url.clone().unwrap(),
-                md5: c.file.md5.clone().unwrap(),
-                extension: Extension::guess_format(&c.file.ext.clone().unwrap()),
+                url: c.post.file.url.clone().unwrap(),
+                md5: c.post.file.md5.clone().unwrap(),
+                extension: Extension::guess_format(&c.post.file.ext.clone().unwrap()),
                 tags: tag_list,
-                rating: Rating::from_rating_str(&c.rating),
+                rating: Rating::from_rating_str(&c.post.rating),
             };
             Ok(unit)
         } else {
