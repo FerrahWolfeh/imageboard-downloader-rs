@@ -7,9 +7,9 @@
 //!
 //!
 
-//NOTE: https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&names=folinic_(arknights)%20arknights%20ru_zhai%20highres%20black_hair
+// NOTE: https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&names=folinic_(arknights)%20arknights%20ru_zhai%20highres%20black_hair
 // This is to search all tags and their meanings.
-// Gotta do an enum based on this thing.
+// I've to do an enum based on this thing.
 
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};

@@ -38,7 +38,7 @@ async fn danbooru_test_post_api() {
 async fn e621_test_post_api() {
     let server_config = DEFAULT_SERVERS.get("e621").unwrap().clone();
 
-    let extractor = DanbooruExtractor::new_with_config(&["female"], &[], false, false, server_config);
+    let extractor = DanbooruExtractor::new_with_config(&["solo"], &[], false, false, server_config);
 
     let post_list = extractor.get_post_list(1, None).await;
 
@@ -58,7 +58,7 @@ async fn e621_test_post_api() {
     assert!(!first_post.md5.is_empty());
     assert!(!first_post.url.is_empty());
     assert_ne!(first_post.rating, Rating::Unknown);
-    assert!(first_post.tags.iter().any(|tag| tag.tag() == "1girl"));
+    assert!(first_post.tags.iter().any(|tag| tag.tag() == "solo"));
 }
 
 #[tokio::test]
