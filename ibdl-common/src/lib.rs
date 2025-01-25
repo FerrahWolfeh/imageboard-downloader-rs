@@ -1,4 +1,5 @@
-#![deny(clippy::nursery)]
+#![deny(clippy::all)]
+use std::fmt::{Display, Formatter};
 use std::{
     env,
     fs::create_dir_all,
@@ -6,7 +7,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-
 // Public Exports
 pub use bincode;
 pub use directories;
@@ -38,14 +38,14 @@ pub enum ImageBoards {
     Gelbooru,
 }
 
-impl ToString for ImageBoards {
-    fn to_string(&self) -> String {
+impl Display for ImageBoards {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Danbooru => String::from("Danbooru"),
-            Self::E621 => String::from("e621"),
-            Self::GelbooruV0_2 => String::from("Gelbooru Beta V0.2.0"),
-            Self::Moebooru => String::from("Moebooru"),
-            Self::Gelbooru => String::from("Gelbooru"),
+            Self::Danbooru => write!(f, "Danbooru"),
+            Self::E621 => write!(f, "e621"),
+            Self::GelbooruV0_2 => write!(f, "Gelbooru Beta V0.2.0"),
+            Self::Moebooru => write!(f, "Moebooru"),
+            Self::Gelbooru => write!(f, "Gelbooru"),
         }
     }
 }

@@ -98,7 +98,7 @@ impl Default for ImageboardConfig {
 
 impl ImageboardConfig {
     #[must_use]
-    pub fn new(imageboard: ServerConfig, username: String, api_key: String) -> Self {
+    pub const fn new(imageboard: ServerConfig, username: String, api_key: String) -> Self {
         Self {
             imageboard,
             username,

@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 use std::process::exit;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -38,8 +39,7 @@ async fn main() -> Result<()> {
                 dirname.display().bold().blue().italic()
             ))
             .wait_for_newline(true)
-            .interact()
-            .unwrap();
+            .interact()?;
         if !conf_exists {
             println!("{}", "Download cancelled".bold().blue());
             exit(0);

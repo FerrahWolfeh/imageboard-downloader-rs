@@ -7,7 +7,9 @@
 //! * `Questionable` or `Sensitive`: Posts that involve nude/semi-nude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
 //! * `Explicit`: Posts that are explicity pornographic or have other sensitive content such as gore, etc.
 //!
+
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default,
@@ -24,13 +26,13 @@ pub enum Rating {
     Unknown,
 }
 
-impl ToString for Rating {
-    fn to_string(&self) -> String {
+impl Display for Rating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Safe => String::from("Safe"),
-            Self::Questionable => String::from("Questionable"),
-            Self::Explicit => String::from("Explicit"),
-            Self::Unknown => String::from("Unknown"),
+            Self::Safe => write!(f, "Safe"),
+            Self::Questionable => write!(f, "Questionable"),
+            Self::Explicit => write!(f, "Explicit"),
+            Self::Unknown => write!(f, "Unknown"),
         }
     }
 }

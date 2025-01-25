@@ -1,4 +1,4 @@
-//! Main representation of a imageboard post
+//! Main representation of an imageboard post
 //!
 //! # Post
 //! A [`Post` struct](Post) is a generic representation of an imageboard post.
@@ -128,7 +128,7 @@ impl Post {
             NameType::MD5 => self.md5.to_string(),
         };
 
-        format!("{}.{}", name, self.extension.to_string())
+        format!("{}.{}", name, self.extension)
     }
 
     /// Get the generic name of the post. Can be it's MD5 hash or ID
@@ -142,6 +142,6 @@ impl Post {
 
     #[inline]
     pub fn seq_file_name(&self, num_digits: usize) -> String {
-        format!("{:0num_digits$}.{}", self.id, self.extension.to_string())
+        format!("{:0num_digits$}.{}", self.id, self.extension)
     }
 }

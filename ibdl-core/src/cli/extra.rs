@@ -108,7 +108,7 @@ pub fn get_servers<'a>() -> &'a HashMap<String, ServerConfig> {
     AVAILABLE_SERVERS.get_or_init(|| {
         let mut servers = DEFAULT_SERVERS.clone();
 
-        let cfg_path = PathBuf::from(env::var("IBDL_SERVER_CFG").unwrap_or({
+        let cfg_path = PathBuf::from(env::var("IBDL_SERVER_CFG").unwrap_or_else(|_| {
             let cdir = ProjectDirs::from("com", "FerrahWolfeh", "imageboard-downloader").unwrap();
             cdir.config_dir().to_string_lossy().to_string()
         }));

@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -60,19 +61,19 @@ impl FromStr for Extension {
     }
 }
 
-impl ToString for Extension {
-    fn to_string(&self) -> String {
+impl Display for Extension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::JPG => String::from("jpg"),
-            Self::PNG => String::from("png"),
-            Self::WEBP => String::from("webp"),
-            Self::GIF => String::from("gif"),
-            Self::WEBM => String::from("webm"),
-            Self::MP4 => String::from("mp4"),
-            Self::Ugoira => String::from("zip"),
-            Self::Unknown => String::from("bin"),
-            Self::AVIF => String::from("avif"),
-            Self::JXL => String::from("jxl"),
+            Self::JPG => write!(f, "jpg"),
+            Self::PNG => write!(f, "png"),
+            Self::WEBP => write!(f, "webp"),
+            Self::GIF => write!(f, "gif"),
+            Self::WEBM => write!(f, "webm"),
+            Self::MP4 => write!(f, "mp4"),
+            Self::Ugoira => write!(f, "zip"),
+            Self::Unknown => write!(f, "bin"),
+            Self::AVIF => write!(f, "avif"),
+            Self::JXL => write!(f, "jxl"),
         }
     }
 }
