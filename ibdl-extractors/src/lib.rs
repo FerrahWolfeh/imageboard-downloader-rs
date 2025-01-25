@@ -1,4 +1,4 @@
-#![deny(clippy::nursery)]
+#![deny(clippy::all)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
