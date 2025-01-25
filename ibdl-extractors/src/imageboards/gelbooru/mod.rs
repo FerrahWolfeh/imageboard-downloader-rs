@@ -251,11 +251,11 @@ impl Extractor for GelbooruExtractor {
         };
 
         let page_post_count = {
-            limit.map_or(self.server_cfg.max_post_limit as u16, |count| {
-                if count < self.server_cfg.max_post_limit as u16 {
+            limit.map_or(self.server_cfg.max_post_limit, |count| {
+                if count < self.server_cfg.max_post_limit {
                     count
                 } else {
-                    self.server_cfg.max_post_limit as u16
+                    self.server_cfg.max_post_limit
                 }
             })
         };
