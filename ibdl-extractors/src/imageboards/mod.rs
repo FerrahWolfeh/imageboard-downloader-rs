@@ -137,7 +137,7 @@ pub trait Extractor {
         page: u16,
     ) -> impl Future<Output = Result<PostQueue, ExtractorError>> + Send;
 
-    /// Searches all posts from all pages with given tags, it's the most pratical one, but slower on startup since it will search all pages by itself until it finds no more posts.
+    /// Searches all posts from all pages with given tags, it's the most practical one, but slower on startup since it will search all pages by itself until it finds no more posts.
     fn full_search(
         &mut self,
         start_page: Option<u16>,
