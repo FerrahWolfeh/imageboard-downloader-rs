@@ -134,14 +134,6 @@ impl Extractor for GelbooruExtractor {
         }
     }
 
-    fn features() -> ExtractorFeatures {
-        ExtractorFeatures::from_bits_truncate(0b0000_0111) // AsyncFetch + TagSearch + SinglePostFetch
-    }
-
-    fn config(&self) -> ServerConfig {
-        self.server_cfg.clone()
-    }
-
     async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
         let mut posts = Self::get_post_list(self, page).await?;
 
@@ -239,6 +231,11 @@ impl Extractor for GelbooruExtractor {
         Ok(fin)
     }
 
+    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.excluded_tags = tags.to_vec();
+        self
+    }
+
     fn force_extension(&mut self, extension: Extension) -> &mut Self {
         self.selected_extension = Some(extension);
         self
@@ -266,7 +263,7 @@ impl Extractor for GelbooruExtractor {
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let items = serde_json::from_str::<Value>(raw_json.as_str()).unwrap();
+        let items = serde_json::from_str::<Value>(raw_json.as_str())?;
 
         if let Some(arr) = items.as_array() {
             let posts = self.gelbooru_old_path(arr);
@@ -297,9 +294,12 @@ impl Extractor for GelbooruExtractor {
         self.active_imageboard
     }
 
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
-        self.excluded_tags = tags.to_vec();
-        self
+    fn features() -> ExtractorFeatures {
+        ExtractorFeatures::from_bits_truncate(0b0000_0111) // AsyncFetch + TagSearch + SinglePostFetch
+    }
+
+    fn config(&self) -> ServerConfig {
+        self.server_cfg.clone()
     }
 }
 
