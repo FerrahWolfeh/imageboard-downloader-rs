@@ -4,9 +4,9 @@ use ibdl_common::{
     serde_json,
 };
 
-use crate::{error::ExtractorError, imageboards::PoolExtract};
-
 use super::{models::E621PoolList, E621Extractor};
+use crate::error::ExtractorError;
+use crate::prelude::PoolExtract;
 
 impl PoolExtract for E621Extractor {
     async fn fetch_pool_idxs(

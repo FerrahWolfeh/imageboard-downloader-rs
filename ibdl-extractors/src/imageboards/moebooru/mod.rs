@@ -12,12 +12,12 @@ use ibdl_common::{
 };
 use std::fmt::Display;
 
-use crate::extractor_config::DEFAULT_SERVERS;
+use crate::extractor::caps::ExtractorFeatures;
+use crate::extractor::Extractor;
+use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
 };
-
-use super::{Extractor, ExtractorFeatures, ServerConfig};
 
 mod models;
 mod unsync;
@@ -228,7 +228,7 @@ impl Extractor for MoebooruExtractor {
 
         let page_post_count = {
             limit.map_or(self.server_cfg.max_post_limit, |count| {
-                if count < self.server_cfg.max_post_limit{
+                if count < self.server_cfg.max_post_limit {
                     count
                 } else {
                     self.server_cfg.max_post_limit

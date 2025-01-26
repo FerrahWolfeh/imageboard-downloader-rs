@@ -8,7 +8,7 @@ use ibdl_common::tokio::{self, join};
 use ibdl_core::async_queue::Queue;
 use ibdl_core::clap::Parser;
 use ibdl_core::cli::{Cli, Commands, AVAILABLE_SERVERS};
-use ibdl_extractors::imageboards::ExtractorFeatures;
+use ibdl_extractors::prelude::ExtractorFeatures;
 use once_cell::sync::Lazy;
 use std::process::exit;
 use std::sync::atomic::AtomicU64;

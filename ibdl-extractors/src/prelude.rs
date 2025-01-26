@@ -1,7 +1,9 @@
-pub use crate::imageboards::AsyncFetch;
-pub use crate::imageboards::Auth;
-pub use crate::imageboards::Extractor;
-pub use crate::imageboards::ExtractorThreadHandle;
-pub use crate::imageboards::PoolExtract;
-pub use crate::imageboards::PostFetchAsync;
-pub use crate::imageboards::SinglePostFetch;
+pub use crate::extractor::caps::AsyncFetch;
+pub use crate::extractor::caps::Auth;
+pub use crate::extractor::caps::ExtractorFeatures;
+pub use crate::extractor::caps::ExtractorThreadHandle;
+pub use crate::extractor::caps::PoolExtract;
+pub use crate::extractor::caps::PostFetchAsync;
+pub use crate::extractor::caps::PostFetchMethod;
+pub use crate::extractor::caps::SinglePostFetch;
+pub use crate::extractor::Extractor;

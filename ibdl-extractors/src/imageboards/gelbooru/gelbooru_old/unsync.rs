@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ibdl_common::{
     log::debug,
     post::Post,
@@ -5,16 +7,17 @@ use ibdl_common::{
         spawn,
         sync::mpsc::{Sender, UnboundedSender},
         task::JoinHandle,
+        time::sleep,
     },
 };
 
-use super::MoebooruExtractor;
-use crate::extractor::caps::AsyncFetch;
+use super::GelbooruV0_2Extractor;
 use crate::extractor::Extractor;
+use crate::prelude::{AsyncFetch};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-// A quick alias so I can copy paste stuff faster
-type ExtractorUnit = MoebooruExtractor;
+// A quick alias so I can copy-paste stuff faster
+type ExtractorUnit = GelbooruV0_2Extractor;
 
 impl AsyncFetch for ExtractorUnit {
     async fn async_fetch(
@@ -42,7 +45,7 @@ impl AsyncFetch for ExtractorUnit {
         debug!("Async extractor thread initialized");
 
         loop {
-            let position = start_page.map_or(page, |n| page + n);
+            let position = start_page.map_or(page - 1, |n| page + n - 1);
 
             let posts = self.get_post_list(position, limit).await?;
             let size = posts.len();
@@ -93,6 +96,10 @@ impl AsyncFetch for ExtractorUnit {
             }
 
             page += 1;
+
+            //debounce
+            debug!("Debouncing API calls by 500 ms");
+            sleep(Duration::from_millis(500)).await;
         }
 
         debug!("Terminating thread.");

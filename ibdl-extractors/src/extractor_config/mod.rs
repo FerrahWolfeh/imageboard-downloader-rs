@@ -1,3 +1,7 @@
+use crate::extractor::caps::ExtractorFeatures;
+use crate::extractor::Extractor;
+use crate::imageboards::prelude::*;
+use crate::server_config;
 use ibdl_common::serde;
 use ibdl_common::{
     serde::{Deserialize, Serialize},
@@ -6,9 +10,6 @@ use ibdl_common::{
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fmt::Display;
-
-use crate::imageboards::{prelude::*, Extractor, ExtractorFeatures};
-use crate::server_config;
 
 pub(crate) const DEFAULT_EXT_UA: &str =
     concat!("Rust Imageboard Post Extractor/", env!("CARGO_PKG_VERSION"));
@@ -38,6 +39,18 @@ pub(crate) const E621_EXT_UA: &str = concat!(
     "Rust Imageboard Post Extractor/",
     env!("CARGO_PKG_VERSION"),
     " (by e621 user FerrahWolfeh)"
+);
+
+pub(crate) const GB_CLI_UA: &str = concat!(
+    "Rust Imageboard Downloader/",
+    env!("CARGO_PKG_VERSION"),
+    " (by gelbooru user FerrahWolfeh)"
+);
+
+pub(crate) const GB_EXT_UA: &str = concat!(
+    "Rust Imageboard Post Extractor/",
+    env!("CARGO_PKG_VERSION"),
+    " (by gelbooru user FerrahWolfeh)"
 );
 
 pub mod macros;
@@ -85,13 +98,13 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             "gelbooru",
             "Gelbooru",
             ImageBoards::Gelbooru,
-            DEFAULT_CLI_UA,
-            DEFAULT_EXT_UA,
+            GB_CLI_UA,
+            GB_EXT_UA,
             "https://gelbooru.com",
             Some(String::from(
-                "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+                "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
             )),
-            "http://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
+            "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
             None,
             100,
             None,

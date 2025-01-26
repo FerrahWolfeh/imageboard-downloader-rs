@@ -14,7 +14,7 @@ use ibdl_common::{
 use ibdl_extractors::imageboards::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
 };
-use ibdl_extractors::{imageboards::PostFetchMethod, prelude::*};
+use ibdl_extractors::prelude::*;
 use owo_colors::OwoColorize;
 
 use crate::{

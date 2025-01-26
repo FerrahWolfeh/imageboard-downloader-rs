@@ -6,9 +6,10 @@
 //!
 use self::models::DanbooruPost;
 
-use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 use crate::auth::{AuthState, ImageboardConfig};
-use crate::extractor_config::DEFAULT_SERVERS;
+use crate::extractor::caps::{Auth, ExtractorFeatures, SinglePostFetch};
+use crate::extractor::Extractor;
+use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::Method;

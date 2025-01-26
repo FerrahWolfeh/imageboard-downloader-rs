@@ -5,7 +5,7 @@
 //! - Native blacklist (defined in user profile page)
 //!
 use crate::auth::{AuthState, ImageboardConfig};
-use crate::extractor_config::DEFAULT_SERVERS;
+use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
 use ibdl_common::post::extension::Extension;
 use ibdl_common::reqwest::{Client, Method};
 use ibdl_common::serde_json;
@@ -19,12 +19,13 @@ use std::fmt::Display;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
+use crate::extractor::caps::ExtractorFeatures;
+use crate::extractor::Extractor;
 use crate::imageboards::e621::models::E621SinglePostTopLevel;
+use crate::prelude::{Auth, SinglePostFetch};
 use crate::{
     blacklist::BlacklistFilter, error::ExtractorError, imageboards::e621::models::E621TopLevel,
 };
-
-use super::{Auth, Extractor, ExtractorFeatures, ServerConfig, SinglePostFetch};
 
 mod models;
 mod pool;

@@ -1,7 +1,7 @@
 #![cfg(test)]
+use crate::extractor::Extractor;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::imageboards::danbooru::DanbooruExtractor;
-use crate::imageboards::Extractor;
 use ibdl_common::{post::rating::Rating, tokio, ImageBoards};
 
 #[tokio::test]

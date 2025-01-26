@@ -9,17 +9,14 @@ use ibdl_common::{
     },
 };
 
-use crate::{
-    blacklist::BlacklistFilter,
-    error::ExtractorError,
-    imageboards::{
-        AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
-    },
-};
-
 use super::DanbooruExtractor;
+use crate::extractor::caps::{
+    AsyncFetch, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
+};
+use crate::extractor::Extractor;
+use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-// A quick alias so I can copy paste stuff faster
+// A quick alias so I can copy-paste stuff faster
 type ExtractorUnit = DanbooruExtractor;
 
 impl AsyncFetch for ExtractorUnit {

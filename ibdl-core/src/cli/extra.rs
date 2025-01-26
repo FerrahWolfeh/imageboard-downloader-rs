@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::error::CliError;
 use dialoguer::{theme::ColorfulTheme, Input, Password};
 use ibdl_common::{
     bincode::deserialize,
@@ -13,15 +14,13 @@ use ibdl_common::{
     tokio::fs::{read, remove_file},
     ImageBoards,
 };
+use ibdl_extractors::prelude::{Auth, Extractor};
 use ibdl_extractors::{
     auth::ImageboardConfig,
     extractor_config::{serialize::read_server_cfg_file, ServerConfig, DEFAULT_SERVERS},
-    imageboards::{Auth, Extractor},
 };
 use owo_colors::OwoColorize;
 use std::fs;
-
-use crate::error::CliError;
 
 use super::AVAILABLE_SERVERS;
 

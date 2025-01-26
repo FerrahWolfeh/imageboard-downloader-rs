@@ -11,13 +11,11 @@ use ibdl_common::{
     },
 };
 
-use crate::{
-    blacklist::BlacklistFilter,
-    error::ExtractorError,
-    imageboards::{AsyncFetch, Extractor, PostFetchAsync, PostFetchMethod, SinglePostFetch},
-};
-
 use super::GelbooruExtractor;
+use crate::extractor::caps::PostFetchMethod;
+use crate::extractor::Extractor;
+use crate::prelude::{AsyncFetch, PostFetchAsync, SinglePostFetch};
+use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
 // A quick alias so I can copy paste stuff faster
 type ExtractorUnit = GelbooruExtractor;

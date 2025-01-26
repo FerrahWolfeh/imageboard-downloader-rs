@@ -1,19 +1,13 @@
 //! Post extractor for Gelbooru-based imageboards
 //!
 //! This extractor is compatible with these imageboards:
-//! * `Imageboards::Rule34`
 //! * `Imageboards::Realbooru`
-//! * `Imageboards::Gelbooru`
 //!
-//!
-
-// NOTE: https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&names=folinic_(arknights)%20arknights%20ru_zhai%20highres%20black_hair
-// This is to search all tags and their meanings.
-// I've to do an enum based on this thing.
 
 use ibdl_common::post::extension::Extension;
+use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;
-use ibdl_common::serde_json::{self};
+use ibdl_common::serde_json::{self, Value};
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
     extract_ext_from_url, join_tags,
@@ -25,18 +19,13 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use crate::extractor::caps::ExtractorFeatures;
-use crate::extractor::common::convert_tags_to_string;
 use crate::extractor::Extractor;
 use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
-use crate::imageboards::gelbooru::models::GelbooruTopLevel;
-use crate::prelude::SinglePostFetch;
 use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-mod gelbooru_old;
-mod models;
 mod unsync;
 
-pub struct GelbooruExtractor {
+pub struct GelbooruV0_2Extractor {
     client: Client,
     tags: Vec<String>,
     tag_string: String,
@@ -47,11 +36,9 @@ pub struct GelbooruExtractor {
     excluded_tags: Vec<String>,
     selected_extension: Option<Extension>,
     server_cfg: ServerConfig,
-    // auth: ImageboardConfig,
-    // auth_state: AuthState
 }
 
-impl Extractor for GelbooruExtractor {
+impl Extractor for GelbooruV0_2Extractor {
     fn new<S>(
         tags: &[S],
         download_ratings: &[Rating],
@@ -61,7 +48,7 @@ impl Extractor for GelbooruExtractor {
     where
         S: ToString + Display,
     {
-        let config = DEFAULT_SERVERS.get("gelbooru").unwrap().clone();
+        let config = DEFAULT_SERVERS.get("realbooru").unwrap().clone();
 
         // Use common client for all connections with a set User-Agent
         let client = Client::builder()
@@ -69,11 +56,21 @@ impl Extractor for GelbooruExtractor {
             .build()
             .unwrap();
 
-        let (string_vec, tag_string) = convert_tags_to_string(tags);
+        let strvec: Vec<String> = tags
+            .iter()
+            .map(|t| {
+                let st: String = t.to_string();
+                st
+            })
+            .collect();
+
+        // Merge all tags in the URL format
+        let tag_string = join_tags!(strvec);
+        debug!("Tag List: {}", tag_string);
 
         Self {
             client,
-            tags: string_vec,
+            tags: strvec,
             tag_string,
             disable_blacklist,
             total_removed: 0,
@@ -82,8 +79,6 @@ impl Extractor for GelbooruExtractor {
             excluded_tags: vec![],
             selected_extension: None,
             server_cfg: config,
-            // auth_state: AuthState::NotAuthenticated,
-            // auth: ImageboardConfig::default()
         }
     }
 
@@ -126,8 +121,6 @@ impl Extractor for GelbooruExtractor {
             excluded_tags: vec![],
             selected_extension: None,
             server_cfg: config,
-            // auth_state: AuthState::NotAuthenticated,
-            // auth: ImageboardConfig::default()
         }
     }
 
@@ -142,7 +135,7 @@ impl Extractor for GelbooruExtractor {
         posts.reverse();
 
         let qw = PostQueue {
-            imageboard: ImageBoards::Gelbooru,
+            imageboard: ImageBoards::GelbooruV0_2,
             client: self.client.clone(),
             posts,
             tags: self.tags.clone(),
@@ -219,7 +212,7 @@ impl Extractor for GelbooruExtractor {
         fvec.reverse();
 
         let fin = PostQueue {
-            imageboard: ImageBoards::Gelbooru,
+            imageboard: ImageBoards::GelbooruV0_2,
             client: self.client.clone(),
             posts: fvec,
             tags: self.tags.clone(),
@@ -277,35 +270,67 @@ impl Extractor for GelbooruExtractor {
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let parsed_json: GelbooruTopLevel =
-            serde_json::from_str::<GelbooruTopLevel>(raw_json.as_str())?;
+        let items = serde_json::from_str::<Value>(raw_json.as_str())?;
 
-        let batch = parsed_json
-            .post
-            .into_iter()
-            .filter(|c| c.file_url.is_some());
+        if let Some(arr) = items.as_array() {
+            let start = Instant::now();
+            let post_iter = arr.iter().filter(|f| f["hash"].as_str().is_some());
 
-        let mapper_iter = batch.map(|c| {
-            let tag_list = c.map_tags();
+            let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
 
-            let rt = c.rating.unwrap();
-            let rating = Rating::from_rating_str(&rt);
-            let xt = c.file_url.unwrap();
+            post_iter.for_each(|post| {
+                let tag_iter = post["tags"].as_str().unwrap().split(' ');
 
-            let extension = extract_ext_from_url!(xt);
+                let mut tags = Vec::with_capacity(tag_iter.size_hint().0);
 
-            Post {
-                id: c.id.unwrap(),
-                website: ImageBoards::Danbooru,
-                md5: c.md5.unwrap(),
-                url: xt,
-                extension: Extension::guess_format(&extension),
-                tags: tag_list,
-                rating,
-            }
-        });
+                tag_iter.for_each(|f| {
+                    tags.push(Tag::new(f, TagType::Any));
+                });
 
-        Ok(mapper_iter.collect::<Vec<Post>>())
+                let rating = Rating::from_rating_str(post["rating"].as_str().unwrap());
+
+                let file = post["image"].as_str().unwrap();
+
+                let md5 = post["hash"].as_str().unwrap().to_string();
+
+                let ext = extract_ext_from_url!(file);
+
+                let imgu = self
+                    .server_cfg
+                    .image_url
+                    .as_ref()
+                    .map_or(&self.server_cfg.base_url, |img_url| img_url);
+
+                let drop_url = format!(
+                    "{}/images/{}/{}.{}",
+                    imgu,
+                    post["directory"].as_str().unwrap(),
+                    &md5,
+                    ext
+                );
+
+                let unit = Post {
+                    id: post["id"].as_u64().unwrap(),
+                    website: ImageBoards::GelbooruV0_2,
+                    url: drop_url,
+                    md5,
+                    extension: Extension::guess_format(&ext),
+                    rating,
+                    tags,
+                };
+
+                post_mtx.push(unit);
+            });
+
+            let end = Instant::now();
+
+            debug!("List size: {}", post_mtx.len());
+            debug!("Post mapping took {:?}", end - start);
+
+            return Ok(post_mtx);
+        }
+
+        Err(ExtractorError::PostMapFailure)
     }
 
     fn client(&self) -> Client {
@@ -317,7 +342,7 @@ impl Extractor for GelbooruExtractor {
     }
 
     fn imageboard(&self) -> ImageBoards {
-        ImageBoards::Gelbooru
+        ImageBoards::GelbooruV0_2
     }
 
     fn features() -> ExtractorFeatures {
@@ -326,67 +351,5 @@ impl Extractor for GelbooruExtractor {
 
     fn config(&self) -> ServerConfig {
         self.server_cfg.clone()
-    }
-}
-
-// impl Auth for GelbooruExtractor {
-//     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
-//         let mut cfg = config;
-//
-//         self.excluded_tags
-//             .append(&mut cfg.user_data.blacklisted_tags);
-//
-//         self.auth = cfg;
-//         self.auth_state = AuthState::Authenticated;
-//         Ok(())
-//     }
-// }
-
-impl SinglePostFetch for GelbooruExtractor {
-    fn map_post(&self, _raw_json: String) -> Result<Post, ExtractorError> {
-        unimplemented!("Unsupported operation! Use `self.map_posts()` instead.");
-    }
-
-    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        if self.server_cfg.post_url.is_none() {
-            return Err(ExtractorError::UnsupportedOperation);
-        };
-
-        let url = format!(
-            "{}/{}.json",
-            self.server_cfg.post_url.as_ref().unwrap(),
-            post_id
-        );
-
-        let items = self.client.get(&url).send().await?.text().await?;
-
-        let start_point = Instant::now();
-
-        let mtx = self.map_posts(items)?;
-
-        mtx.first().map_or_else(
-            || Err(ExtractorError::ZeroPosts),
-            |post| {
-                let end_iter = start_point.elapsed();
-
-                debug!("Post mapping took {:?}", end_iter);
-                Ok(post.clone())
-            },
-        )
-    }
-
-    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {
-        let mut pvec = Vec::with_capacity(posts.len());
-
-        for post_id in posts {
-            let post = self.get_post(*post_id).await?;
-
-            // This function is pretty heavy on API usage, so let's ease it up a little.
-            debug!("Debouncing API calls by 500 ms");
-            sleep(Duration::from_millis(500)).await;
-
-            pvec.push(post);
-        }
-        Ok(pvec)
     }
 }

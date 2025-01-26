@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use ahash::{HashMap, HashMapExt};
 use ibdl_common::{
     log::debug,
@@ -11,18 +9,15 @@ use ibdl_common::{
         time::sleep,
     },
 };
-
-use crate::{
-    blacklist::BlacklistFilter,
-    error::ExtractorError,
-    imageboards::{
-        AsyncFetch, Extractor, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch,
-    },
-};
+use std::time::Duration;
 
 use super::E621Extractor;
+use crate::extractor::caps::PostFetchMethod;
+use crate::extractor::Extractor;
+use crate::prelude::{AsyncFetch, PoolExtract, PostFetchAsync, SinglePostFetch};
+use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-// A quick alias so I can copy paste stuff faster
+// A quick alias so I can copy-paste stuff faster
 type ExtractorUnit = E621Extractor;
 
 impl AsyncFetch for ExtractorUnit {
