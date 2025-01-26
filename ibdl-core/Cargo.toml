@@ -1,6 +1,6 @@
 [package]
 name = "ibdl-core"
-version = "1.7.0"
+version = "1.7.1"
 edition = "2021"
 description = "Main download infrastructure for imageboard_downloader"
 license = "MIT"
@@ -11,8 +11,8 @@ documentation = "https://docs.rs/ibdl-core"
 
 [dependencies]
 indicatif = "0.17.7"
-ibdl-common = { version = "1.8.0", path = "../ibdl-common" }
-ibdl-extractors = { version = "1.9.0", path = "../ibdl-extractors" }
+ibdl-common = { version = "1.8.1", path = "../ibdl-common" }
+ibdl-extractors = { version = "1.10.0", path = "../ibdl-extractors" }
 thiserror = "2.0.11"
 futures = "0.3"
 md5 = "0.7.0"
