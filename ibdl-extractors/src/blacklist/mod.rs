@@ -48,7 +48,7 @@ use crate::extractor_config::ServerConfig;
 
 use super::error::ExtractorError;
 
-const BF_INIT_TEXT: &str = include_str!("./blacklist.toml");
+const BF_INIT_TEXT: &str = include_str!("blacklist.toml");
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "self::serde")]

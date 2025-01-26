@@ -1,8 +1,4 @@
 #![deny(clippy::all)]
-use std::process::exit;
-use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
-
 use color_eyre::eyre::{bail, Result};
 use color_eyre::owo_colors::OwoColorize;
 use dialoguer::theme::ColorfulTheme;
@@ -14,6 +10,9 @@ use ibdl_core::clap::Parser;
 use ibdl_core::cli::{Cli, Commands, AVAILABLE_SERVERS};
 use ibdl_extractors::imageboards::ExtractorFeatures;
 use once_cell::sync::Lazy;
+use std::process::exit;
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 
 static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
 
