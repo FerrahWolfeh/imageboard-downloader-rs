@@ -300,7 +300,7 @@ impl Extractor for E621Extractor {
     }
 
     fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let mut items: E621TopLevel = serde_json::from_str(raw_json.as_str()).unwrap();
+        let mut items: E621TopLevel = serde_json::from_str(raw_json.as_str())?;
 
         let post_iter = items.posts.iter_mut().filter(|c| c.file.url.is_some());
 

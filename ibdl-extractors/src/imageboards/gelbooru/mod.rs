@@ -16,7 +16,7 @@ use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::{self};
 use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
-    extract_ext_from_url, join_tags,
+    extract_ext_from_url,
     log::debug,
     post::{rating::Rating, Post, PostQueue},
     ImageBoards,
@@ -103,17 +103,7 @@ impl Extractor for GelbooruExtractor {
             .build()
             .unwrap();
 
-        let strvec: Vec<String> = tags
-            .iter()
-            .map(|t| {
-                let st: String = t.to_string();
-                st
-            })
-            .collect();
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(strvec);
-        debug!("Tag List: {}", tag_string);
+        let (strvec, tag_string) = convert_tags_to_string(tags);
 
         Self {
             client,
