@@ -1,12 +1,13 @@
 // 20002709
-use ibdl_common::post::{extension::Extension, NameType};
+use ibdl_common::post::{NameType, extension::Extension};
 use ibdl_extractors::extractor_config::ServerConfig;
 use once_cell::sync::OnceCell;
 use std::{collections::HashMap, path::PathBuf};
 
-use clap::{Parser, Subcommand};
+#[cfg(feature = "cbz")]
+use std::path::Path;
 
-use crate::generate_output_path_precise;
+use clap::{Parser, Subcommand};
 
 use self::{
     commands::{pool::Pool, post::Post, search::TagSearch},
@@ -85,6 +86,7 @@ pub struct Cli {
     /// Save posts inside a cbz file.
     ///
     /// Will ask to overwrite the destination file.
+    #[cfg(feature = "cbz")]
     #[clap(
         long,
         value_parser,
@@ -142,18 +144,40 @@ impl Cli {
     }
 
     pub fn generate_save_path(&self) -> Result<PathBuf, std::io::Error> {
-        let raw_save_path = if let Some(precise_path) = &self.output {
-            precise_path.to_owned()
-        } else {
-            std::env::current_dir()?
-        };
+        #[cfg(feature = "cbz")]
+        if self.cbz {
+            // CBZ mode is selected by the user and the feature is enabled.
+            // Determine the base path for the CBZ file name.
+            let base_name_path = if let Some(output_path) = &self.output {
+                output_path.clone()
+            } else {
+                // No -o provided, use a default name in the current directory.
+                std::env::current_dir()?.join("imageboard_download")
+            };
+            // generate_output_path_precise is only compiled if 'cbz' feature is on.
+            // It will append ".cbz" to the base_name_path.
+            return Ok(generate_output_path_precise(&base_name_path, true));
+        }
 
-        let dirname = if self.output.is_some() {
-            generate_output_path_precise(&raw_save_path, self.cbz)
+        // This block is reached if:
+        // 1. The 'cbz' feature is disabled (the #[cfg(feature = "cbz")] block above is removed).
+        // 2. The 'cbz' feature is enabled, but self.cbz is false (user didn't pass --cbz).
+        // In both cases, we are in folder download mode.
+        if let Some(output_path) = &self.output {
+            Ok(output_path.clone())
         } else {
-            raw_save_path
-        };
-
-        Ok(dirname)
+            std::env::current_dir()
+        }
     }
+}
+
+#[cfg(feature = "cbz")]
+/// This function creates the destination directory without creating additional ones related to
+/// the selected imageboard or tags used.
+#[inline]
+pub fn generate_output_path_precise(main_path: &Path, cbz_mode: bool) -> PathBuf {
+    if cbz_mode {
+        return PathBuf::from(&format!("{}.cbz", main_path.display()));
+    }
+    main_path.to_path_buf()
 }

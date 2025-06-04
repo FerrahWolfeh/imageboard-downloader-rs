@@ -17,7 +17,6 @@ thiserror = "2.0.11"
 futures = "0.3"
 md5 = "0.7.0"
 tokio-stream = "0.1.14"
-owo-colors = "4.0.0"
 once_cell = "1.19.0"
 dialoguer = "0.11.0"
 
@@ -31,6 +30,7 @@ cbz = ["zip"]
 #default = ["cbz"] # Keep CBZ enabled by default for backward compatibility
 
 [dependencies.zip]
-version = "0.6.6"
+version = "4.0.0"
 default-features = false
 features = ["deflate", "time"]
+optional = true

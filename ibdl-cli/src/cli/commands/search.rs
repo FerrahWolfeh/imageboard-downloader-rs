@@ -1,9 +1,9 @@
 use clap::Args;
 use ibdl_common::{
-    post::{rating::Rating, Post},
+    ImageBoards,
+    post::{Post, rating::Rating},
     reqwest::Client,
     tokio::sync::mpsc::{Sender, UnboundedSender},
-    ImageBoards,
 };
 use ibdl_extractors::imageboards::{
     danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
@@ -12,9 +12,9 @@ use ibdl_extractors::imageboards::{
 use ibdl_extractors::prelude::*;
 
 use crate::{
-    cli::{extra::auth_imgboard, Cli},
-    error::CliError,
     RatingArg,
+    cli::{Cli, extra::auth_imgboard},
+    error::CliError,
 };
 
 #[derive(Debug, Args)]
@@ -146,6 +146,7 @@ impl TagSearch {
                 let client = unit.client();
 
                 let ext_thd = unit.setup_fetch_thread(
+                    // Pass the sender for the total count channel
                     channel_tx,
                     self.start_page,
                     self.limit,
@@ -173,6 +174,7 @@ impl TagSearch {
                 let client = unit.client();
 
                 let ext_thd = unit.setup_fetch_thread(
+                    // Pass the sender for the total count channel
                     channel_tx,
                     self.start_page,
                     self.limit,
@@ -199,6 +201,7 @@ impl TagSearch {
                 let client = unit.client();
 
                 let ext_thd = unit.setup_fetch_thread(
+                    // Pass the sender for the total count channel
                     channel_tx,
                     self.start_page,
                     self.limit,
