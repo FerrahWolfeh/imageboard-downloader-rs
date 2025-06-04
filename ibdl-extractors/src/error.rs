@@ -44,8 +44,11 @@ pub enum ExtractorError {
     #[error("Failed to map posts")]
     PostMapFailure,
 
-    #[error("Failed to decode blacklist.toml in {path}")]
-    BlacklistDecodeError { path: String },
+    #[error("Failed to decode blacklis: {source}")]
+    BlacklistDecodeError {
+        #[from]
+        source: toml::de::Error,
+    },
 
     #[error("Invalid imageboard selected for this extractor: {imgboard}")]
     InvalidImageboard { imgboard: String },

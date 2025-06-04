@@ -1,13 +1,10 @@
 //! All methods and structs related to user authentication and configuration for imageboard websites
 use bincode::serialize;
-use ibdl_common::{bincode, log, reqwest, tokio};
+use ibdl_common::{bincode, log, reqwest};
 use log::debug;
 use reqwest::Client;
-use std::io;
-use std::path::Path;
+use std::io::{self};
 use thiserror::Error;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
 
 use ibdl_common::ImageBoards;
 
@@ -111,6 +108,12 @@ impl ImageboardConfig {
         }
     }
 
+    /// Returns the "pretty name" of the imageboard server.
+    #[must_use]
+    pub fn server_pretty_name(&self) -> &str {
+        &self.imageboard.pretty_name
+    }
+
     pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
         #[derive(Debug, Serialize, Deserialize)]
         #[serde(crate = "self::serde")]
@@ -166,31 +169,18 @@ impl ImageboardConfig {
             debug!("User id: {}", self.user_data.id);
             debug!("Blacklisted tags: '{:?}'", self.user_data.blacklisted_tags);
 
-            self.write_cache().await?;
+            // The responsibility of caching/writing the config is now external.
+            // The caller can use `to_bincode_bytes()` to get the serialized data.
         }
 
         Ok(())
     }
 
-    /// Generates a bincode file that contains all the data from `self` and saves
-    /// it in the directory provided by a `ImageBoards::auth_cache_dir()` method.
-    async fn write_cache(&self) -> Result<(), Error> {
-        let config_path =
-            ImageBoards::auth_cache_dir()?.join(Path::new(&self.imageboard.pretty_name));
-        let mut cfg_cache = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .read(true)
-            .write(true)
-            .open(&config_path)
-            .await?;
-
-        let Ok(bytes) = serialize(&self) else {
-            return Err(Error::ConfigEncodeError);
-        };
-
-        cfg_cache.write_all(&bytes).await?;
-        debug!("Wrote auth cache to {}", &config_path.display());
-        Ok(())
+    /// Serializes the `ImageboardConfig` into bincode-encoded bytes.
+    ///
+    /// This allows external code to handle the actual writing of the cache,
+    /// making the process IO-agnostic.
+    pub fn to_bincode_bytes(&self) -> Result<Vec<u8>, Error> {
+        serialize(&self).map_err(|_| Error::ConfigEncodeError)
     }
 }

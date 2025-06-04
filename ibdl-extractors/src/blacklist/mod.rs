@@ -87,11 +87,7 @@ impl GlobalBlacklist {
 
         let gbl_string = read_to_string(&dir).await?;
 
-        let Ok(deserialized) = from_str::<Self>(&gbl_string) else {
-            return Err(ExtractorError::BlacklistDecodeError {
-                path: dir.display().to_string(),
-            });
-        };
+        let deserialized = from_str::<Self>(&gbl_string)?;
 
         debug!("Global blacklist config decoded");
         debug!(

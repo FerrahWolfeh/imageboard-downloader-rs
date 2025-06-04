@@ -224,7 +224,7 @@ impl Extractor for MoebooruExtractor {
     ) -> Result<Vec<Post>, ExtractorError> {
         if self.server_cfg.post_list_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
-        };
+        }
 
         let page_post_count = {
             limit.map_or(self.server_cfg.max_post_limit, |count| {

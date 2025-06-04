@@ -16,7 +16,7 @@ impl PoolExtract for E621Extractor {
     ) -> Result<HashMap<u64, usize>, ExtractorError> {
         if self.server_cfg.pool_idx_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
-        };
+        }
 
         let url = format!(
             "{}/{}.json",

@@ -269,7 +269,7 @@ impl Extractor for DanbooruExtractor {
     ) -> Result<Vec<Post>, ExtractorError> {
         if self.server_cfg.post_list_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
-        };
+        }
 
         let mut request = self
             .client
@@ -281,14 +281,14 @@ impl Extractor for DanbooruExtractor {
             request = request.basic_auth(&self.auth.username, Some(&self.auth.api_key));
         } else {
             debug!("Fetching posts from page {}", page);
-        };
+        }
 
         let page_post_count = {
-            limit.map_or(self.server_cfg.max_post_limit as u16, |count| {
-                if count < self.server_cfg.max_post_limit as u16 {
+            limit.map_or(self.server_cfg.max_post_limit, |count| {
+                if count < self.server_cfg.max_post_limit {
                     count
                 } else {
-                    self.server_cfg.max_post_limit as u16
+                    self.server_cfg.max_post_limit
                 }
             })
         };
@@ -405,7 +405,7 @@ impl SinglePostFetch for DanbooruExtractor {
     async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
         if self.server_cfg.post_url.is_none() {
             return Err(ExtractorError::UnsupportedOperation);
-        };
+        }
 
         let url = format!(
             "{}/{}.json",
