@@ -1,7 +1,7 @@
 [package]
 name = "ibdl-core"
 version = "1.7.1"
-edition = "2021"
+edition = "2024"
 description = "Main download infrastructure for imageboard_downloader"
 license = "MIT"
 repository = "https://gitlab.com/FerrahWolfeh/imageboard-downloader-rs"
