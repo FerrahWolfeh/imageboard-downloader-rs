@@ -33,3 +33,15 @@ macro_rules! extract_ext_from_url {
         ext.to_string()
     }};
 }
+
+#[macro_export]
+macro_rules! all_ratings {
+    () => {
+        &[
+            Rating::Safe,
+            Rating::Questionable,
+            Rating::Explicit,
+            Rating::Unknown,
+        ]
+    };
+}

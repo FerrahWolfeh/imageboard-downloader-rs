@@ -38,6 +38,18 @@ pub enum ImageBoards {
     Gelbooru,
 }
 
+impl ImageBoards {
+    pub fn domain(&self) -> &'static str {
+        match self {
+            Self::Danbooru => "https://danbooru.donmai.us",
+            Self::E621 => "https://e621.net",
+            Self::GelbooruV0_2 => "http://realbooru.com",
+            Self::Moebooru => "https://konachan.com",
+            Self::Gelbooru => "https://gelbooru.com",
+        }
+    }
+}
+
 impl Display for ImageBoards {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
