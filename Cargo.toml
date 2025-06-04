@@ -1,5 +1,11 @@
 [workspace]
-members = ["ibdl-common", "ibdl-core", "ibdl-extractors"]
+members = [
+    "ibdl-cli",
+    "ibdl-common",
+    "ibdl-core",
+    "ibdl-extractors",
+    "ibdl-wasm-gui",
+]
 
 [package]
 name = "imageboard_downloader"

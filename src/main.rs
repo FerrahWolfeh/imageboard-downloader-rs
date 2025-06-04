@@ -1,20 +1,18 @@
 #![deny(clippy::all)]
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use color_eyre::owo_colors::OwoColorize;
-use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
-use ibdl_common::tokio::sync::mpsc::{channel, unbounded_channel};
-use ibdl_common::tokio::{self, join};
+use ibdl_cli::cli::{AVAILABLE_SERVERS, Cli, Commands};
+use ibdl_cli::progress_bars::IndicatifProgressHandler; // Import the CLI progress handler
 use ibdl_core::async_queue::Queue;
+use ibdl_core::async_queue::QueueOpts;
 use ibdl_core::clap::Parser;
-use ibdl_core::cli::{Cli, Commands, AVAILABLE_SERVERS};
+use ibdl_core::progress::ProgressListener;
 use ibdl_extractors::prelude::ExtractorFeatures;
-use once_cell::sync::Lazy;
 use std::process::exit;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-
-static POST_COUNTER: Lazy<Arc<AtomicU64>> = Lazy::new(|| Arc::new(AtomicU64::new(0)));
+use tokio::sync::mpsc::{channel, unbounded_channel};
+use tokio::{self, join};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,46 +30,83 @@ async fn main() -> Result<()> {
     if (dirname.exists() && (dirname.is_file() || dirname.read_dir()?.next().is_some()))
         && !args.overwrite
     {
-        let conf_exists = Confirm::with_theme(&ColorfulTheme::default())
+        let conf_exists = Confirm::new()
             .with_prompt(format!(
                 "The path {} is not empty or already exists. Do you want to continue?",
                 dirname.display().bold().blue().italic()
             ))
             .wait_for_newline(true)
             .interact()?;
+
         if !conf_exists {
             println!("{}", "Download cancelled".bold().blue());
             exit(0);
         }
     }
 
-    let (channel_tx, channel_rx) = unbounded_channel();
-
-    let (length_sender, length_channel) = channel(args.simultaneous_downloads as usize);
+    // Channel for posts from extractor to queue
+    let (posts_sender, posts_receiver) = unbounded_channel();
+    // Channel for total post count from extractor to progress handler
+    let (length_sender, mut length_receiver) = channel::<u64>(1);
     let mut is_pool = false;
 
+    // Create the progress handler instance
+    // The initial length will be set by the extractor via the listener
+    let progress_handler = Arc::new(IndicatifProgressHandler::new(
+        0,
+        args.imageboard.clone().server,
+    ));
+
+    // Task to update the main progress bar's total length
+    let progress_total_updater_task = tokio::spawn({
+        let progress_handler = progress_handler.clone();
+        async move {
+            while let Some(total_posts) = length_receiver.recv().await {
+                progress_handler.inc_main_total(total_posts);
+            }
+            // Receiver will be dropped when sender is dropped by the extractor or extractor finishes
+        }
+    });
+
     let (ext, client) = match &args.mode {
-        Commands::Search(com) => com.init_extractor(&args, channel_tx, length_sender).await?,
+        Commands::Search(com) => {
+            com.init_extractor(&args, posts_sender, length_sender)
+                .await?
+        }
         Commands::Pool(com) => {
             is_pool = true;
-            com.init_extractor(&args, channel_tx, length_sender).await?
+            com.init_extractor(&args, posts_sender, length_sender)
+                .await?
         }
-        Commands::Post(com) => com.init_extractor(&args, channel_tx, length_sender).await?,
+        Commands::Post(com) => {
+            com.init_extractor(&args, posts_sender, length_sender)
+                .await?
+        }
+    };
+
+    let output_options = QueueOpts {
+        #[cfg(feature = "cbz")]
+        save_as_cbz: args.cbz,
+        #[cfg(not(feature = "cbz"))]
+        save_as_cbz: false, // If CBZ feature is off, this must be false
+        pool_download: is_pool,
+        name_type: args.name_type(),
+        annotate: args.annotate,
     };
 
     let qw = Queue::new(
         args.imageboard.clone(),
         args.simultaneous_downloads,
         Some(client),
-        args.cbz,
-        is_pool,
-        args.name_type(),
-        args.annotate,
+        output_options,
+        Some(progress_handler.clone()), // Pass the progress handler
     );
 
-    let asd = qw.setup_async_downloader(dirname, POST_COUNTER.clone(), channel_rx, length_channel);
+    let downloader_task = qw.setup_async_downloader(dirname, posts_receiver);
 
-    let (Ok(removed), Ok(results)) = join!(ext, asd) else {
+    let (Ok(removed), Ok(results), Ok(_)) =
+        join!(ext, downloader_task, progress_total_updater_task)
+    else {
         bail!("Failed starting threads!")
     };
 

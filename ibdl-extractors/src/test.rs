@@ -2,7 +2,7 @@
 use crate::extractor::Extractor;
 use crate::extractor_config::DEFAULT_SERVERS;
 use crate::imageboards::danbooru::DanbooruExtractor;
-use ibdl_common::{post::rating::Rating, tokio, ImageBoards};
+use ibdl_common::{post::rating::Rating, ImageBoards};
 
 #[tokio::test]
 async fn danbooru_test_post_api() {

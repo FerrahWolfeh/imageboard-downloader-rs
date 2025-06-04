@@ -1,7 +1,6 @@
 use std::{io, num::TryFromIntError};
 
 use thiserror::Error;
-use tokio::task;
 
 #[derive(Error, Debug)]
 pub enum PostError {
@@ -29,11 +28,8 @@ pub enum PostError {
     #[error("Error while fetching chunk: {message}")]
     ChunkDownloadFail { message: String },
 
-    #[error("Failed to start thread for writing file to destination cbz: {source}")]
-    ZipThreadStartError {
-        #[from]
-        source: task::JoinError,
-    },
+    #[error("Failed to start thread for writing file to destination cbz: {msg}")]
+    ZipThreadStartError { msg: String },
 
     #[error("Failed to write file to destination cbz: {message}")]
     ZipFileWriteError { message: String },

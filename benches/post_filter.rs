@@ -1,16 +1,18 @@
 use ahash::AHashSet;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use ibdl_common::post::{
+    Post,
     extension::Extension,
     rating::Rating,
     tags::{Tag, TagType},
-    Post,
 };
 use rand::{
-    distributions::{Alphanumeric, DistString},
-    seq::SliceRandom,
-    thread_rng, Rng,
+    Rng,
+    distr::{Alphanumeric, SampleString},
+    rng,
+    seq::IndexedRandom,
 };
+use std::hint::black_box;
 
 const TAGS: [&str; 135] = [
     "dog",
@@ -160,9 +162,9 @@ const RATINGS: [Rating; 4] = [
 ];
 
 fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
-    let rnum = rng.gen_range(1..=27);
+    let rnum = rng.random_range(1..=27);
 
     let random_tlist: AHashSet<String> = TAGS
         .choose_multiple(&mut rng, rnum)
@@ -172,9 +174,9 @@ fn seed_data(num: u64) -> (Vec<Post>, AHashSet<String>) {
     let mut v2: Vec<Post> = vec![];
 
     for _i in 0..=num {
-        let rn = rng.gen_range(0..=27);
+        let rn = rng.random_range(0..=27);
 
-        let id = rng.gen_range(1..u64::MAX);
+        let id = rng.random_range(1..u64::MAX);
 
         let md5 = Alphanumeric.sample_string(&mut rng, 32);
 

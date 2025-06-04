@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use ibdl_common::post::rating::Rating;
 use ibdl_extractors::extractor_config::DEFAULT_SERVERS;
 use ibdl_extractors::imageboards::danbooru::DanbooruExtractor;
@@ -6,6 +6,7 @@ use ibdl_extractors::imageboards::e621::E621Extractor;
 use ibdl_extractors::imageboards::gelbooru::GelbooruExtractor;
 use ibdl_extractors::imageboards::moebooru::MoebooruExtractor;
 use ibdl_extractors::prelude::Extractor;
+use std::hint::black_box;
 
 static TEST_JSON_E621: &str = include_str!("../assets/sample_post_lists/test_list_e621.json");
 static TEST_JSON_DANBOORU: &str =
