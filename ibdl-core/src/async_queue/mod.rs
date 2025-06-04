@@ -56,29 +56,23 @@ mod cbz;
 mod folder;
 
 use crate::error::QueueError;
-use crate::progress_bars::ProgressCounter;
+// Import the new progress listener traits and helpers
+use crate::progress::{no_op_progress_listener, SharedProgressListener};
 use ibdl_common::log::debug;
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::{NameType, Post};
 use ibdl_common::reqwest::Client;
 use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::{channel, Receiver, UnboundedReceiver};
+use ibdl_common::tokio::sync::mpsc::UnboundedReceiver; // Removed Receiver, channel
 use ibdl_common::tokio::task::JoinHandle;
 use ibdl_common::{client, tokio};
 use ibdl_extractors::extractor_config::ServerConfig;
-use once_cell::sync::OnceCell;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::fs::{create_dir_all, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-
-static PROGRESS_COUNTERS: OnceCell<ProgressCounter> = OnceCell::new();
-
-pub(crate) fn get_counters() -> &'static ProgressCounter {
-    PROGRESS_COUNTERS.get().unwrap()
-}
 
 #[derive(Debug, Copy, Clone)]
 enum DownloadFormat {
@@ -119,37 +113,45 @@ impl DownloadFormat {
     }
 }
 
+/// Options for configuring the output and naming of downloaded files.
+#[derive(Debug, Clone, Copy)]
+pub struct QueueOpts {
+    pub save_as_cbz: bool,
+    pub pool_download: bool,
+    pub name_type: NameType,
+    pub annotate: bool,
+}
+
 /// Struct where all the downloading will take place
 pub struct Queue {
-    imageboard: ServerConfig,
     sim_downloads: u8,
     client: Client,
     download_fmt: DownloadFormat,
     name_type: NameType,
     annotate: bool,
+    // No imageboard field here, it's used for client creation only if needed
+    progress_listener: SharedProgressListener,
 }
 
 impl Queue {
     /// Set up the queue for download
     pub fn new(
-        imageboard: ServerConfig,
+        server_config: ServerConfig,
         sim_downloads: u8,
         custom_client: Option<Client>,
-        save_as_cbz: bool,
-        pool_download: bool,
-        name_type: NameType,
-        annotate: bool,
+        options: QueueOpts,
+        progress_listener: Option<SharedProgressListener>,
     ) -> Self {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client!(imageboard)
+            client!(server_config)
         };
 
         let download_fmt = if options.pool_download {
             #[cfg(feature = "cbz")]
             if options.save_as_cbz {
-            DownloadFormat::CbzPool
+                DownloadFormat::CbzPool
             } else {
                 DownloadFormat::FolderPool
             }
@@ -160,64 +162,85 @@ impl Queue {
             DownloadFormat::Folder
         };
 
+        let listener = progress_listener.unwrap_or_else(no_op_progress_listener);
         Self {
             download_fmt,
-            imageboard,
             sim_downloads,
-            annotate,
+            annotate: options.annotate,
             client,
-            name_type,
+            name_type: options.name_type,
+            progress_listener: listener,
         }
     }
 
+    /// Spawns the main asynchronous download task.
+    ///
+    /// # Arguments
+    /// * `output_dir`: The base directory where files or CBZ archives will be saved.
+    /// * `channel_rx`: An unbounded receiver for `Post` objects to be downloaded.
+    ///
+    /// The caller is responsible for:
+    /// 1. Creating and configuring the `ProgressListener` (passed during `Queue::new`).
+    /// 2. Calling `set_main_total` and `inc_main_total` on the `ProgressListener` as posts are discovered.
+    /// 3. Sending `Post` objects into `channel_rx`.
+    ///
+    /// # Returns
+    /// A `JoinHandle` to the spawned task, which will return the total number of successfully
+    /// downloaded posts or a `QueueError`.
     pub fn setup_async_downloader(
         self,
         output_dir: PathBuf,
-        post_counter: Arc<AtomicU64>,
         channel_rx: UnboundedReceiver<Post>,
-        length_rx: Receiver<u64>,
     ) -> JoinHandle<Result<u64, QueueError>> {
+        let progress_listener = self.progress_listener.clone(); // Clone Arc for the spawned task
+
         spawn(async move {
             debug!("Async Downloader thread initialized");
-
-            let counters = PROGRESS_COUNTERS.get_or_init(|| {
-                ProgressCounter::initialize(
-                    post_counter.load(Ordering::Relaxed),
-                    self.imageboard.server,
-                )
-            });
 
             self.create_out(&output_dir).await?;
 
             let post_channel = UnboundedReceiverStream::new(channel_rx);
-            let (progress_sender, progress_channel) = channel(self.sim_downloads as usize);
 
-            counters.init_length_updater(length_rx).await;
-            counters.init_download_counter(progress_channel).await;
+            // Counter for successfully downloaded posts
+            // This counter tracks posts that are fully downloaded and saved.
+            let downloaded_post_count = Arc::new(AtomicU64::new(0));
 
-            if self.download_fmt.download_cbz() {
+            // The main progress bar (controlled by progress_listener.main_tick() and set_main_total())
+            // will now track posts as they are received from the extractor into the queue.
+            // The total for this bar is set by the caller (e.g., main.rs) after the extractor
+            // sends the total number of posts it expects to fetch.
+            // The condition now correctly checks if the 'cbz' feature is enabled AND
+            // if the download format is actually CBZ.
+            if cfg!(feature = "cbz") && self.download_fmt.download_cbz() {
+                #[cfg(feature = "cbz")]
                 self.cbz_path(
-                    output_dir,
-                    progress_sender,
-                    post_channel,
+                    output_dir,   // This is the CBZ file path itself
+                    post_channel, // Stream of posts from the extractor
                     self.download_fmt.download_pool(),
+                    progress_listener.clone(), // Pass listener to internal methods
+                    downloaded_post_count.clone(), // Pass counter
                 )
                 .await?;
             } else {
+                // This branch is taken if 'cbz' feature is disabled,
+                // OR if 'cbz' feature is enabled but folder download is selected.
                 self.download_channel(
                     post_channel,
-                    progress_sender,
-                    output_dir,
+                    output_dir, // This is the root directory for downloaded files
                     self.download_fmt.download_pool(),
+                    progress_listener.clone(), // Pass listener to internal methods
+                    downloaded_post_count.clone(), // Pass counter
                 )
                 .await;
             }
 
-            counters.main.finish_and_clear();
+            // Signal that the main processing is done via the listener
+            // This will finish the main progress bar, indicating all posts received
+            // from the extractor have been processed (attempted for download).
+            self.progress_listener.main_done();
 
-            let tot = counters.downloaded_mtx.load(Ordering::SeqCst);
-
-            Ok(tot)
+            let total_downloaded = downloaded_post_count.load(Ordering::SeqCst);
+            Ok(total_downloaded)
         })
     }
 
@@ -257,6 +280,7 @@ impl Queue {
         let outpath = output.join(format!("{}.txt", post.name(name_type)));
         let mut prompt_file = OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(outpath)
             .await?;
@@ -276,4 +300,16 @@ impl Queue {
         debug!("Wrote caption file for {}", post.file_name(name_type));
         Ok(())
     }
+
+    // NOTE on Progress Handling:
+    //
+    // The `SharedProgressListener` is used for two main types of progress:
+    // 1. Main Progress (Extractor Output):
+    //    - Total: Set by the CLI (`main.rs`) when the extractor communicates the total number of posts it will fetch.
+    //             This happens via the `length_tx` channel passed to the extractor.
+    //    - Ticks: `progress_listener.main_tick()` is called within `cbz_path` or `download_channel`
+    //             as soon as a `Post` is received from the `post_channel` (i.e., from the extractor).
+    // 2. Download Progress (Per-File):
+    //    - Handled by `progress_listener.add_download_task(...)` and its associated `DownloadProgressUpdater` methods.
+    //    - `downloaded_post_count` (Arc<AtomicU64>) is incremented after a post's file is successfully downloaded.
 }
