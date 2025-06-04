@@ -25,6 +25,11 @@ dialoguer = "0.11.0"
 version = "4.4"
 features = ["derive", "cargo"]
 
+[features]
+# Enables downloading posts into CBZ archives
+cbz = ["zip"]
+#default = ["cbz"] # Keep CBZ enabled by default for backward compatibility
+
 [dependencies.zip]
 version = "0.6.6"
 default-features = false

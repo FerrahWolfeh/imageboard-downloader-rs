@@ -1,4 +1,12 @@
-use std::{fs::File, io::Write, path::PathBuf, sync::Arc, sync::Mutex};
+use std::{
+    fs::File,
+    io::Write,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
+};
 
 use futures::StreamExt;
 use ibdl_common::{
@@ -7,74 +15,71 @@ use ibdl_common::{
     reqwest::Client,
     tokio::{
         io::AsyncWriteExt,
-        sync::mpsc::Sender,
         task::{self, spawn_blocking},
     },
-    ImageBoards,
 };
-use owo_colors::OwoColorize;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use zip::{write::FileOptions, CompressionMethod, ZipWriter};
+use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
-use crate::{async_queue::get_counters, error::QueueError};
+use crate::{error::QueueError, progress::SharedProgressListener};
 
 use super::Queue;
 
 impl Queue {
     pub(crate) async fn fetch_cbz_pool(
         client: Client,
-        variant: ImageBoards,
         post: Post,
         zip: Arc<Mutex<ZipWriter<File>>>,
         num_digits: usize,
+        progress_listener: SharedProgressListener,
     ) -> Result<(), PostError> {
-        let counters = get_counters();
-
         let filename = post.seq_file_name(num_digits);
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
 
+        // Use the already computed filename for logging if skipping
         if res.status().is_client_error() {
-            counters.multi.println(format!(
-                "{} {}{}",
-                "Image source returned status".bold().red(),
-                res.status().as_str().bold().red(),
-                ". Skipping download.".bold().red()
-            ))?;
-            counters.main.inc(1);
+            debug!(
+                "Image source for {} returned status {}. Skipping download.",
+                post.url,
+                res.status().as_str()
+            );
+            progress_listener.log_skip_message(
+                &filename,
+                &format!("skipped, server returned: {}", res.status().as_str()),
+            );
             return Err(PostError::RemoteFileNotFound);
         }
 
         let size = res.content_length().unwrap_or_default();
+        let dl_updater = progress_listener.add_download_task(filename.clone(), Some(size));
+        let mut downloaded_bytes = 0;
 
-        let pb = counters.add_download_bar(size, variant);
-
-        // Download the file chunk by chunk.
         debug!("Retrieving chunks for {}", &filename);
         let mut stream = res.bytes_stream();
 
-        let buf_size: usize = size.try_into()?;
+        let mut fvec: Vec<u8> = Vec::with_capacity(size.try_into().unwrap_or(0));
 
-        let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
-
-        let options = FileOptions::default().compression_method(CompressionMethod::Stored);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
 
         while let Some(item) = stream.next().await {
             // Retrieve chunk.
             let chunk = match item {
                 Ok(chunk) => chunk,
                 Err(e) => {
+                    dl_updater.finish();
                     return Err(PostError::ChunkDownloadFail {
                         message: e.to_string(),
-                    })
+                    });
                 }
             };
-            pb.inc(chunk.len().try_into()?);
+            let chunk_len = chunk.len() as u64;
+            downloaded_bytes += chunk_len;
+            dl_updater.set_progress(downloaded_bytes);
 
             // Write to file.
             AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
         }
-
         spawn_blocking(move || -> Result<(), PostError> {
             let mut un_mut = zip.lock().unwrap();
 
@@ -91,51 +96,53 @@ impl Queue {
 
             Ok(())
         })
-        .await??;
+        .await
+        .map_err(|thread_error| PostError::ZipThreadStartError {
+            msg: thread_error.to_string(), // Corrected from ZipFileWriteError to ZipThreadStartError if it's from spawn_blocking
+        })??;
 
-        pb.finish_and_clear();
+        dl_updater.finish();
 
         Ok(())
     }
 
     pub(crate) async fn fetch_cbz(
         client: Client,
-        variant: ImageBoards,
         name_type: NameType,
         post: Post,
         annotate: bool,
         zip: Arc<Mutex<ZipWriter<File>>>,
+        progress_listener: SharedProgressListener,
     ) -> Result<(), PostError> {
-        let counters = get_counters();
         let filename = post.file_name(name_type);
         debug!("Fetching {}", &post.url);
         let res = client.get(&post.url).send().await?;
 
+        // Use the already computed filename for logging if skipping
         if res.status().is_client_error() {
-            counters.multi.println(format!(
-                "{} {}{}",
-                "Image source returned status".bold().red(),
-                res.status().as_str().bold().red(),
-                ". Skipping download.".bold().red()
-            ))?;
-            counters.main.inc(1);
+            debug!(
+                "Image source for {} returned status {}. Skipping download.",
+                post.url,
+                res.status().as_str()
+            );
+            progress_listener.log_skip_message(
+                &filename,
+                &format!("skipped, server returned: {}", res.status().as_str()),
+            );
             return Err(PostError::RemoteFileNotFound);
         }
 
         let size = res.content_length().unwrap_or_default();
+        let dl_updater = progress_listener.add_download_task(filename.clone(), Some(size));
+        let mut downloaded_bytes = 0;
 
-        let pb = counters.add_download_bar(size, variant);
-
-        // Download the file chunk by chunk.
         debug!("Retrieving chunks for {}", &filename);
         let mut stream = res.bytes_stream();
 
-        let buf_size: usize = size.try_into()?;
+        let mut fvec: Vec<u8> = Vec::with_capacity(size.try_into().unwrap_or(0));
 
-        let mut fvec: Vec<u8> = Vec::with_capacity(buf_size);
-
-        let options = FileOptions::default().compression_method(CompressionMethod::Stored);
-        let cap_options = FileOptions::default()
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        let cap_options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated)
             .compression_level(Some(5));
 
@@ -144,23 +151,24 @@ impl Queue {
             let chunk = match item {
                 Ok(chunk) => chunk,
                 Err(e) => {
+                    dl_updater.finish();
                     return Err(PostError::ChunkDownloadFail {
                         message: e.to_string(),
-                    })
+                    });
                 }
             };
-            pb.inc(chunk.len().try_into()?);
+            let chunk_len = chunk.len() as u64;
+            downloaded_bytes += chunk_len;
+            dl_updater.set_progress(downloaded_bytes);
 
             // Write to file.
             AsyncWriteExt::write_all(&mut fvec, &chunk).await?;
         }
-
         spawn_blocking(move || -> Result<(), PostError> {
             let mut un_mut = zip.lock().unwrap();
 
             debug!("Writing {} to cbz file", filename);
-            if let Err(error) =
-                un_mut.start_file(format!("{}/{}", post.rating.to_string(), filename), options)
+            if let Err(error) = un_mut.start_file(format!("{}/{}", post.rating, filename), options)
             {
                 drop(un_mut);
                 return Err(PostError::ZipFileWriteError {
@@ -173,7 +181,7 @@ impl Queue {
             if annotate {
                 debug!("Writing caption for {} to cbz file", filename);
                 if let Err(error) = un_mut.start_file(
-                    format!("{}/{}.txt", post.rating.to_string(), post.name(name_type)),
+                    format!("{}/{}.txt", post.rating, post.name(name_type)),
                     cap_options,
                 ) {
                     drop(un_mut);
@@ -200,9 +208,12 @@ impl Queue {
             }
             Ok(())
         })
-        .await??;
+        .await
+        .map_err(|thread_error| PostError::ZipThreadStartError {
+            msg: thread_error.to_string(),
+        })??;
 
-        pb.finish_and_clear();
+        dl_updater.finish();
 
         Ok(())
     }
@@ -212,11 +223,13 @@ impl Queue {
         zip: Arc<Mutex<ZipWriter<File>>>,
     ) -> Result<(), QueueError> {
         {
+            let opts = SimpleFileOptions::default();
+
             let mut z_1 = zip.lock().unwrap();
-            z_1.add_directory(Rating::Safe.to_string(), FileOptions::default())?;
-            z_1.add_directory(Rating::Questionable.to_string(), FileOptions::default())?;
-            z_1.add_directory(Rating::Explicit.to_string(), FileOptions::default())?;
-            z_1.add_directory(Rating::Unknown.to_string(), FileOptions::default())?;
+            z_1.add_directory(Rating::Safe.to_string(), opts)?;
+            z_1.add_directory(Rating::Questionable.to_string(), opts)?;
+            z_1.add_directory(Rating::Explicit.to_string(), opts)?;
+            z_1.add_directory(Rating::Unknown.to_string(), opts)?;
         }
 
         Ok(())
@@ -225,50 +238,97 @@ impl Queue {
     pub(crate) async fn cbz_path(
         &self,
         path: PathBuf,
-        progress_channel: Sender<bool>,
         channel: UnboundedReceiverStream<Post>,
-        pool: bool,
+        is_pool: bool,
+        progress_listener: SharedProgressListener,
+        // This counter is incremented *after* a post is successfully downloaded and added to the CBZ.
+        // The main progress bar is ticked *before* the download task is spawned,
+        // indicating the post has been received from the extractor.
+        downloaded_post_count: Arc<AtomicU64>,
     ) -> Result<(), QueueError> {
         debug!("Target file: {}", path.display());
 
         let file = File::create(&path)?;
         let zip = Arc::new(Mutex::new(ZipWriter::new(file)));
 
-        if !pool {
+        if !is_pool {
             self.write_zip_structure(zip.clone())?;
         }
-        let sender = progress_channel.clone();
 
         channel
-            .map(|d| {
-                let nt = self.name_type;
+            .map(|post_to_download| {
+                // Increment main progress bar as soon as a post is received from the extractor channel
+                progress_listener.main_tick();
 
-                let cli = self.client.clone();
-                let zip = zip.clone();
-                let variant = self.imageboard.server;
-                let annotate = self.annotate;
-                let sender = sender.clone();
+                // Clone Arcs and values
+                let nt_clone = self.name_type;
+                let client_clone = self.client.clone();
+                let zip_clone = zip.clone();
+                let progress_listener_clone = progress_listener.clone();
+                let annotate_clone = self.annotate;
 
                 task::spawn(async move {
-                    if pool {
-                        Self::fetch_cbz_pool(cli, variant, d, zip, 6).await?;
+                    if is_pool {
+                        Self::fetch_cbz_pool(
+                            client_clone,
+                            post_to_download,
+                            zip_clone,
+                            6, // num_digits for pool
+                            progress_listener_clone,
+                        )
+                        .await
                     } else {
-                        Self::fetch_cbz(cli, variant, nt, d, annotate, zip).await?;
+                        Self::fetch_cbz(
+                            client_clone,
+                            nt_clone,
+                            post_to_download,
+                            annotate_clone,
+                            zip_clone,
+                            progress_listener_clone,
+                        )
+                        .await
                     }
-
-                    let _ = sender.send(true).await;
-                    Ok::<(), QueueError>(())
                 })
             })
             .buffer_unordered(self.sim_downloads.into())
-            .for_each(|_| async {})
+            .for_each(
+                |task_join_result: Result<Result<(), PostError>, task::JoinError>| {
+                    let downloaded_post_count_clone = downloaded_post_count.clone();
+                    async move {
+                        match task_join_result {
+                            Ok(Ok(())) => {
+                                // Successfully joined, and fetch was Ok
+                                downloaded_post_count_clone.fetch_add(1, Ordering::SeqCst);
+                            }
+                            Ok(Err(post_error)) => {
+                                // Successfully joined, but fetch failed
+                                debug!("Failed to download and add post to CBZ: {}", post_error);
+                            }
+                            Err(join_error) => {
+                                // Task panicked or was cancelled
+                                debug!("CBZ post processing task failed: {}", join_error);
+                            }
+                        }
+                    }
+                },
+            )
             .await;
 
-        {
-            let mut mtx = zip.lock().unwrap();
+        // Finalize the zip archive.
+        // To call `finish()`, which consumes `self`, we need to obtain ownership
+        // of the `ZipWriter`.
+        // 1. Try to unwrap the `Arc` to get the `Mutex`. This succeeds if this is the
+        //    last `Arc` pointer to the `Mutex`. All tasks using clones of the `Arc`
+        //    must have completed and dropped their clones.
+        // 2. Get the `ZipWriter` from the `Mutex` using `into_inner()`. This consumes
+        //    the `Mutex` and returns the inner data.
+        let zip_writer_mutex = Arc::try_unwrap(zip)
+            .map_err(|_arc_still_has_clones| QueueError::MutexLockReleaseError)?;
+        let zip_writer = zip_writer_mutex
+            .into_inner()
+            .map_err(|_poison_error| QueueError::MutexLockReleaseError)?;
 
-            mtx.finish()?;
-        }
+        zip_writer.finish()?; // Consumes `zip_writer` and finalizes the archive.
         Ok(())
     }
 }

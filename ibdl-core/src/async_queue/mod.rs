@@ -50,7 +50,9 @@
 //! }
 //! ```
 
+#[cfg(feature = "cbz")]
 mod cbz;
+
 mod folder;
 
 use crate::error::QueueError;
@@ -80,7 +82,9 @@ pub(crate) fn get_counters() -> &'static ProgressCounter {
 
 #[derive(Debug, Copy, Clone)]
 enum DownloadFormat {
+    #[cfg(feature = "cbz")]
     Cbz,
+    #[cfg(feature = "cbz")]
     CbzPool,
     Folder,
     FolderPool,
@@ -90,17 +94,24 @@ impl DownloadFormat {
     #[inline]
     pub const fn download_cbz(&self) -> bool {
         match self {
+            #[cfg(feature = "cbz")]
             Self::Cbz => true,
+            #[cfg(feature = "cbz")]
             Self::CbzPool => true,
+            #[cfg(not(feature = "cbz"))] // If cbz feature is off, these variants don't exist
             Self::Folder => false,
             Self::FolderPool => false,
+            #[cfg(feature = "cbz")]
+            _ => false,
         }
     }
 
     #[inline]
     pub const fn download_pool(&self) -> bool {
         match self {
+            #[cfg(feature = "cbz")]
             Self::Cbz => false,
+            #[cfg(feature = "cbz")]
             Self::CbzPool => true,
             Self::Folder => false,
             Self::FolderPool => true,
@@ -135,11 +146,15 @@ impl Queue {
             client!(imageboard)
         };
 
-        let download_fmt = if save_as_cbz && pool_download {
+        let download_fmt = if options.pool_download {
+            #[cfg(feature = "cbz")]
+            if options.save_as_cbz {
             DownloadFormat::CbzPool
-        } else if save_as_cbz {
-            DownloadFormat::Cbz
-        } else if pool_download {
+            } else {
+                DownloadFormat::FolderPool
+            }
+            #[cfg(not(feature = "cbz"))]
+            // If CBZ is disabled, pool download always goes to folder
             DownloadFormat::FolderPool
         } else {
             DownloadFormat::Folder

@@ -22,6 +22,7 @@ pub enum QueueError {
     #[error("Failed to deserialize summary file: {error}")]
     SummaryDeserializeFail { error: String },
 
+    #[cfg(feature = "cbz")]
     #[error("Error while adding file to cbz file: {source}")]
     ZipIOError {
         #[from]

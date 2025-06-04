@@ -27,6 +27,11 @@ once_cell = "1.21.3"
 dialoguer = "0.11.0"
 tokio = { version = "1", features = ["full"] }
 
+[features]
+cbz = [
+    "ibdl-cli/cbz",
+] # The binary's 'cbz' feature enables 'ibdl-cli's 'cbz' feature
+
 
 [dev-dependencies]
 criterion = { version = "0.6.0", features = ["html_reports"] }
