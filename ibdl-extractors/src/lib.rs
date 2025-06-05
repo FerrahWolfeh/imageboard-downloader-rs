@@ -1,12 +1,7 @@
-#![deny(clippy::nursery, clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::struct_field_names)]
 //! # IBDL Extractors
 //!
-//! `ibdl-extractors` is a crate designed to provide a robust and standardized way to
-//! interact with various imageboard APIs.
+//! `ibdl-extractors` is a crate designed to provide a standardized way to
+//! interact with the imageboard APIs.
 //!
 //! It handles the complexities of fetching
 //! post data, managing authentication, and applying blacklists, allowing developers
@@ -54,7 +49,12 @@
 //!     }
 //! }
 //! ```
-extern crate ibdl_common;
+#![deny(clippy::nursery, clippy::pedantic)]
+#![allow(clippy::too_long_first_doc_paragraph)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::struct_field_names)]
 
 /// Handles user authentication and configuration for imageboard websites.
 pub mod auth;

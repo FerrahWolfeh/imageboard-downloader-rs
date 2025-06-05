@@ -6,7 +6,6 @@
 //! This module provides the generic [`PostExtractor`](crate::extractor::PostExtractor) struct and the [`SiteApi`](crate::extractor::SiteApi) trait.
 //! `PostExtractor` handles the common logic for fetching, filtering, and queuing posts,
 //! while `SiteApi` defines the site-specific operations required to interact with a particular imageboard's API.
-#![deny(clippy::nursery)]
 use crate::{
     auth::{AuthState, ImageboardConfig},
     blacklist::BlacklistFilter,
