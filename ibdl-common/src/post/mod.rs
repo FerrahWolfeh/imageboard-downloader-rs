@@ -16,7 +16,6 @@
 //!   - [`extension`](crate::post::extension): Manages file extensions.
 //!   - [`rating`](crate::post::rating): Represents content safety ratings.
 //!   - [`tags`](crate::post::tags): Handles post tags.
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use std::{cmp::Ordering, fmt::Debug, ops::Not};
@@ -55,37 +54,6 @@ impl Not for NameType {
         match self {
             Self::ID => Self::MD5,
             Self::MD5 => Self::ID,
-        }
-    }
-}
-
-/// Represents a collection of posts fetched from an imageboard.
-///
-/// This structure holds the posts themselves, along with context such as the
-/// imageboard source, the client used for fetching, and the tags used for the search.
-#[derive(Debug)]
-pub struct PostQueue {
-    /// The imageboard where the posts come from.
-    pub imageboard: ImageBoards,
-    /// The internal `Client` used by the extractor.
-    pub client: Client,
-    /// A list containing all `Post`s collected.
-    pub posts: Vec<Post>,
-    /// The tags used to search the collected posts.
-    pub tags: Vec<String>,
-}
-
-impl PostQueue {
-    /// Prepares the post queue, potentially limiting the number of posts.
-    ///
-    /// If `limit` is `Some`, the `posts` vector will be truncated to that size.
-    /// If `limit` is `None`, the `posts` vector will be shrunk to fit its current
-    /// content, potentially freeing up unused capacity.
-    pub fn prepare(&mut self, limit: Option<u16>) {
-        if let Some(max) = limit {
-            self.posts.truncate(max as usize);
-        } else {
-            self.posts.shrink_to_fit()
         }
     }
 }

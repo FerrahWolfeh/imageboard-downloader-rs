@@ -14,7 +14,7 @@ use crate::{
 };
 use ahash::HashMap;
 use ibdl_common::{
-    post::{extension::Extension, rating::Rating, Post, PostQueue},
+    post::{extension::Extension, rating::Rating, Post},
     ImageBoards,
 };
 use log::{debug, error};
@@ -249,6 +249,37 @@ pub struct PostExtractor<S: SiteApi> {
     pool_config: Option<PoolDownloadConfig>,
     /// The site-specific API handler.
     site_api: S,
+}
+
+/// Represents a collection of posts fetched from an imageboard.
+///
+/// This structure holds the posts themselves, along with context such as the
+/// imageboard source, the client used for fetching, and the tags used for the search.
+#[derive(Debug)]
+pub struct PostQueue {
+    /// The imageboard where the posts come from.
+    pub imageboard: ImageBoards,
+    /// The internal `Client` used by the extractor.
+    pub client: Client,
+    /// A list containing all `Post`s collected.
+    pub posts: Vec<Post>,
+    /// The tags used to search the collected posts.
+    pub tags: Vec<String>,
+}
+
+impl PostQueue {
+    /// Prepares the post queue, potentially limiting the number of posts.
+    ///
+    /// If `limit` is `Some`, the `posts` vector will be truncated to that size.
+    /// If `limit` is `None`, the `posts` vector will be shrunk to fit its current
+    /// content, potentially freeing up unused capacity.
+    pub fn prepare(&mut self, limit: Option<u16>) {
+        if let Some(max) = limit {
+            self.posts.truncate(max as usize);
+        } else {
+            self.posts.shrink_to_fit();
+        }
+    }
 }
 
 /// Configuration for a pool-based download.

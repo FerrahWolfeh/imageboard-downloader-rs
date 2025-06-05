@@ -33,14 +33,6 @@ pub enum PostError {
     #[error("Failed to print line to Progress Bar: {message}")]
     ProgressBarPrintFail { message: String },
 
-    /// An error occurred while trying to connect to the download URL for a post.
-    /// Wraps an underlying `reqwest::Error`.
-    #[error("Failed to connect to download URL: {source}")]
-    ConnectionFail {
-        #[from]
-        source: reqwest::Error,
-    },
-
     /// The URL for the post's file is valid, but the remote server indicated
     /// that the file could not be found (e.g., HTTP 404).
     #[error("Post URL is valid but original file doesn't exist")]
