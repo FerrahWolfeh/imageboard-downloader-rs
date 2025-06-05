@@ -66,5 +66,5 @@ pub fn read_server_cfg_file<S: std::hash::BuildHasher>(
         smap.insert(id, config);
     }
 
-    debug!("Configured servers: {:?}", smap);
+    debug!("Configured servers: {smap:?}");
 }

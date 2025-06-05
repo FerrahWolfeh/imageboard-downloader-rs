@@ -148,7 +148,7 @@ impl ImageboardConfig {
             .json::<AuthTest>()
             .await?;
 
-        debug!("{:?}", req);
+        debug!("{req:?}");
 
         if req.success.is_some() {
             return Err(Error::InvalidLogin);

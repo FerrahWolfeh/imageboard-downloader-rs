@@ -151,14 +151,8 @@ impl SiteApi for DanbooruApi {
         let tags_for_query = join_tags!(api_query_tags);
         let tags_for_post_queue = input_tags.to_vec();
 
-        debug!(
-            "DanbooruApi processed_tags for API query: '{}'",
-            tags_for_query
-        );
-        debug!(
-            "DanbooruApi tags for PostQueue (and positive filtering): {:?}",
-            tags_for_post_queue
-        );
+        debug!("DanbooruApi processed_tags for API query: '{tags_for_query}'");
+        debug!("DanbooruApi tags for PostQueue (and positive filtering): {tags_for_post_queue:?}");
 
         (tags_for_query, tags_for_post_queue)
     }

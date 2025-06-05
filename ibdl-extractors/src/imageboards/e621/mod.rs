@@ -61,7 +61,7 @@ impl SiteApi for E621Api {
         let mut posts = Vec::with_capacity(response.posts.len());
         for item in response.posts {
             if item.file.url.is_none() || item.id.is_none() || item.file.md5.is_none() {
-                debug!("Skipping post due to missing essential data: {:?}", item);
+                debug!("Skipping post due to missing essential data: {item:?}");
                 continue;
             }
 

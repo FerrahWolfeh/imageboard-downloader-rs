@@ -233,7 +233,7 @@ impl BlacklistFilter {
             original_list.retain(|c| self.selected_ratings.binary_search(&c.rating).is_ok());
 
             let safe_counter = original_size - original_list.len();
-            debug!("Removed {} posts with non-selected ratings", safe_counter);
+            debug!("Removed {safe_counter} posts with non-selected ratings");
 
             removed += safe_counter as u64;
         }
@@ -256,12 +256,12 @@ impl BlacklistFilter {
                 });
             }
 
-            debug!("Blacklist removed {} posts", bp);
+            debug!("Blacklist removed {bp} posts");
             removed += bp as u64;
         }
 
         debug!("Filtering took {:?}", start.elapsed());
-        debug!("Removed total of {} posts", removed);
+        debug!("Removed total of {removed} posts");
 
         (removed, original_list)
     }

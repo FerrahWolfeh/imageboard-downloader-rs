@@ -298,8 +298,8 @@ impl<S: SiteApi> PostExtractor<S> {
             .collect();
         let (tags_for_query, tags_for_post_queue) = site_api.process_tags(&initial_tags);
 
-        debug!("Processed Tags for API Query: {}", tags_for_query);
-        debug!("Tags for PostQueue: {:?}", tags_for_post_queue);
+        debug!("Processed Tags for API Query: {tags_for_query}");
+        debug!("Tags for PostQueue: {tags_for_post_queue:?}");
 
         Self {
             client,
@@ -376,7 +376,7 @@ impl<S: SiteApi> PostExtractor<S> {
             effective_blacklist_tags.sort_unstable();
             effective_blacklist_tags.dedup();
         }
-        debug!("Effective blacklist tags: {:?}", effective_blacklist_tags);
+        debug!("Effective blacklist tags: {effective_blacklist_tags:?}");
 
         let blacklist = BlacklistFilter::new(
             self.server_cfg.clone(),
@@ -403,7 +403,7 @@ impl<S: SiteApi> PostExtractor<S> {
                 return Err(ExtractorError::ZeroPage);
             }
 
-            debug!("Scanning page {}", position);
+            debug!("Scanning page {position}");
 
             let posts_this_page = self.get_post_list(position, limit).await?;
             let posts_count = posts_this_page.len();
@@ -414,10 +414,7 @@ impl<S: SiteApi> PostExtractor<S> {
                 && page > 1
             // Don't break on first page if empty, get_post_list would error
             {
-                debug!(
-                    "Site API condition met to break search loop (posts: {}).",
-                    posts_count
-                );
+                debug!("Site API condition met to break search loop (posts: {posts_count}).");
                 break;
             }
 
@@ -446,19 +443,19 @@ impl<S: SiteApi> PostExtractor<S> {
 
             if let Some(num) = limit {
                 if fvec.len() >= num as usize {
-                    debug!("Post limit ({}) reached.", num);
+                    debug!("Post limit ({num}) reached.");
                     break;
                 }
             }
 
             if page >= page_limit {
-                debug!("Page limit ({}) reached.", page_limit);
+                debug!("Page limit ({page_limit}) reached.");
                 break;
             }
 
             page += 1;
             if let Some(delay) = self.site_api.full_search_api_call_delay() {
-                debug!("Delaying for {:?} before next page.", delay);
+                debug!("Delaying for {delay:?} before next page.");
                 sleep(delay).await;
             }
         }
@@ -539,17 +536,11 @@ impl<S: SiteApi> PostExtractor<S> {
         let mut request_builder = self.client.request(Method::GET, &final_url_string);
 
         if self.auth_state.is_auth() {
-            debug!(
-                "[AUTH] Fetching posts from page {} via URL: {}",
-                page, final_url_string
-            );
+            debug!("[AUTH] Fetching posts from page {page} via URL: {final_url_string}");
             request_builder = request_builder
                 .basic_auth(&self.auth_config.username, Some(&self.auth_config.api_key));
         } else {
-            debug!(
-                "Fetching posts from page {} via URL: {}",
-                page, final_url_string
-            );
+            debug!("Fetching posts from page {page} via URL: {final_url_string}");
         }
 
         let req = request_builder; // All query params are now part of final_url_string
@@ -651,11 +642,11 @@ impl<S: SiteApi + 'static> SinglePostFetch for PostExtractor<S> {
 
         let mut request_builder = self.client.get(url);
         if self.auth_state.is_auth() {
-            debug!("[AUTH] Fetching post {}", post_id);
+            debug!("[AUTH] Fetching post {post_id}");
             request_builder = request_builder
                 .basic_auth(&self.auth_config.username, Some(&self.auth_config.api_key));
         } else {
-            debug!("Fetching post {}", post_id);
+            debug!("Fetching post {post_id}");
         }
 
         let raw_body = request_builder.send().await?.text().await?;
@@ -686,7 +677,7 @@ impl<S: SiteApi + 'static> SinglePostFetch for PostExtractor<S> {
             pvec.push(post);
 
             if idx < posts_ids.len() - 1 {
-                debug!("Debouncing API calls by {:?}", delay);
+                debug!("Debouncing API calls by {delay:?}");
                 sleep(delay).await;
             }
         }
@@ -783,14 +774,12 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
                             counter.send(1).await?;
                         }
                     } else {
-                        debug!("Post ID {} from pool was filtered out.", post_id_u64);
+                        debug!("Post ID {post_id_u64} from pool was filtered out.");
                     }
                 }
                 Err(e) => {
                     ibdl_common::log::error!(
-                        "Failed to fetch post ID {} from pool: {:?}",
-                        post_id_u64,
-                        e
+                        "Failed to fetch post ID {post_id_u64} from pool: {e:?}"
                     );
                     // Optionally, decide if this error should halt the process or be skipped.
                     // For now, we log and continue.
@@ -858,7 +847,7 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
                     // Only error if first page is empty
                     return Err(ExtractorError::ZeroPosts);
                 }
-                debug!("No more posts found on page {}.", position);
+                debug!("No more posts found on page {position}.");
                 break;
             }
 
@@ -906,19 +895,19 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
 
             if let Some(num) = limit {
                 if total_posts_sent >= num {
-                    debug!("Target post count of {} reached.", num);
+                    debug!("Target post count of {num} reached.");
                     break;
                 }
             }
 
             if page >= page_limit {
-                debug!("Max number of pages ({}) reached", page_limit);
+                debug!("Max number of pages ({page_limit}) reached");
                 break;
             }
 
             page += 1;
             if let Some(delay) = self.site_api.full_search_api_call_delay() {
-                debug!("Delaying for {:?} before next page.", delay);
+                debug!("Delaying for {delay:?} before next page.");
                 sleep(delay).await;
             }
         }
@@ -1021,7 +1010,7 @@ impl<S: SiteApi + 'static> PostFetchAsync for PostExtractor<S> {
                         post_channel.send(self.get_post(*p_id).await?)?;
                         length_channel.send(1).await?;
                         if idx < p_ids.len() - 1 {
-                            debug!("Debouncing API calls by {:?}", delay);
+                            debug!("Debouncing API calls by {delay:?}");
                             sleep(delay).await;
                         }
                     }
@@ -1060,7 +1049,7 @@ impl<S: SiteApi + 'static> PoolExtract for PostExtractor<S> {
             })?;
 
         let url = self.site_api.pool_details_url(base_url, pool_id);
-        debug!("Fetching pool details from URL: {}", url);
+        debug!("Fetching pool details from URL: {url}");
 
         let mut request_builder = self.client.get(&url);
 
@@ -1117,10 +1106,7 @@ impl<S: SiteApi + 'static> PoolExtract for PostExtractor<S> {
                 pool_id: id,
                 last_first,
             });
-            debug!(
-                "PostExtractor configured for pool download: ID {}, last_first: {}",
-                id, last_first
-            );
+            debug!("PostExtractor configured for pool download: ID {id}, last_first: {last_first}");
         } else {
             self.pool_config = None;
             debug!("PostExtractor pool download configuration cleared.");

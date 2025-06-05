@@ -13,6 +13,6 @@ where
     }
     let tag_string = strvec.join("+");
 
-    debug!("Tag List: {}", tag_string);
+    debug!("Tag List: {tag_string}");
     (strvec, tag_string)
 }
