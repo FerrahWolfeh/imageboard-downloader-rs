@@ -117,7 +117,7 @@ impl Queue {
                                                 captured_ui_listener.log_event(
                                                     LogType::Warning, // Or LogType::Error
                                                     &file_name,
-                                                    &format!("Failed to write caption: {}", error),
+                                                    &format!("Failed to write caption: {}.", error),
                                                 );
                                             } else {
                                                 // Optionally log caption success
@@ -216,12 +216,12 @@ impl Queue {
                 progress_listener.log_event(
                     LogType::Skip,
                     &target_file_name,
-                    "already exists and is identical (MD5 match)",
+                    "already exists and is identical (MD5 match).",
                 );
                 return Ok(true); // Identical file exists, skip download
             }
             // MD5 mismatch for the target file name
-            let msg = "removed existing file (MD5 mismatch), will redownload";
+            let msg = "removed existing file (MD5 mismatch), will redownload.";
             progress_listener.log_event(LogType::Remove, &target_file_name, msg);
             remove_file(target_path_full).await?;
             return Ok(false); // Removed, proceed with download
@@ -239,13 +239,13 @@ impl Queue {
                 progress_listener.log_event(
                     LogType::Rename,
                     &target_file_name,
-                    &format!("renamed from {} (MD5 match)", alternative_name),
+                    &format!("renamed from {} (MD5 match).", alternative_name),
                 );
                 return Ok(true); // Renamed successfully, skip download
             }
             // MD5 mismatch for the alternative file name
             let msg = &format!(
-                "removed existing file {} (MD5 mismatch), will redownload",
+                "removed existing file {} (MD5 mismatch), will redownload.",
                 alternative_name
             );
             progress_listener.log_event(
@@ -290,7 +290,7 @@ impl Queue {
                 res.status().as_str()
             );
             progress_listener.log_event(
-                LogType::Skip, // Or LogType::Warning if more appropriate for server issues
+                LogType::Warning,
                 &fname,
                 &format!("download skipped, server returned: {}", res.status()),
             );
@@ -340,7 +340,6 @@ impl Queue {
         }
 
         dl_updater.finish();
-        progress_listener.log_event(LogType::Success, &fname, "downloaded successfully");
         debug!("Finished downloading {} successfully.", fname);
         Ok(())
     }

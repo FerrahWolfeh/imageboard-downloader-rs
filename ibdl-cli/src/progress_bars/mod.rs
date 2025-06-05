@@ -147,16 +147,11 @@ impl ProgressListener for IndicatifProgressHandler {
                     "{} {} {}",
                     target.blue().italic(),
                     message.green().bold(),
-                    "Skipping.".green().bold()
+                    "Skipping...".green().bold()
                 )
             }
             LogType::Rename => {
-                format!(
-                    "{} {} {}",
-                    target.blue().italic(),
-                    message.green().bold(),
-                    "Renamed.".green().bold()
-                )
+                format!("{} {}", target.blue().italic(), message.green().bold(),)
             }
             LogType::Remove => {
                 format!(
@@ -167,12 +162,7 @@ impl ProgressListener for IndicatifProgressHandler {
                 )
             }
             LogType::Success => {
-                format!(
-                    "{} {} {}",
-                    target.blue().italic(),
-                    message.green().bold(),
-                    "Success.".green().bold()
-                )
+                format!("{} {}", target.blue().italic(), message.green().bold(),)
             }
             LogType::Warning => format!(
                 "{} {} {}",
