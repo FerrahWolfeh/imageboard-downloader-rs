@@ -1,9 +1,10 @@
 use ibdl_common::ImageBoards;
 // Import the progress traits from ibdl_core
-use ibdl_core::progress::{DownloadProgressUpdater, ProgressListener};
+use ibdl_core::progress::{DownloadProgressUpdater, LogType, ProgressListener};
 use indicatif::{
     HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
 };
+use owo_colors::OwoColorize;
 use std::{fmt::Write, time::Duration};
 
 const PROGRESS_CHARS: &str = "━━";
@@ -138,8 +139,56 @@ impl ProgressListener for IndicatifProgressHandler {
         Box::new(IndicatifDownloadProgressUpdater { bar: managed_pb })
     }
 
-    fn log_skip_message(&self, file_name: &str, reason: &str) {
-        self.main_bar.println(format!("{} {}", file_name, reason));
+    fn log_event(&self, log_type: LogType, target: &str, message: &str) {
+        let formatted_message = match log_type {
+            LogType::Info => format!("{} {}", target.bold(), message),
+            LogType::Skip => {
+                format!(
+                    "{} {} {}",
+                    target.blue().italic(),
+                    message.green().bold(),
+                    "Skipping.".green().bold()
+                )
+            }
+            LogType::Rename => {
+                format!(
+                    "{} {} {}",
+                    target.blue().italic(),
+                    message.green().bold(),
+                    "Renamed.".green().bold()
+                )
+            }
+            LogType::Remove => {
+                format!(
+                    "{} {} {}",
+                    target.blue().italic(),
+                    message.red().bold(),
+                    "Removed.".red().bold()
+                )
+            }
+            LogType::Success => {
+                format!(
+                    "{} {} {}",
+                    target.blue().italic(),
+                    message.green().bold(),
+                    "Success.".green().bold()
+                )
+            }
+            LogType::Warning => format!(
+                "{} {} {}",
+                target.blue().italic(),
+                message.yellow().bold(),
+                "Warning.".yellow().bold()
+            ),
+            LogType::Error => format!(
+                "{} {} {}",
+                target.blue().italic(),
+                message.red().bold(),
+                "Error.".red().bold()
+            ),
+        };
+
+        self.main_bar.println(formatted_message);
     }
 }
 

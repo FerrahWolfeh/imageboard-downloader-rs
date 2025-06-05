@@ -1,6 +1,25 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+/// Type of log event, used for styling or filtering messages in the UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogType {
+    /// General informational message.
+    Info,
+    /// File was skipped (e.g., already exists, remote error).
+    Skip,
+    /// File was renamed.
+    Rename,
+    /// File was removed (e.g., MD5 mismatch before redownload).
+    Remove,
+    /// Operation was successful (e.g., download complete, caption written).
+    Success,
+    /// A non-critical issue or warning.
+    Warning,
+    /// An error occurred for a specific item/file being processed.
+    Error,
+}
+
 /// Trait for reporting overall progress, typically for a collection of items (e.g., posts).
 /// All methods should be thread-safe.
 pub trait ProgressListener: Send + Sync + Debug {
@@ -31,9 +50,15 @@ pub trait ProgressListener: Send + Sync + Debug {
         total_size: Option<u64>,
     ) -> Box<dyn DownloadProgressUpdater>;
 
-    /// Logs a message indicating a file/post was skipped and why.
-    /// This message is intended for user visibility (e.g., printed above progress bars).
-    fn log_skip_message(&self, file_name: &str, reason: &str);
+    /// Logs a categorized event message to be displayed in the progress UI.
+    ///
+    /// This method allows the UI to differentiate message types for custom formatting (e.g., colors).
+    ///
+    /// # Arguments
+    /// * `log_type`: The category of the log message (e.g., Skip, Rename, Error).
+    /// * `target`: A string identifying the subject of the log (e.g., filename, post ID).
+    /// * `message`: The descriptive message content.
+    fn log_event(&self, log_type: LogType, target: &str, message: &str);
 }
 
 /// Trait for updating the progress of an individual download task.
@@ -68,7 +93,7 @@ impl ProgressListener for NoOpProgressListener {
     ) -> Box<dyn DownloadProgressUpdater> {
         Box::new(NoOpDownloadProgressUpdater)
     }
-    fn log_skip_message(&self, _file_name: &str, _reason: &str) {}
+    fn log_event(&self, _log_type: LogType, _target: &str, _message: &str) {}
 }
 
 /// A no-operation implementation of `DownloadProgressUpdater`.

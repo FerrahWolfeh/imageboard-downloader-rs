@@ -14,9 +14,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use std::sync::{Arc, atomic::Ordering};
 
 use crate::error::DownloaderError;
-// Using PostError for file operation errors within this module
-// use crate::error::QueueError;
-use crate::progress::SharedProgressListener;
+use crate::progress::{LogType, SharedProgressListener};
 
 use super::Queue;
 
@@ -36,6 +34,8 @@ impl Queue {
         progress_listener: SharedProgressListener,
         downloaded_post_count: Arc<AtomicU64>,
     ) {
+        let ui_event_listener = progress_listener.clone();
+
         channel
             .map(|post_to_download| {
                 let nt_clone = self.name_type;
@@ -86,6 +86,7 @@ impl Queue {
                     Result<FolderDownloadTaskStatus, DownloaderError>,
                     task::JoinError,
                 >| {
+                    let captured_ui_listener = ui_event_listener.clone();
                     let downloaded_post_count_clone = downloaded_post_count.clone();
                     let output_dir_clone = output_dir.clone();
                     let name_type_clone = self.name_type;
@@ -105,12 +106,26 @@ impl Queue {
                                             )
                                             .await
                                             {
+                                                let file_name =
+                                                    downloaded_post.file_name(name_type_clone);
                                                 debug!(
                                                     "{} {}: {}",
                                                     "Failed to write caption file for",
-                                                    downloaded_post.file_name(name_type_clone),
+                                                    file_name,
                                                     error
                                                 );
+                                                captured_ui_listener.log_event(
+                                                    LogType::Warning, // Or LogType::Error
+                                                    &file_name,
+                                                    &format!("Failed to write caption: {}", error),
+                                                );
+                                            } else {
+                                                // Optionally log caption success
+                                                // captured_ui_listener.log_event(
+                                                //     LogType::Success,
+                                                //     &downloaded_post.file_name(name_type_clone),
+                                                //     "Caption written successfully",
+                                                // );
                                             }
                                         }
                                         downloaded_post_count_clone.fetch_add(1, Ordering::SeqCst);
@@ -129,10 +144,22 @@ impl Queue {
                             Ok(Err(post_error)) => {
                                 // Task joined, but the operation inside (check_file_exists or fetch) failed
                                 debug!("Failed to process post: {}", post_error);
+                                // Optionally, log this error to the UI.
+                                // Needs a way to get a relevant 'target' name (e.g., post ID or filename if available from error context)
+                                captured_ui_listener.log_event(
+                                    LogType::Error,
+                                    "Post Processing", // Placeholder target
+                                    &format!("Failed to process post: {}", post_error),
+                                );
                             }
                             Err(join_error) => {
                                 // Task panicked or was cancelled
                                 debug!("Download task failed to execute: {}", join_error);
+                                captured_ui_listener.log_event(
+                                    LogType::Error,
+                                    "Task Execution",
+                                    &format!("Task failed: {}", join_error),
+                                );
                             }
                         }
                     }
@@ -186,18 +213,17 @@ impl Queue {
             let hash = format!("{:x}", file_digest);
 
             if hash == post.md5 {
-                progress_listener.log_skip_message(
+                progress_listener.log_event(
+                    LogType::Skip,
                     &target_file_name,
                     "already exists and is identical (MD5 match)",
                 );
                 return Ok(true); // Identical file exists, skip download
             }
             // MD5 mismatch for the target file name
+            let msg = "removed existing file (MD5 mismatch), will redownload";
+            progress_listener.log_event(LogType::Remove, &target_file_name, msg);
             remove_file(target_path_full).await?;
-            progress_listener.log_skip_message(
-                &target_file_name,
-                "removed existing file (MD5 mismatch), will redownload",
-            );
             return Ok(false); // Removed, proceed with download
         }
 
@@ -210,21 +236,24 @@ impl Queue {
             if hash == post.md5 {
                 // MD5 matches, but name is alternative. Rename it.
                 rename(&alternative_path, target_path_full).await?;
-                progress_listener.log_skip_message(
+                progress_listener.log_event(
+                    LogType::Rename,
                     &target_file_name,
                     &format!("renamed from {} (MD5 match)", alternative_name),
                 );
                 return Ok(true); // Renamed successfully, skip download
             }
             // MD5 mismatch for the alternative file name
-            remove_file(&alternative_path).await?;
-            progress_listener.log_skip_message(
-                &target_file_name, // Log against the name we *intended* to write
-                &format!(
-                    "removed existing file {} (MD5 mismatch), will redownload",
-                    alternative_name
-                ),
+            let msg = &format!(
+                "removed existing file {} (MD5 mismatch), will redownload",
+                alternative_name
             );
+            progress_listener.log_event(
+                LogType::Remove,
+                &target_file_name, // Log against the name we *intended* to write
+                msg,
+            );
+            remove_file(&alternative_path).await?;
             return Ok(false); // Removed, proceed with download
         }
 
@@ -260,9 +289,10 @@ impl Queue {
                 fname,
                 res.status().as_str()
             );
-            progress_listener.log_skip_message(
+            progress_listener.log_event(
+                LogType::Skip, // Or LogType::Warning if more appropriate for server issues
                 &fname,
-                &format!("skipped, server returned: {}", res.status()),
+                &format!("download skipped, server returned: {}", res.status()),
             );
             return Err(DownloaderError::RemoteFileNotFound);
         }
@@ -310,6 +340,7 @@ impl Queue {
         }
 
         dl_updater.finish();
+        progress_listener.log_event(LogType::Success, &fname, "downloaded successfully");
         debug!("Finished downloading {} successfully.", fname);
         Ok(())
     }
