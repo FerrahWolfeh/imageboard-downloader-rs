@@ -1,21 +1,27 @@
-//! General enum for rating posts found by the imageboard downloader
-//! # Post Rating
-//! In general, most imageboard websites also classify posts considering how explicit they are
+//! # Post Rating Module
 //!
-//! Posts are usually classified into 4 special tags:
-//! * `Safe` or `General`: Posts that don't involve anything suggestive. Usually normal fanart.
-//! * `Questionable` or `Sensitive`: Posts that involve nude/seminude characters or other suggestive art that *might* not be safe for viewing close to other people or at work.
-//! * `Explicit`: Posts that are explicitly pornographic or have other sensitive content such as gore, etc.
+//! This module defines the [`Rating`] enum, which represents the content safety
+//! classification of an imageboard post. Imageboards typically categorize posts
+//! based on their explicitness to allow users to filter content.
 //!
+//! Common classifications include:
+//! - **Safe/General**: Content suitable for all audiences.
+//! - **Questionable/Sensitive**: Content that may be mildly suggestive, contain nudity,
+//!   or themes not suitable for all environments (e.g., work).
+//! - **Explicit**: Content that is overtly sexual, violent, or otherwise not safe for work (NSFW).
+//!
+//! The [`Rating`] enum provides a standardized way to handle these classifications
+//! across different imageboard sources.
 
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
+/// Represents the content safety rating of an imageboard post.
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default,
 )]
 pub enum Rating {
-    /// Represents posts that are don't involve anything suggestive or sensitive.
+    /// Content is considered safe for all audiences and environments.
     Safe,
     /// Represents posts that have some degree of nudity or sexually suggestive elements.
     Questionable,
@@ -27,6 +33,7 @@ pub enum Rating {
 }
 
 impl Display for Rating {
+    /// Formats the `Rating` variant into a user-friendly string.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Safe => write!(f, "Safe"),
@@ -38,7 +45,12 @@ impl Display for Rating {
 }
 
 impl Rating {
-    /// Guess the variant according to the rating tag present in the post
+    /// Parses a string representation of a rating into a `Rating` variant.
+    ///
+    /// This function attempts to map common rating strings (and their abbreviations)
+    /// found in imageboard APIs or tags to the corresponding `Rating` enum variant.
+    ///
+    /// The matching is case-sensitive.
     pub fn from_rating_str(s: &str) -> Self {
         match s {
             "s" | "g" | "safe" | "sensitive" | "general" => Self::Safe,

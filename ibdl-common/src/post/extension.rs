@@ -1,11 +1,22 @@
+//! # Post Extension Module
+//!
+//! This module defines the [`Extension`] enum, which represents the file extension
+//! of a media file associated with an imageboard post. It provides utilities for
+//! parsing extension strings and determining file characteristics (e.g., if it's a video).
+//!
+//! The [`Extension`] enum is a crucial part of the [`Post`](crate::post::Post) struct,
+//! ensuring that downloaded files are saved with the correct extension.
+
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use super::error::PostError;
+use super::error::PostError; // Assuming PostError is well-documented elsewhere
 
-/// Enum representing the 8 possible extensions a downloaded post can have.
+/// Represents the file extension of a downloaded media file.
+///
+/// This enum covers common image, video, and special formats found on imageboards.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Extension {
@@ -26,23 +37,42 @@ pub enum Extension {
 }
 
 impl Extension {
-    /// Naive and simple way of recognizing the extension of a post to use in [`Post`](crate::post::Post). This function never fails.
+    /// Attempts to determine the `Extension` from a string slice.
+    ///
+    /// This function parses the input string (case-insensitively) and returns the
+    /// corresponding `Extension` variant. If the string does not match any known
+    /// extension, it defaults to [`Extension::Unknown`].
+    ///
+    /// This function will never panic.
+    ///
+    /// # Examples
+    /// ```
+    /// # use ibdl_common::post::extension::Extension;
+    /// assert_eq!(Extension::guess_format("jpg"), Extension::JPG);
+    /// assert_eq!(Extension::guess_format("PNG"), Extension::PNG);
+    /// assert_eq!(Extension::guess_format("nonexistent"), Extension::Unknown);
+    /// ```
     pub fn guess_format(s: &str) -> Self {
-        let uu = Self::from_str(s);
-        if uu.is_err() {
-            return Self::Unknown;
-        }
-        uu.unwrap()
+        Self::from_str(s).unwrap_or(Self::Unknown)
     }
 
+    /// Checks if the extension typically represents a video or animated format.
+    ///
+    /// This includes traditional video formats like MP4 and WEBM, as well as
+    /// animated image formats like GIF and the special Ugoira (zip) format.
     pub const fn is_video(&self) -> bool {
         matches!(self, Self::GIF | Self::WEBM | Self::MP4 | Self::Ugoira)
     }
 }
 
 impl FromStr for Extension {
+    /// The error type returned when parsing an extension string fails.
     type Err = PostError;
 
+    /// Parses a string slice into an `Extension` variant.
+    ///
+    /// The parsing is case-insensitive. If the string does not correspond to a
+    /// known extension, a [`PostError::UnknownExtension`] is returned.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "jpg" | "jpeg" | "jfif" => Ok(Self::JPG),

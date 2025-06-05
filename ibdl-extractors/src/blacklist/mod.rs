@@ -245,7 +245,7 @@ impl BlacklistFilter {
                 0
             } else {
                 debug!("Removing posts with tags {:?}", self.gbl_tags);
-                original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(&s.tag())));
+                original_list.retain(|c| !c.tags.iter().any(|s| self.gbl_tags.contains(s.tag())));
                 fsize - original_list.len()
             };
 

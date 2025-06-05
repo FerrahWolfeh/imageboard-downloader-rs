@@ -1,3 +1,10 @@
+//! # IBDL-COMMON
+//!
+//! This crate is the common backbone for the `imageboard-downloader` project.
+//! It provides shared data structures, utility functions, and re-exports common
+//! dependencies used across the various parts of the imageboard downloader,
+//! such as the core library and any potential frontends or tools.
+//!
 #![deny(clippy::all)]
 use std::fmt::{Display, Formatter};
 use std::{
@@ -7,23 +14,36 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-// Public Exports
+
+/// Re-export of the `bincode` crate for binary serialization and deserialization.
 pub use bincode;
+/// Re-export of the `directories` crate for platform-agnostic directory management.
 pub use directories;
+/// Re-export of the `log` crate for logging.
 pub use log;
+/// Re-export of the `reqwest` crate for making HTTP requests.
 pub use reqwest;
+/// Re-export of the `serde` crate for serialization and deserialization.
 pub use serde;
+/// Re-export of the `serde_json` crate for JSON serialization and deserialization.
 pub use serde_json;
+/// Re-export of the `tokio` crate for asynchronous runtime.
 pub use tokio;
 
 use directories::ProjectDirs;
 
 use serde::{Deserialize, Serialize};
 
+/// Contains utility macros used throughout the `imageboard-downloader` ecosystem.
 pub mod macros;
+/// Defines the `Post` structure and related functionalities for representing imageboard posts.
 pub mod post;
 
-/// All currently supported imageboards and their underlying attributes
+/// Represents all currently supported imageboard websites.
+///
+/// This enum is central to identifying and configuring interactions with different
+/// imageboard sources. It includes methods for obtaining domain names and handling
+/// website-specific naming conventions.
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImageBoards {
     /// Represents the website ```https://danbooru.donmai.us``` or it's safe variant ```https://safebooru.donmai.us```.
@@ -31,15 +51,17 @@ pub enum ImageBoards {
     /// Represents the website ```https://e621.net``` or it's safe variant ```https://e926.net```.
     E621,
     /// Represents the website ```http://realbooru.com```
+    #[serde(rename = "gelbooru_0.2")] // Keep serde name for compatibility if needed
     GelbooruV0_2,
     /// Represents the website ```https://konachan.com``` or it's safe variant ```https://konachan.net```.
     Moebooru,
-    /// Represents the website ```https://gelbooru.com```.
+    /// Represents the website ```https://gelbooru.com```
     Gelbooru,
 }
 
 impl ImageBoards {
-    pub fn domain(&self) -> &'static str {
+    /// Returns the primary domain name for the imageboard.
+    pub fn domain(self) -> &'static str {
         match self {
             Self::Danbooru => "https://danbooru.donmai.us",
             Self::E621 => "https://e621.net",
@@ -51,6 +73,7 @@ impl ImageBoards {
 }
 
 impl Display for ImageBoards {
+    /// Formats the `ImageBoards` variant into a user-friendly string.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Danbooru => write!(f, "Danbooru"),
@@ -63,8 +86,11 @@ impl Display for ImageBoards {
 }
 
 impl FromStr for ImageBoards {
+    /// Defines the possible error type when parsing a string into `ImageBoards`.
     type Err = String;
 
+    /// Parses a string slice into an `ImageBoards` variant.
+    /// This allows for flexible input, accepting common aliases for the imageboards.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "gelbooru" => Ok(Self::Gelbooru),
@@ -72,7 +98,7 @@ impl FromStr for ImageBoards {
             "danbooru" => Ok(Self::Danbooru),
             "e621" => Ok(Self::E621),
             "moebooru" => Ok(Self::Moebooru),
-            _ => Err(String::from("Invalid imageboard type.")),
+            _ => Err(format!("Invalid or unsupported imageboard type: {}", s)),
         }
     }
 }
@@ -80,11 +106,12 @@ impl FromStr for ImageBoards {
 impl ImageBoards {
     /// Returns a `PathBuf` pointing to the imageboard's authentication cache.
     ///
-    /// This is XDG-compliant and saves cache files to
-    /// `$XDG_CONFIG_HOME/imageboard-downloader/<imageboard>` on Linux or
-    /// `%APPDATA%/FerrahWolfeh/imageboard-downloader/<imageboard>` on Windows
+    /// The cache directory is determined in the following order:
+    /// 1. If the `IBDL_CACHE_DIR` environment variable is set, its value is used.
+    /// 2. Otherwise, a platform-specific XDG-compliant directory is used:
+    ///    - Linux: `$XDG_CONFIG_HOME/imageboard-downloader/`
+    ///    - Windows: `%APPDATA%/FerrahWolfeh/imageboard-downloader/`
     ///
-    /// Or you can set the env var `IBDL_CACHE_DIR` to point it to a custom location.
     #[inline]
     pub fn auth_cache_dir() -> Result<PathBuf, io::Error> {
         let cfg_path = env::var("IBDL_CACHE_DIR").unwrap_or({
@@ -100,4 +127,5 @@ impl ImageBoards {
 
         Ok(cfold.to_path_buf())
     }
+    // Note: The auth_cache_dir is currently global and not per-imageboard.
 }
