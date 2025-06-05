@@ -1,22 +1,17 @@
-use ibdl_common::{
-    post::tags::{Tag, TagType},
-    serde::{self, Deserialize, Serialize},
-};
+use ibdl_common::post::tags::{Tag, TagType};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621TopLevel {
     pub posts: Vec<E621Post>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621SinglePostTopLevel {
     pub post: E621Post,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621Post {
     pub id: Option<u64>,
     pub file: E621File,
@@ -25,7 +20,6 @@ pub struct E621Post {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621File {
     pub ext: Option<String>,
     pub md5: Option<String>,
@@ -33,7 +27,6 @@ pub struct E621File {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621AuthUser {
     pub success: Option<bool>,
     pub message: Option<String>,
@@ -43,7 +36,6 @@ pub struct E621AuthUser {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct Tags {
     pub general: Vec<String>,
     pub species: Vec<String>,
@@ -78,7 +70,6 @@ impl Tags {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct E621PoolList {
     pub post_ids: Vec<u64>,
 }

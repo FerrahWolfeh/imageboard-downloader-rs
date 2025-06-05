@@ -2,8 +2,6 @@ use clap::Args;
 use ibdl_common::{
     ImageBoards,
     post::{Post, rating::Rating},
-    reqwest::Client,
-    tokio::sync::mpsc::{Sender, UnboundedSender},
 };
 use ibdl_extractors::extractor::PostExtractor;
 use ibdl_extractors::prelude::*;
@@ -12,6 +10,8 @@ use ibdl_extractors::prelude::*;
 use ibdl_extractors::imageboards::prelude::DanbooruApi;
 #[cfg(feature = "e621")]
 use ibdl_extractors::imageboards::prelude::E621Api;
+use reqwest::Client;
+use tokio::sync::mpsc::{Sender, UnboundedSender};
 
 // Enable the auth import only when imageboards that support both pools and auth are enabled.
 // Currently, Danbooru and E621 fit this.

@@ -1,16 +1,12 @@
-use ibdl_common::{
-    post::tags::{Tag, TagType},
-    serde::{self, Deserialize, Serialize},
-};
+use ibdl_common::post::tags::{Tag, TagType};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct GelbooruTopLevel {
     pub post: Vec<GelbooruPost>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct GelbooruPost {
     pub id: Option<u64>,
     pub md5: Option<String>,

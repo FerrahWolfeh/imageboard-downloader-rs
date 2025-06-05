@@ -57,21 +57,20 @@ mod folder;
 
 use crate::error::QueueError;
 // Import the new progress listener traits and helpers
-use crate::progress::{no_op_progress_listener, SharedProgressListener};
-use ibdl_common::log::debug;
+use crate::progress::{SharedProgressListener, no_op_progress_listener};
 use ibdl_common::post::error::PostError;
 use ibdl_common::post::{NameType, Post};
-use ibdl_common::reqwest::Client;
-use ibdl_common::tokio::spawn;
-use ibdl_common::tokio::sync::mpsc::UnboundedReceiver; // Removed Receiver, channel
-use ibdl_common::tokio::task::JoinHandle;
-use ibdl_common::{client, tokio};
 use ibdl_extractors::extractor_config::ServerConfig;
+use log::debug;
+use reqwest::Client;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::fs::{create_dir_all, OpenOptions};
+use std::sync::atomic::{AtomicU64, Ordering};
+use tokio::fs::{OpenOptions, create_dir_all};
 use tokio::io::AsyncWriteExt;
+use tokio::spawn;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::task::JoinHandle;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[derive(Debug, Copy, Clone)]
@@ -145,7 +144,10 @@ impl Queue {
         let client = if let Some(cli) = custom_client {
             cli
         } else {
-            client!(server_config)
+            Client::builder()
+                .user_agent(server_config.client_user_agent)
+                .build()
+                .unwrap()
         };
 
         let download_fmt = if options.pool_download {
@@ -253,7 +255,7 @@ impl Queue {
                 Err(error) => {
                     return Err(QueueError::DirCreationError {
                         message: error.to_string(),
-                    })
+                    });
                 }
             };
             return Ok(());
@@ -265,7 +267,7 @@ impl Queue {
             Err(error) => {
                 return Err(QueueError::DirCreationError {
                     message: error.to_string(),
-                })
+                });
             }
         };
 

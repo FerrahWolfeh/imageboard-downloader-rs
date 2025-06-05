@@ -13,13 +13,13 @@
 
 use ahash::HashMap;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::serde_json::{self};
 use ibdl_common::{
     extract_ext_from_url,
-    log::debug,
     post::{rating::Rating, Post},
     ImageBoards,
 };
+use log::debug;
+use serde_json;
 use std::time::Duration;
 
 use crate::error::ExtractorError;

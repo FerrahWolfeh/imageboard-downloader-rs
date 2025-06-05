@@ -11,13 +11,13 @@ use crate::extractor::SiteApi;
 use crate::imageboards::danbooru::models::DanbooruPoolList; // Use PostExtractor from generic
 use ahash::HashMap;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::serde_json;
 use ibdl_common::{
     join_tags,
-    log::debug,
     post::{rating::Rating, Post},
     ImageBoards,
 };
+use log::debug;
+use serde_json;
 use std::time::Duration;
 
 mod models;

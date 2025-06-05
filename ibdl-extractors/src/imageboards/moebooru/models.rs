@@ -1,7 +1,6 @@
-use ibdl_common::serde::{self, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-#[serde(crate = "self::serde")]
 pub struct KonachanPost {
     pub id: Option<u64>,
     pub md5: Option<String>,

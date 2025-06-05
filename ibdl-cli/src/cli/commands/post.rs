@@ -1,16 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Args;
-use ibdl_common::{
-    ImageBoards,
-    log::warn,
-    post::Post as Pst,
-    reqwest::Client,
-    tokio::{
-        fs,
-        sync::mpsc::{Sender, UnboundedSender},
-    },
-};
+use ibdl_common::{ImageBoards, post::Post as Pst};
 use ibdl_extractors::prelude::*;
 
 use ibdl_extractors::extractor::PostExtractor;
@@ -22,7 +13,13 @@ use ibdl_extractors::imageboards::prelude::E621Api;
 #[cfg(feature = "gelbooru")]
 use ibdl_extractors::imageboards::prelude::GelbooruApi;
 
+use log::warn;
 use owo_colors::OwoColorize;
+use reqwest::Client;
+use tokio::{
+    fs,
+    sync::mpsc::{Sender, UnboundedSender},
+};
 
 // Enable the auth import only when imageboards that support it are enabled
 #[cfg(any(feature = "danbooru", feature = "e621"))]

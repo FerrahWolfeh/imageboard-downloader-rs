@@ -6,9 +6,9 @@ use crate::error::ExtractorError;
 use ahash::HashMap;
 use bitflags::bitflags;
 use ibdl_common::post::Post;
-use ibdl_common::tokio::sync::mpsc::{Sender, UnboundedSender};
-use ibdl_common::tokio::task::JoinHandle;
 use std::future::Future;
+use tokio::sync::mpsc::{Sender, UnboundedSender};
+use tokio::task::JoinHandle;
 
 /// A type alias for a `JoinHandle` returned by asynchronous extractor operations.
 ///

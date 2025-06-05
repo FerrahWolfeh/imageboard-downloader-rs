@@ -15,20 +15,8 @@ use std::{
     str::FromStr,
 };
 
-/// Re-export of the `bincode` crate for binary serialization and deserialization.
-pub use bincode;
 /// Re-export of the `directories` crate for platform-agnostic directory management.
 pub use directories;
-/// Re-export of the `log` crate for logging.
-pub use log;
-/// Re-export of the `reqwest` crate for making HTTP requests.
-pub use reqwest;
-/// Re-export of the `serde` crate for serialization and deserialization.
-pub use serde;
-/// Re-export of the `serde_json` crate for JSON serialization and deserialization.
-pub use serde_json;
-/// Re-export of the `tokio` crate for asynchronous runtime.
-pub use tokio;
 
 use directories::ProjectDirs;
 

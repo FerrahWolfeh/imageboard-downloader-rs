@@ -5,12 +5,12 @@
 //! - Native blacklist (defined in user profile page)
 use ahash::HashMap;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::serde_json;
 use ibdl_common::{
     join_tags,
     post::{rating::Rating, Post},
     ImageBoards,
 };
+use serde_json;
 use std::time::Duration;
 
 use crate::extractor::caps::ExtractorFeatures;
@@ -19,7 +19,7 @@ use crate::{
     error::ExtractorError,
     imageboards::e621::models::{E621PoolList, E621SinglePostTopLevel, E621TopLevel},
 };
-use ibdl_common::log::debug;
+use log::debug;
 
 mod models;
 

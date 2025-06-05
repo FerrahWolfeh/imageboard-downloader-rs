@@ -1,10 +1,7 @@
 use crate::auth::Error;
-use ibdl_common::{
-    post::Post,
-    reqwest, serde_json,
-    tokio::{self, sync::mpsc::error::SendError},
-};
+use ibdl_common::post::Post;
 use thiserror::Error;
+use tokio::sync::mpsc::error::SendError;
 
 /// Enumerates the possible errors that can arise during extractor operations.
 ///

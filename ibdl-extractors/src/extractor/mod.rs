@@ -14,12 +14,11 @@ use crate::{
 };
 use ahash::HashMap;
 use ibdl_common::{
-    client,
-    log::debug,
     post::{extension::Extension, rating::Rating, Post, PostQueue},
-    reqwest::{Client, Method},
     ImageBoards,
 };
+use log::{debug, error};
+use reqwest::{Client, Method};
 use serde::de::DeserializeOwned;
 use std::{
     fmt::Display,
@@ -37,7 +36,6 @@ use crate::error::ExtractorError;
 use caps::ExtractorFeatures;
 
 pub mod caps;
-pub mod common;
 
 /// Defines the contract for site-specific API interactions, deserialization, and data mapping.
 ///
@@ -289,7 +287,10 @@ impl<S: SiteApi> PostExtractor<S> {
         T: ToString + Display,
     {
         let client_cfg = server_cfg.clone();
-        let client = client!(client_cfg);
+        let client = Client::builder()
+            .user_agent(&client_cfg.client_user_agent)
+            .build()
+            .unwrap();
 
         let initial_tags: Vec<String> = tags_raw
             .iter()
@@ -777,9 +778,7 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
                     }
                 }
                 Err(e) => {
-                    ibdl_common::log::error!(
-                        "Failed to fetch post ID {post_id_u64} from pool: {e:?}"
-                    );
+                    error!("Failed to fetch post ID {post_id_u64} from pool: {e:?}");
                     // Optionally, decide if this error should halt the process or be skipped.
                     // For now, we log and continue.
                 }

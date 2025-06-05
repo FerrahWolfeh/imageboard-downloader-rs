@@ -1,13 +1,15 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
 
+// TODO: For some reason this is not working. I have to check that out later.
+
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::{
     extract_ext_from_url, join_tags,
-    log::debug,
     post::{rating::Rating, Post},
-    serde_json, ImageBoards,
+    ImageBoards,
 };
+use log::debug;
 use std::time::Duration;
 
 use crate::extractor::caps::ExtractorFeatures;

@@ -19,6 +19,9 @@ md5 = "0.7.0"
 tokio-stream = "0.1.14"
 once_cell = "1.19.0"
 dialoguer = "0.11.0"
+tokio = { version = "1.45.1" }
+reqwest = "0.12.19"
+log = "0.4.27"
 
 [dependencies.clap]
 version = "4.4"

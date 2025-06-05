@@ -1,16 +1,12 @@
-use ibdl_common::{
-    post::tags::{Tag, TagType},
-    serde::{self, Deserialize, Serialize},
-};
+use ibdl_common::post::tags::{Tag, TagType};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(crate = "self::serde")]
 pub struct DanbooruPoolList {
     pub post_ids: Vec<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "self::serde")]
 pub struct DanbooruPost {
     pub id: Option<u64>,
     pub md5: Option<String>,

@@ -33,17 +33,17 @@
 //! any tag listed in the applicable blacklist (global or site-specific), it will be excluded.
 use ahash::AHashSet;
 use ibdl_common::directories::ProjectDirs;
-use ibdl_common::log::{debug, warn};
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::post::Post;
-use ibdl_common::serde::{self, Deserialize, Serialize};
-use ibdl_common::tokio::fs::{create_dir_all, read_to_string, File};
-use ibdl_common::tokio::io::AsyncWriteExt;
-use ibdl_common::tokio::time::Instant;
+use log::{debug, warn};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+use tokio::fs::{create_dir_all, read_to_string, File};
+use tokio::io::AsyncWriteExt;
+use tokio::time::Instant;
 use toml::from_str;
 
 use crate::extractor_config::ServerConfig;
@@ -55,7 +55,6 @@ const BF_INIT_TEXT: &str = include_str!("blacklist.toml");
 /// Represents a list of blacklisted tags for a specific imageboard or for global application.
 /// Used internally for deserializing the `blacklist.toml` file.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(crate = "self::serde")]
 struct BlacklistTags {
     /// A vector of tags (as strings) to be blacklisted.
     tags: Vec<String>,
@@ -64,7 +63,6 @@ struct BlacklistTags {
 /// Represents the entire blacklist configuration, loaded from `blacklist.toml`.
 /// It contains global blacklisted tags and site-specific blacklisted tags.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(crate = "self::serde")]
 pub struct GlobalBlacklist {
     /// A map where keys are imageboard names (e.g., "danbooru", "e621") or "global".
     /// The values are `BlacklistTags` structs containing the tags to be excluded for that specific scope.

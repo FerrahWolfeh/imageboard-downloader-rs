@@ -1,8 +1,6 @@
-use ibdl_common::{
-    log::debug,
-    serde::{self, Deserialize},
-    ImageBoards,
-};
+use ibdl_common::ImageBoards;
+use log::debug;
+use serde::Deserialize;
 use std::{collections::HashMap, fs::read_to_string, io::Write, str::FromStr};
 use std::{fs::File, path::Path};
 use toml;
@@ -14,13 +12,11 @@ use super::ServerConfig;
 const SAMPLE_SERVER_TOML: &str = include_str!("sample.toml");
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "self::serde")]
 struct Config {
     servers: HashMap<String, Server>,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "self::serde")]
 struct Server {
     pretty_name: String,
     server: String,

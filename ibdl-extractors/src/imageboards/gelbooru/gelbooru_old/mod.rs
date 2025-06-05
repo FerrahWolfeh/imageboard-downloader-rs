@@ -4,6 +4,8 @@
 //! * `Imageboards::Realbooru`
 //!
 
+// TODO: I have to actually convert this thing to the new format.
+
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::reqwest::Client;

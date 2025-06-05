@@ -18,12 +18,9 @@ use crate::imageboards::gelbooru::GelbooruApi;
 #[cfg(feature = "moebooru")]
 use crate::imageboards::prelude::MoebooruApi;
 use crate::server_config;
-use ibdl_common::serde;
-use ibdl_common::{
-    serde::{Deserialize, Serialize},
-    ImageBoards,
-};
+use ibdl_common::ImageBoards;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 
@@ -221,7 +218,6 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
 /// This struct is used by extractors to understand how to interact with a specific
 /// imageboard's API, including URLs, user-agents, and supported features.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(crate = "self::serde")]
 pub struct ServerConfig {
     /// A short, unique string identifier for the server (e.g., "danbooru", "e621").
     /// This is often used as a key in configuration maps.

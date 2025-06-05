@@ -3,20 +3,16 @@ use std::sync::atomic::AtomicU64;
 
 use futures::StreamExt;
 use ibdl_common::post::error::PostError;
-use ibdl_common::{
-    log::debug,
-    post::{NameType, Post},
-    reqwest::Client,
-    tokio::{
-        fs::{read, remove_file, rename, OpenOptions},
-        io::{AsyncWriteExt, BufWriter},
-        task,
-    },
-};
+use ibdl_common::post::{NameType, Post};
+use log::debug;
 use md5::compute;
+use reqwest::Client;
+use tokio::fs::{OpenOptions, read, remove_file, rename};
+use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::task;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::{Arc, atomic::Ordering};
 
 // Using PostError for file operation errors within this module
 // use crate::error::QueueError;

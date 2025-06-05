@@ -5,21 +5,21 @@ use std::{
 };
 
 use crate::error::CliError;
+use bincode::deserialize;
 use dialoguer::{Input, Password, theme::ColorfulTheme};
 use ibdl_common::{
     ImageBoards,
-    bincode::deserialize,
     directories::ProjectDirs, // Keep for get_servers
-    log::{debug, info, warn}, // Added error and info
-    tokio::fs::{create_dir_all, read, remove_file, write}, // Added create_dir_all, write
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
     extractor::{PostExtractor, SiteApi},
     extractor_config::{DEFAULT_SERVERS, ServerConfig, serialize::read_server_cfg_file},
 };
+use log::{debug, info, warn};
 use owo_colors::OwoColorize;
 use std::fs;
+use tokio::fs::{create_dir_all, read, remove_file, write};
 
 use super::AVAILABLE_SERVERS;
 use ibdl_extractors::prelude::Auth; // Keep this for the Auth trait

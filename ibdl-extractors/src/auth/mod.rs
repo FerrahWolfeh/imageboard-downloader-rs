@@ -8,7 +8,6 @@
 //! Key components include [`ImageboardConfig`](crate::auth::ImageboardConfig) for storing credentials and user data,
 //! and [`AuthState`](crate::auth::AuthState) to represent the current authentication status.
 use bincode::serialize;
-use ibdl_common::{bincode, log, reqwest};
 use log::debug;
 use reqwest::Client;
 use std::io::{self};
@@ -16,7 +15,7 @@ use thiserror::Error;
 
 use ibdl_common::ImageBoards;
 
-use ibdl_common::serde::{self, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
 
@@ -75,7 +74,6 @@ pub enum Error {
 /// It holds the server configuration, user credentials (username and API key),
 /// and fetched user data like ID, name, and blacklisted tags.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(crate = "self::serde")]
 pub struct ImageboardConfig {
     /// The `ServerConfig` for the imageboard this configuration applies to.
     /// This provides details like API endpoints and server-specific settings.
@@ -94,7 +92,6 @@ pub struct ImageboardConfig {
 /// It's principally used to filter which posts to download according to the user's blacklist
 /// configured in the imageboard profile settings.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(crate = "self::serde")]
 pub struct UserData {
     /// The unique numerical ID of the user on the imageboard.
     pub id: u64,
@@ -167,7 +164,6 @@ impl ImageboardConfig {
     /// or if the imageboard does not support authentication via this method.
     pub async fn authenticate(&mut self, client: &Client) -> Result<(), Error> {
         #[derive(Debug, Serialize, Deserialize)]
-        #[serde(crate = "self::serde")]
         struct AuthTest {
             pub success: Option<bool>,
             pub id: Option<u64>,
