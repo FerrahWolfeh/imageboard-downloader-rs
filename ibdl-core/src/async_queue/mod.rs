@@ -55,10 +55,9 @@ mod cbz;
 
 mod folder;
 
-use crate::error::QueueError;
+use crate::error::DownloaderError;
 // Import the new progress listener traits and helpers
 use crate::progress::{SharedProgressListener, no_op_progress_listener};
-use ibdl_common::post::error::PostError;
 use ibdl_common::post::{NameType, Post};
 use ibdl_extractors::extractor_config::ServerConfig;
 use log::debug;
@@ -193,7 +192,7 @@ impl Queue {
         self,
         output_dir: PathBuf,
         channel_rx: UnboundedReceiver<Post>,
-    ) -> JoinHandle<Result<u64, QueueError>> {
+    ) -> JoinHandle<Result<u64, DownloaderError>> {
         let progress_listener = self.progress_listener.clone(); // Clone Arc for the spawned task
 
         spawn(async move {
@@ -246,14 +245,14 @@ impl Queue {
         })
     }
 
-    async fn create_out(&self, dir: &Path) -> Result<(), QueueError> {
+    async fn create_out(&self, dir: &Path) -> Result<(), DownloaderError> {
         if self.download_fmt.download_cbz() {
             let output_file = dir.parent().unwrap().to_path_buf();
 
             match create_dir_all(&output_file).await {
                 Ok(_) => (),
                 Err(error) => {
-                    return Err(QueueError::DirCreationError {
+                    return Err(DownloaderError::DirCreationError {
                         message: error.to_string(),
                     });
                 }
@@ -265,7 +264,7 @@ impl Queue {
         match create_dir_all(&dir).await {
             Ok(_) => (),
             Err(error) => {
-                return Err(QueueError::DirCreationError {
+                return Err(DownloaderError::DirCreationError {
                     message: error.to_string(),
                 });
             }
@@ -278,7 +277,7 @@ impl Queue {
         post: &Post,
         name_type: NameType,
         output: &Path,
-    ) -> Result<(), PostError> {
+    ) -> Result<(), DownloaderError> {
         let outpath = output.join(format!("{}.txt", post.name(name_type)));
         let mut prompt_file = OpenOptions::new()
             .create(true)

@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 
 use futures::StreamExt;
-use ibdl_common::post::error::PostError;
 use ibdl_common::post::{NameType, Post};
 use log::debug;
 use md5::compute;
@@ -14,6 +13,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use std::sync::{Arc, atomic::Ordering};
 
+use crate::error::DownloaderError;
 // Using PostError for file operation errors within this module
 // use crate::error::QueueError;
 use crate::progress::SharedProgressListener;
@@ -83,7 +83,7 @@ impl Queue {
             .buffer_unordered(self.sim_downloads as usize)
             .for_each(
                 |task_join_result: Result<
-                    Result<FolderDownloadTaskStatus, PostError>,
+                    Result<FolderDownloadTaskStatus, DownloaderError>,
                     task::JoinError,
                 >| {
                     let downloaded_post_count_clone = downloaded_post_count.clone();
@@ -162,7 +162,7 @@ impl Queue {
         target_path_full: &Path, // e.g., /output/dir/md5_name.ext or /output/dir/id_name.ext
         name_type: NameType,
         progress_listener: &SharedProgressListener,
-    ) -> Result<bool, PostError> {
+    ) -> Result<bool, DownloaderError> {
         let target_file_name = post.file_name(name_type); // The name it *should* have
 
         let output_dir = target_path_full.parent().unwrap();
@@ -239,7 +239,7 @@ impl Queue {
         name_type: NameType,
         is_pool: bool,
         progress_listener: SharedProgressListener,
-    ) -> Result<(), PostError> {
+    ) -> Result<(), DownloaderError> {
         let fname = if is_pool {
             post.seq_file_name(6)
         } else {
@@ -264,7 +264,7 @@ impl Queue {
                 &fname,
                 &format!("skipped, server returned: {}", res.status()),
             );
-            return Err(PostError::RemoteFileNotFound);
+            return Err(DownloaderError::RemoteFileNotFound);
         }
 
         let size = res.content_length().unwrap_or_default();
@@ -289,7 +289,7 @@ impl Queue {
                 Ok(chunk) => chunk,
                 Err(e) => {
                     dl_updater.finish(); // Ensure updater is finished on error
-                    return Err(PostError::ChunkDownloadFail {
+                    return Err(DownloaderError::ChunkDownloadFail {
                         message: e.to_string(),
                     });
                 }
