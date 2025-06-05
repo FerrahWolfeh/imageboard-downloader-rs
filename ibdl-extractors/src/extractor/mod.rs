@@ -395,18 +395,11 @@ impl<S: SiteApi> PostExtractor<S> {
         Ok(posts)
     }
 
-    // This method is not used by PostExtractor directly, SiteApi handles mapping.
-    // It's part of the trait, so we provide a stub. Concrete SiteApi impls do the work.
-    fn map_posts(&self, raw_data: &str) -> Result<Vec<Post>, ExtractorError> {
-        let deserialized_list = self.site_api.deserialize_post_list(raw_data)?;
-        self.site_api.map_post_list_response(deserialized_list)
-    }
-
     pub fn client(&self) -> Client {
         self.client.clone()
     }
 
-    const fn total_removed(&self) -> u64 {
+    pub const fn total_removed(&self) -> u64 {
         self.total_removed
     }
 
