@@ -409,8 +409,6 @@ impl<S: SiteApi> PostExtractor<S> {
 
     #[must_use]
     pub fn features() -> ExtractorFeatures {
-        // This should ideally be S::features(), but Extractor::features is not tied to `self`.
-        // Concrete types will override this.
         S::features()
     }
 
