@@ -1,3 +1,12 @@
+//! # Extractor Configuration Module
+//!
+//! This module centralizes the configuration for various imageboard servers supported
+//! by the `ibdl-extractors` crate. It defines the `ServerConfig` struct, which holds
+//! all necessary parameters for an extractor to interact with a specific imageboard,
+//! such as API endpoints, user-agent strings, and post limits.
+//!
+//! It also provides a default set of configurations for commonly used imageboards,
+//! accessible via the `DEFAULT_SERVERS` static map.
 use crate::extractor::caps::ExtractorFeatures;
 use crate::extractor::SiteApi;
 #[cfg(feature = "danbooru")]
@@ -18,12 +27,17 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fmt::Display;
 
+/// Default User-Agent string used by extractors when no site-specific UA is defined.
 pub(crate) const DEFAULT_EXT_UA: &str =
     concat!("Rust Imageboard Post Extractor/", env!("CARGO_PKG_VERSION"));
 
+/// Default User-Agent string used by the CLI or other frontend applications
+/// when no site-specific UA is defined.
 pub(crate) const DEFAULT_CLI_UA: &str =
     concat!("Rust Imageboard Downloader/", env!("CARGO_PKG_VERSION"));
 
+// User-Agent strings specifically for Danbooru, including a reference to the maintainer's username.
+// These are used if the "danbooru" feature is enabled.
 #[cfg(feature = "danbooru")]
 pub(crate) const DB_EXT_UA: &str = concat!(
     "Rust Imageboard Post Extractor/",
@@ -66,10 +80,17 @@ pub(crate) const GB_EXT_UA: &str = concat!(
     " (by gelbooru user FerrahWolfeh)"
 );
 
+/// Contains macros for simplifying server configuration definitions.
 pub mod macros;
+/// Handles serialization aspects, potentially for custom server configurations.
 pub mod serialize;
 
-/// Static map of all available server configs
+/// A lazily initialized static map holding default `ServerConfig` instances for
+/// various supported imageboards.
+///
+/// The keys of the map are short string identifiers for the imageboards (e.g., "danbooru", "e621").
+/// This map is populated based on the enabled feature flags (e.g., "danbooru", "e621", "gelbooru", "moebooru").
+/// It utilizes the `server_config!` macro for concise configuration definitions.
 pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
     let mut hmap = HashMap::new(); // Initialize with default capacity, will grow as needed
 
@@ -195,24 +216,52 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
     hmap
 });
 
+/// Holds all the necessary configuration details for an imageboard server.
+///
+/// This struct is used by extractors to understand how to interact with a specific
+/// imageboard's API, including URLs, user-agents, and supported features.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
 pub struct ServerConfig {
+    /// A short, unique string identifier for the server (e.g., "danbooru", "e621").
+    /// This is often used as a key in configuration maps.
     pub name: String,
+    /// A user-friendly, displayable name for the imageboard (e.g., "Danbooru", "e621").
     pub pretty_name: String,
+    /// The `ImageBoards` enum variant that categorizes this server type.
     pub server: ImageBoards,
+    /// The User-Agent string to be used by client applications (like a CLI downloader)
+    /// when interacting with this server.
     pub client_user_agent: String,
+    /// The User-Agent string to be used by the extractor logic itself when making API requests.
     pub extractor_user_agent: String,
+    /// The base URL of the imageboard (e.g., "<https://danbooru.donmai.us>").
     pub base_url: String,
+    /// An optional URL template for accessing individual posts directly, often including a placeholder for the post ID.
     pub post_url: Option<String>,
+    /// The primary API endpoint URL for fetching lists of posts (e.g., a JSON endpoint).
     pub post_list_url: Option<String>,
+    /// An optional API endpoint URL for fetching information about pools or sets of posts.
     pub pool_idx_url: Option<String>,
+    /// The maximum number of posts the server's API can return in a single request.
     pub max_post_limit: u16,
+    /// An optional URL used for authentication checks or fetching user profile information.
     pub auth_url: Option<String>,
+    /// An optional, site-specific URL pattern or base for constructing direct image URLs.
+    /// This field might be used by specific extractors if the primary `post.url` is not direct.
     pub image_url: Option<String>,
 }
 
 impl ServerConfig {
+    /// Retrieves the `ExtractorFeatures` for the server type defined in this configuration.
+    ///
+    /// This method maps the `self.server` (an `ImageBoards` variant) to the
+    /// specific features supported by its corresponding extractor implementation.
+    ///
+    /// # Panics
+    /// Panics if the feature flag corresponding to `self.server` (e.g., "danbooru" for `ImageBoards::Danbooru`)
+    /// is not enabled during compilation. This ensures that an attempt is not made to get features
+    /// for an extractor that hasn't been compiled into the library.
     #[inline]
     #[must_use]
     pub fn extractor_features(&self) -> ExtractorFeatures {
@@ -240,6 +289,10 @@ impl ServerConfig {
 }
 
 impl Default for ServerConfig {
+    /// Provides a default `ServerConfig`.
+    ///
+    /// By default, this returns the configuration for Danbooru, assuming the "danbooru"
+    /// feature is enabled. If not, the User-Agent strings might fall back to defaults.
     fn default() -> Self {
         Self {
             name: String::from("danbooru"),
@@ -259,6 +312,7 @@ impl Default for ServerConfig {
 }
 
 impl Display for ServerConfig {
+    /// Formats the `ServerConfig` for display, showing its `name`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
