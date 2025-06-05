@@ -14,6 +14,9 @@ pub enum ExtractorError {
     #[error("Failed to send post through channel")]
     ChannelSendFail(#[from] SendError<Post>),
 
+    #[error("Page number cannot be zero.")]
+    ZeroPage,
+
     #[error("Too many tags, got: {current} while this imageboard only supports a max of {max}")]
     TooManyTags { current: usize, max: u64 },
 
@@ -59,9 +62,18 @@ pub enum ExtractorError {
     #[error("Unsupported operation for this server")]
     UnsupportedOperation,
 
+    #[error("Integer number is too high to be casted")]
+    IntConversionFail {
+        #[from]
+        source: std::num::TryFromIntError,
+    },
+
     #[error("Error sending length data to progress counter: {source}")]
     SendLengthFail {
         #[from]
         source: SendError<u64>,
     },
+
+    #[error("Post is missing an essential field {field}")]
+    MissingField { field: String },
 }

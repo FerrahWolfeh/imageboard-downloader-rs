@@ -11,283 +11,79 @@
 // This is to search all tags and their meanings.
 // I've to do an enum based on this thing.
 
+use ahash::HashMap;
 use ibdl_common::post::extension::Extension;
-use ibdl_common::reqwest::Client;
 use ibdl_common::serde_json::{self};
-use ibdl_common::tokio::time::{sleep, Instant};
 use ibdl_common::{
     extract_ext_from_url,
     log::debug,
-    post::{rating::Rating, Post, PostQueue},
+    post::{rating::Rating, Post},
     ImageBoards,
 };
-use std::fmt::Display;
 use std::time::Duration;
 
+use crate::error::ExtractorError;
 use crate::extractor::caps::ExtractorFeatures;
-use crate::extractor::common::convert_tags_to_string;
-use crate::extractor::Extractor;
-use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
+use crate::extractor::SiteApi;
 use crate::imageboards::gelbooru::models::GelbooruTopLevel;
-use crate::prelude::SinglePostFetch;
-use crate::{blacklist::BlacklistFilter, error::ExtractorError};
 
-mod gelbooru_old;
+// mod gelbooru_old;
 mod models;
-mod unsync;
+// mod unsync;
 
-pub struct GelbooruExtractor {
-    client: Client,
-    tags: Vec<String>,
-    tag_string: String,
-    disable_blacklist: bool,
-    total_removed: u64,
-    download_ratings: Vec<Rating>,
-    map_videos: bool,
-    excluded_tags: Vec<String>,
-    selected_extension: Option<Extension>,
-    server_cfg: ServerConfig,
-    // auth: ImageboardConfig,
-    // auth_state: AuthState
+// Define the GelbooruApi struct
+pub struct GelbooruApi;
+
+impl GelbooruApi {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
 }
 
-impl Extractor for GelbooruExtractor {
-    fn new<S>(
-        tags: &[S],
-        download_ratings: &[Rating],
-        disable_blacklist: bool,
-        map_videos: bool,
-    ) -> Self
-    where
-        S: ToString + Display,
-    {
-        let config = DEFAULT_SERVERS.get("gelbooru").unwrap().clone();
+impl Default for GelbooruApi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-        // Use common client for all connections with a set User-Agent
-        let client = Client::builder()
-            .user_agent(&config.client_user_agent)
-            .build()
-            .unwrap();
+// Implement the SiteApi trait for GelbooruApi
+impl SiteApi for GelbooruApi {
+    type PostListResponse = GelbooruTopLevel;
+    type SinglePostResponse = GelbooruTopLevel; // Gelbooru single post endpoint returns a list
+    type PoolDetailsResponse = (); // Gelbooru standard API doesn't support pools
 
-        let (string_vec, tag_string) = convert_tags_to_string(tags);
-
-        Self {
-            client,
-            tags: string_vec,
-            tag_string,
-            disable_blacklist,
-            total_removed: 0,
-            download_ratings: download_ratings.to_vec(),
-            map_videos,
-            excluded_tags: vec![],
-            selected_extension: None,
-            server_cfg: config,
-            // auth_state: AuthState::NotAuthenticated,
-            // auth: ImageboardConfig::default()
-        }
+    fn deserialize_post_list(&self, data: &str) -> Result<Self::PostListResponse, ExtractorError> {
+        let response = serde_json::from_str::<GelbooruTopLevel>(data)?;
+        Ok(response)
     }
 
-    fn new_with_config<S>(
-        tags: &[S],
-        download_ratings: &[Rating],
-        disable_blacklist: bool,
-        map_videos: bool,
-        config: ServerConfig,
-    ) -> Self
-    where
-        S: ToString + Display,
-    {
-        // Use common client for all connections with a set User-Agent
-        let client = Client::builder()
-            .user_agent(&config.client_user_agent)
-            .build()
-            .unwrap();
-
-        let (strvec, tag_string) = convert_tags_to_string(tags);
-
-        Self {
-            client,
-            tags: strvec,
-            tag_string,
-            disable_blacklist,
-            total_removed: 0,
-            download_ratings: download_ratings.to_vec(),
-            map_videos,
-            excluded_tags: vec![],
-            selected_extension: None,
-            server_cfg: config,
-            // auth_state: AuthState::NotAuthenticated,
-            // auth: ImageboardConfig::default()
-        }
-    }
-
-    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
-        let mut posts = self.get_post_list(page, None).await?;
-
-        if posts.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-
-        posts.sort();
-        posts.reverse();
-
-        let qw = PostQueue {
-            imageboard: ImageBoards::Gelbooru,
-            client: self.client.clone(),
-            posts,
-            tags: self.tags.clone(),
-        };
-
-        Ok(qw)
-    }
-
-    async fn full_search(
-        &mut self,
-        start_page: Option<u16>,
-        limit: Option<u16>,
-    ) -> Result<PostQueue, ExtractorError> {
-        let blacklist = BlacklistFilter::new(
-            self.server_cfg.clone(),
-            &Vec::default(),
-            &self.download_ratings,
-            self.disable_blacklist,
-            !self.map_videos,
-            self.selected_extension,
-        )
-        .await?;
-
-        let mut fvec = if let Some(size) = limit {
-            Vec::with_capacity(size as usize)
-        } else {
-            Vec::with_capacity(self.server_cfg.max_post_limit as usize)
-        };
-
-        let mut page = 1;
-
-        loop {
-            let position = start_page.map_or(page - 1, |n| page + n - 1);
-
-            let posts = self.get_post_list(position, limit).await?;
-            let size = posts.len();
-
-            if size == 0 {
-                break;
-            }
-
-            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
-                let (removed, posts) = blacklist.filter(posts);
-                self.total_removed += removed;
-                posts
-            } else {
-                posts
-            };
-
-            fvec.append(&mut list);
-
-            if let Some(num) = limit {
-                if fvec.len() >= num as usize {
-                    break;
-                }
-            }
-
-            if size < self.server_cfg.max_post_limit as usize || page == 100 {
-                break;
-            }
-
-            page += 1;
-
-            //debounce
-            debug!("Debouncing API calls by 500 ms");
-            sleep(Duration::from_millis(500)).await;
-        }
-
-        if fvec.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-
-        fvec.sort();
-        fvec.reverse();
-
-        let fin = PostQueue {
-            imageboard: ImageBoards::Gelbooru,
-            client: self.client.clone(),
-            posts: fvec,
-            tags: self.tags.clone(),
-        };
-
-        Ok(fin)
-    }
-
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
-        self.excluded_tags = tags.to_vec();
-        self
-    }
-
-    fn force_extension(&mut self, extension: Extension) -> &mut Self {
-        self.selected_extension = Some(extension);
-        self
-    }
-
-    async fn get_post_list(
+    fn deserialize_single_post(
         &self,
-        page: u16,
-        limit: Option<u16>,
-    ) -> Result<Vec<Post>, ExtractorError> {
-        if self.server_cfg.post_list_url.is_none() {
-            return Err(ExtractorError::UnsupportedOperation);
-        }
-
-        let page_post_count = {
-            limit.map_or(self.server_cfg.max_post_limit, |count| {
-                if count < self.server_cfg.max_post_limit {
-                    count
-                } else {
-                    self.server_cfg.max_post_limit
-                }
-            })
-        };
-
-        let items = self
-            .client
-            .get(self.server_cfg.post_list_url.as_ref().unwrap())
-            .query(&[
-                ("tags", &self.tag_string),
-                ("pid", &page.to_string()),
-                ("limit", &page_post_count.to_string()),
-            ])
-            .send()
-            .await?
-            .text()
-            .await?;
-
-        #[cfg(debug_assertions)]
-        debug!("{}", items);
-
-        self.map_posts(items)
+        data: &str,
+    ) -> Result<Self::SinglePostResponse, ExtractorError> {
+        self.deserialize_post_list(data)
     }
 
-    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let parsed_json: GelbooruTopLevel =
-            serde_json::from_str::<GelbooruTopLevel>(raw_json.as_str())?;
-
-        let batch = parsed_json
-            .post
-            .into_iter()
-            .filter(|c| c.file_url.is_some());
+    fn map_post_list_response(
+        &self,
+        response: Self::PostListResponse,
+    ) -> Result<Vec<Post>, ExtractorError> {
+        let batch = response.post.into_iter().filter(|c| c.file_url.is_some());
 
         let mapper_iter = batch.map(|c| {
             let tag_list = c.map_tags();
 
-            let rt = c.rating.unwrap();
+            let rt = c.rating.unwrap_or_else(|| "s".to_string()); // Default to safe if rating is missing
             let rating = Rating::from_rating_str(&rt);
-            let xt = c.file_url.unwrap();
+            let xt = c.file_url.unwrap(); // Filtered out None already
 
             let extension = extract_ext_from_url!(xt);
 
             Post {
-                id: c.id.unwrap(),
-                website: ImageBoards::Danbooru,
-                md5: c.md5.unwrap(),
+                id: c.id.unwrap_or(0), // Default to 0 if ID is missing (shouldn't happen)
+                website: ImageBoards::Gelbooru,
+                md5: c.md5.unwrap_or_else(|| "unknown".to_string()), // Default if MD5 is missing
                 url: xt,
                 extension: Extension::guess_format(&extension),
                 tags: tag_list,
@@ -298,85 +94,234 @@ impl Extractor for GelbooruExtractor {
         Ok(mapper_iter.collect::<Vec<Post>>())
     }
 
-    fn client(&self) -> Client {
-        self.client.clone()
+    fn map_single_post_response(
+        &self,
+        response: Self::SinglePostResponse,
+    ) -> Result<Post, ExtractorError> {
+        // Expect the response to contain exactly one post in the 'post' vector
+        let mut posts = self.map_post_list_response(response)?;
+        if posts.len() == 1 {
+            Ok(posts.remove(0))
+        } else if posts.is_empty() {
+            Err(ExtractorError::ZeroPosts)
+        } else {
+            // This shouldn't happen for a single post ID query, but handle defensively
+            Err(ExtractorError::InvalidServerResponse)
+        }
     }
 
-    fn total_removed(&self) -> u64 {
-        self.total_removed
+    fn single_post_url(&self, base_url: &str, post_id: u32) -> String {
+        // Use the standard Gelbooru DAPI single post endpoint
+        format!("{base_url}?page=dapi&s=post&q=index&json=1&id={post_id}")
     }
 
-    fn imageboard(&self) -> ImageBoards {
+    fn posts_url(
+        &self,
+        base_url_with_query: &str,
+        page_num: u16,
+        limit: u16,
+        tags_query_string: &str,
+    ) -> String {
+        // Gelbooru DAPI uses 'pid' for page number, which is 0-indexed.
+        // page_num is 1-indexed as passed from PostExtractor.
+        let pid = if page_num > 0 { page_num - 1 } else { 0 };
+
+        // base_url_with_query is expected to be like "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1"
+        // So, additional parameters are appended with '&'.
+        let mut url = format!("{base_url_with_query}&limit={limit}&pid={pid}");
+
+        if !tags_query_string.is_empty() {
+            url.push_str("&tags=");
+            url.push_str(tags_query_string);
+        }
+        url
+    }
+
+    fn process_tags(&mut self, input_tags: &[String]) -> (String, Vec<String>) {
+        // Gelbooru uses '+' to separate tags in the query string
+        let tag_string = input_tags.join("+");
+        (tag_string, input_tags.to_vec()) // Return both query string and vector
+    }
+
+    fn full_search_page_limit(&self) -> u16 {
+        // Based on the old implementation's loop condition
+        100
+    }
+
+    fn full_search_post_limit_break_condition(&self, posts_fetched_this_page: usize) -> bool {
+        // Break if no posts were found on the current page
+        posts_fetched_this_page == 0
+    }
+
+    fn full_search_api_call_delay(&self) -> Option<Duration> {
+        // Based on the old implementation's debounce
+        Some(Duration::from_millis(500))
+    }
+
+    fn multi_get_post_api_call_delay(&self) -> Duration {
+        // Based on the old implementation's debounce
+        Duration::from_millis(500)
+    }
+
+    fn imageboard_type(&self) -> ImageBoards {
         ImageBoards::Gelbooru
     }
 
     fn features() -> ExtractorFeatures {
-        ExtractorFeatures::from_bits_truncate(0b0000_0111) // AsyncFetch + TagSearch + SinglePostFetch
-    }
-
-    fn config(&self) -> ServerConfig {
-        self.server_cfg.clone()
-    }
-}
-
-// impl Auth for GelbooruExtractor {
-//     async fn auth(&mut self, config: ImageboardConfig) -> Result<(), ExtractorError> {
-//         let mut cfg = config;
-//
-//         self.excluded_tags
-//             .append(&mut cfg.user_data.blacklisted_tags);
-//
-//         self.auth = cfg;
-//         self.auth_state = AuthState::Authenticated;
-//         Ok(())
-//     }
-// }
-
-impl SinglePostFetch for GelbooruExtractor {
-    fn map_post(&self, _raw_json: String) -> Result<Post, ExtractorError> {
-        unimplemented!("Unsupported operation! Use `self.map_posts()` instead.");
-    }
-
-    async fn get_post(&mut self, post_id: u32) -> Result<Post, ExtractorError> {
-        if self.server_cfg.post_url.is_none() {
-            return Err(ExtractorError::UnsupportedOperation);
-        }
-
-        let url = format!(
-            "{}/{}.json",
-            self.server_cfg.post_url.as_ref().unwrap(),
-            post_id
-        );
-
-        let items = self.client.get(&url).send().await?.text().await?;
-
-        let start_point = Instant::now();
-
-        let mtx = self.map_posts(items)?;
-
-        mtx.first().map_or_else(
-            || Err(ExtractorError::ZeroPosts),
-            |post| {
-                let end_iter = start_point.elapsed();
-
-                debug!("Post mapping took {:?}", end_iter);
-                Ok(post.clone())
-            },
+        // Gelbooru supports TagSearch, AsyncFetch, and SinglePostFetch (via its API)
+        // It does NOT support PoolExtract or Auth (for blacklisted tags via API)
+        ExtractorFeatures::from_bits_truncate(
+            ExtractorFeatures::AsyncFetch.bits()
+                | ExtractorFeatures::TagSearch.bits()
+                | ExtractorFeatures::SinglePostFetch.bits(),
         )
     }
 
-    async fn get_posts(&mut self, posts: &[u32]) -> Result<Vec<Post>, ExtractorError> {
-        let mut pvec = Vec::with_capacity(posts.len());
+    // Pool methods (unsupported for standard Gelbooru API)
+    fn pool_details_url(&self, _base_url: &str, _pool_id: u32) -> String {
+        // This should ideally not be called if features() is correct, but provide a placeholder
+        debug!("Attempted to call pool_details_url on GelbooruApi, which does not support pools.");
+        String::new() // Return empty string, the caller should handle the UnsupportedOperation error
+    }
 
-        for post_id in posts {
-            let post = self.get_post(*post_id).await?;
+    fn deserialize_pool_details_response(
+        &self,
+        _data: &str,
+    ) -> Result<Self::PoolDetailsResponse, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
 
-            // This function is pretty heavy on API usage, so let's ease it up a little.
-            debug!("Debouncing API calls by 500 ms");
-            sleep(Duration::from_millis(500)).await;
+    fn map_pool_details_to_post_ids_with_order(
+        &self,
+        _response: Self::PoolDetailsResponse,
+    ) -> Result<HashMap<u64, usize>, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
 
-            pvec.push(post);
+    fn parse_post_ids_from_pool_json_str(
+        &self,
+        _raw_json: &str,
+    ) -> Result<Vec<u64>, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use ibdl_common::{post::rating::Rating, ImageBoards};
+    use tokio::{join, sync::mpsc::unbounded_channel};
+
+    use crate::{
+        extractor::PostExtractor,
+        extractor_config::DEFAULT_SERVERS,
+        imageboards::{danbooru::DanbooruApi, prelude::GelbooruApi},
+        prelude::AsyncFetch,
+    };
+
+    #[tokio::test]
+    async fn post_api() {
+        let server_config = DEFAULT_SERVERS.get("gelbooru").unwrap().clone();
+
+        let api = GelbooruApi::new();
+
+        let extractor = PostExtractor::new(
+            &["1girl", "cyrene_(honkai:_star_rail)"],
+            &[],
+            false,
+            false,
+            api, // Pass the DanbooruApi instance
+            server_config,
+        );
+
+        let post_list = extractor.get_post_list(1, None).await;
+        // Assertions to check the content of the parsed post list.
+        assert!(
+            post_list.is_ok(),
+            "Failed to fetch post list: {:?}",
+            post_list.err()
+        );
+
+        let posts = post_list.unwrap();
+        assert!(!posts.is_empty(), "Post list is empty");
+
+        // Check some properties of the first post.
+        let first_post = &posts[0];
+        assert_eq!(first_post.website, ImageBoards::Gelbooru);
+        assert!(!first_post.md5.is_empty());
+        assert!(!first_post.url.is_empty());
+        assert_ne!(first_post.rating, Rating::Unknown);
+        assert!(first_post.tags.iter().any(|tag| tag.tag() == "1girl"));
+    }
+
+    #[tokio::test]
+    async fn async_fetch() {
+        let server_config = DEFAULT_SERVERS.get("danbooru").unwrap().clone();
+        let danbooru_api = DanbooruApi::new();
+
+        // Tags for the test. DanbooruApi will use the first two for the API query,
+        // and all of them for tags_for_post_queue (used in positive filtering by async_fetch).
+        let tags_to_search = &["1girl", "touhou"];
+        let ratings_to_download = &[]; // No specific rating filter for this test
+        let disable_blacklist = true; // Disable blacklist for simplicity in this test
+        let map_videos = false;
+
+        let extractor = PostExtractor::new(
+            tags_to_search,
+            ratings_to_download,
+            disable_blacklist,
+            map_videos,
+            danbooru_api,
+            server_config,
+        );
+
+        let (post_sender, mut post_receiver) = unbounded_channel();
+        let post_limit = Some(100u16); // We expect to fetch 5 posts
+
+        // setup_fetch_thread consumes the extractor
+        let fetch_handle = extractor.setup_fetch_thread(post_sender, None, post_limit, None);
+
+        let mut received_posts = Vec::new();
+        // Collect posts until the channel is closed (sender is dropped) or limit is reached
+        while let Some(post) = post_receiver.recv().await {
+            received_posts.push(post);
         }
-        Ok(pvec)
+
+        // Ensure the fetch thread completed successfully
+        let fetch_result = join!(fetch_handle).0.unwrap();
+        assert!(
+            fetch_result.is_ok(),
+            "Async fetch failed: {:?}",
+            fetch_result.err()
+        );
+
+        let total_removed_by_blacklist = fetch_result.unwrap();
+        // Since blacklist is disabled and no ratings are specified to filter out,
+        // no posts should be removed by the blacklist logic in async_fetch.
+        assert_eq!(
+            total_removed_by_blacklist, 0,
+            "Blacklist removed posts unexpectedly, expected 0 with disable_blacklist=true."
+        );
+
+        assert_eq!(
+            received_posts.len(),
+            100,
+            "Did not receive the expected number of posts"
+        );
+
+        for post in received_posts {
+            assert_eq!(post.website, ImageBoards::Danbooru);
+            assert!(!post.md5.is_empty());
+            assert!(!post.url.is_empty());
+            assert_ne!(post.rating, Rating::Unknown);
+            // Check that posts contain all the searched tags (due to positive filtering in async_fetch)
+            for tag_str in tags_to_search {
+                assert!(
+                    post.tags.iter().any(|t| t.tag() == *tag_str),
+                    "Post ID {} is missing tag '{}'",
+                    post.id,
+                    tag_str
+                );
+            }
+        }
     }
 }

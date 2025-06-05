@@ -6,4 +6,3 @@ pub use crate::extractor::caps::PoolExtract;
 pub use crate::extractor::caps::PostFetchAsync;
 pub use crate::extractor::caps::PostFetchMethod;
 pub use crate::extractor::caps::SinglePostFetch;
-pub use crate::extractor::Extractor;

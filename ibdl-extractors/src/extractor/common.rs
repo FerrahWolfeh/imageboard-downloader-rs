@@ -1,6 +1,7 @@
 use ibdl_common::log::debug;
 use std::fmt::Display;
 
+#[allow(dead_code)]
 pub fn convert_tags_to_string<S>(tags: &[S]) -> (Vec<String>, String)
 where
     S: ToString + Display,

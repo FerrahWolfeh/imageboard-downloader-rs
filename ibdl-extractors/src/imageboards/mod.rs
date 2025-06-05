@@ -66,12 +66,16 @@
 //!
 #![deny(clippy::nursery)]
 
+#[cfg(feature = "danbooru")]
 pub mod danbooru;
 
+#[cfg(feature = "e621")]
 pub mod e621;
 
+#[cfg(feature = "gelbooru")]
 pub mod gelbooru;
 
+#[cfg(feature = "moebooru")]
 pub mod moebooru;
 
 pub mod prelude;

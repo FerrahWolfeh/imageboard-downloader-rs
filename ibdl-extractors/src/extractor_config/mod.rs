@@ -1,6 +1,13 @@
 use crate::extractor::caps::ExtractorFeatures;
-use crate::extractor::Extractor;
-use crate::imageboards::prelude::*;
+use crate::extractor::SiteApi;
+#[cfg(feature = "danbooru")]
+use crate::imageboards::danbooru::DanbooruApi;
+#[cfg(feature = "e621")]
+use crate::imageboards::e621::E621Api;
+#[cfg(feature = "gelbooru")]
+use crate::imageboards::gelbooru::GelbooruApi;
+#[cfg(feature = "moebooru")]
+use crate::imageboards::prelude::MoebooruApi;
 use crate::server_config;
 use ibdl_common::serde;
 use ibdl_common::{
@@ -17,36 +24,42 @@ pub(crate) const DEFAULT_EXT_UA: &str =
 pub(crate) const DEFAULT_CLI_UA: &str =
     concat!("Rust Imageboard Downloader/", env!("CARGO_PKG_VERSION"));
 
+#[cfg(feature = "danbooru")]
 pub(crate) const DB_EXT_UA: &str = concat!(
     "Rust Imageboard Post Extractor/",
     env!("CARGO_PKG_VERSION"),
     " (by Danbooru user FerrahWolfeh)"
 );
 
+#[cfg(feature = "danbooru")]
 pub(crate) const DB_CLI_UA: &str = concat!(
     "Rust Imageboard Downloader/",
     env!("CARGO_PKG_VERSION"),
     " (by Danbooru user FerrahWolfeh)"
 );
 
+#[cfg(feature = "e621")]
 pub(crate) const E621_CLI_UA: &str = concat!(
     "Rust Imageboard Downloader/",
     env!("CARGO_PKG_VERSION"),
     " (by e621 user FerrahWolfeh)"
 );
 
+#[cfg(feature = "e621")]
 pub(crate) const E621_EXT_UA: &str = concat!(
     "Rust Imageboard Post Extractor/",
     env!("CARGO_PKG_VERSION"),
     " (by e621 user FerrahWolfeh)"
 );
 
+#[cfg(feature = "gelbooru")]
 pub(crate) const GB_CLI_UA: &str = concat!(
     "Rust Imageboard Downloader/",
     env!("CARGO_PKG_VERSION"),
     " (by gelbooru user FerrahWolfeh)"
 );
 
+#[cfg(feature = "gelbooru")]
 pub(crate) const GB_EXT_UA: &str = concat!(
     "Rust Imageboard Post Extractor/",
     env!("CARGO_PKG_VERSION"),
@@ -56,8 +69,11 @@ pub(crate) const GB_EXT_UA: &str = concat!(
 pub mod macros;
 pub mod serialize;
 
+/// Static map of all available server configs
 pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
-    let mut hmap = HashMap::with_capacity(6);
+    let mut hmap = HashMap::new(); // Initialize with default capacity, will grow as needed
+
+    #[cfg(feature = "danbooru")]
     hmap.insert(
         "danbooru".to_string(),
         server_config!(
@@ -75,6 +91,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             None
         ),
     );
+
+    #[cfg(feature = "e621")]
     hmap.insert(
         "e621".to_string(),
         server_config!(
@@ -92,6 +110,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             None
         ),
     );
+
+    #[cfg(feature = "gelbooru")]
     hmap.insert(
         "gelbooru".to_string(),
         server_config!(
@@ -111,6 +131,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             None
         ),
     );
+
+    #[cfg(feature = "gelbooru")] // Rule34 uses Gelbooru-like API
     hmap.insert(
         "rule34".to_string(),
         server_config!(
@@ -130,6 +152,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             None
         ),
     );
+
+    #[cfg(feature = "gelbooru")] // Realbooru uses Gelbooru-like API
     hmap.insert(
         "realbooru".to_string(),
         server_config!(
@@ -149,6 +173,8 @@ pub static DEFAULT_SERVERS: Lazy<HashMap<String, ServerConfig>> = Lazy::new(|| {
             None
         ),
     );
+
+    #[cfg(feature = "moebooru")]
     hmap.insert(
         "konachan".to_string(),
         server_config!(
@@ -191,10 +217,24 @@ impl ServerConfig {
     #[must_use]
     pub fn extractor_features(&self) -> ExtractorFeatures {
         match self.server {
-            ImageBoards::Danbooru => DanbooruExtractor::features(),
-            ImageBoards::E621 => E621Extractor::features(),
-            ImageBoards::Moebooru => MoebooruExtractor::features(),
-            ImageBoards::Gelbooru | ImageBoards::GelbooruV0_2 => GelbooruExtractor::features(),
+            #[cfg(feature = "danbooru")]
+            ImageBoards::Danbooru => DanbooruApi::features(),
+            #[cfg(feature = "e621")]
+            ImageBoards::E621 => E621Api::features(),
+            #[cfg(feature = "moebooru")]
+            ImageBoards::Moebooru => MoebooruApi::features(),
+            #[cfg(feature = "gelbooru")]
+            ImageBoards::Gelbooru => GelbooruApi::features(),
+            // This arm handles cases where a ServerConfig exists for an ImageBoard variant
+            // whose corresponding feature (and thus its Extractor and specific match arm above)
+            // is not compiled in. This can happen if a ServerConfig is manually created
+            // or if the library is used in an unexpected way with feature flags.
+            _ => panic!(
+                "Attempted to get extractor features for {:?} \
+                 but its corresponding feature flag is not enabled. \
+                 Please ensure the required feature (danbooru, e621, gelbooru, or moebooru) is active.",
+                self.server
+            ),
         }
     }
 }

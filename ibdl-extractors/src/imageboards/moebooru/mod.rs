@@ -1,275 +1,63 @@
 //! Post extractor for `https://konachan.com` and other Moebooru imageboards
+
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::tags::{Tag, TagType};
-use ibdl_common::reqwest::Client;
 use ibdl_common::{
-    client, extract_ext_from_url, join_tags,
+    extract_ext_from_url, join_tags,
     log::debug,
-    post::{rating::Rating, Post, PostQueue},
-    serde_json,
-    tokio::time::Instant,
-    ImageBoards,
+    post::{rating::Rating, Post},
+    serde_json, ImageBoards,
 };
-use std::fmt::Display;
+use std::time::Duration;
 
 use crate::extractor::caps::ExtractorFeatures;
-use crate::extractor::Extractor;
-use crate::extractor_config::{ServerConfig, DEFAULT_SERVERS};
-use crate::{
-    blacklist::BlacklistFilter, error::ExtractorError, imageboards::moebooru::models::KonachanPost,
-};
+use crate::extractor::SiteApi;
+use crate::{error::ExtractorError, imageboards::moebooru::models::KonachanPost};
 
 mod models;
-mod unsync;
 
-pub struct MoebooruExtractor {
-    client: Client,
-    tags: Vec<String>,
-    tag_string: String,
-    download_ratings: Vec<Rating>,
-    disable_blacklist: bool,
-    total_removed: u64,
-    map_videos: bool,
-    excluded_tags: Vec<String>,
-    selected_extension: Option<Extension>,
-    server_cfg: ServerConfig,
+// Define the MoebooruApi struct
+pub struct MoebooruApi;
+
+impl MoebooruApi {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
 }
 
-impl Extractor for MoebooruExtractor {
-    fn new<S>(
-        tags: &[S],
-        download_ratings: &[Rating],
-        disable_blacklist: bool,
-        map_videos: bool,
-    ) -> Self
-    where
-        S: ToString + Display,
-    {
-        let config = DEFAULT_SERVERS.get("konachan").unwrap().clone();
+impl Default for MoebooruApi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-        // Use common client for all connections with a set User-Agent
-        let client = client!(config);
+// Implement the SiteApi trait for MoebooruApi
+impl SiteApi for MoebooruApi {
+    type PostListResponse = Vec<KonachanPost>;
+    type SinglePostResponse = (); // Moebooru standard API doesn't support single post fetch
+    type PoolDetailsResponse = (); // Moebooru standard API doesn't support pools
 
-        let strvec: Vec<String> = tags
-            .iter()
-            .map(|t| {
-                let st: String = t.to_string();
-                st
-            })
-            .collect();
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(strvec);
-        debug!("Tag List: {}", tag_string);
-
-        Self {
-            client,
-            tags: strvec,
-            tag_string,
-            download_ratings: download_ratings.to_vec(),
-            disable_blacklist,
-            total_removed: 0,
-            map_videos,
-            excluded_tags: vec![],
-            selected_extension: None,
-            server_cfg: config,
-        }
+    fn deserialize_post_list(&self, data: &str) -> Result<Self::PostListResponse, ExtractorError> {
+        let response = serde_json::from_str::<Vec<KonachanPost>>(data)?;
+        Ok(response)
     }
 
-    fn new_with_config<S>(
-        tags: &[S],
-        download_ratings: &[Rating],
-        disable_blacklist: bool,
-        map_videos: bool,
-        config: ServerConfig,
-    ) -> Self
-    where
-        S: ToString + Display,
-    {
-        // Use common client for all connections with a set User-Agent
-        let client = client!(config);
-
-        let strvec: Vec<String> = tags
-            .iter()
-            .map(|t| {
-                let st: String = t.to_string();
-                st
-            })
-            .collect();
-
-        // Merge all tags in the URL format
-        let tag_string = join_tags!(strvec);
-        debug!("Tag List: {}", tag_string);
-
-        Self {
-            client,
-            tags: strvec,
-            tag_string,
-            download_ratings: download_ratings.to_vec(),
-            disable_blacklist,
-            total_removed: 0,
-            map_videos,
-            excluded_tags: vec![],
-            selected_extension: None,
-            server_cfg: config,
-        }
-    }
-
-    async fn search(&mut self, page: u16) -> Result<PostQueue, ExtractorError> {
-        let mut posts = self.get_post_list(page, None).await?;
-
-        if posts.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-
-        posts.sort();
-        posts.reverse();
-
-        let qw = PostQueue {
-            imageboard: ImageBoards::Moebooru,
-            client: self.client.clone(),
-            posts,
-            tags: self.tags.clone(),
-        };
-
-        Ok(qw)
-    }
-
-    async fn full_search(
-        &mut self,
-        start_page: Option<u16>,
-        limit: Option<u16>,
-    ) -> Result<PostQueue, ExtractorError> {
-        let blacklist = BlacklistFilter::new(
-            self.server_cfg.clone(),
-            &Vec::default(),
-            &self.download_ratings,
-            self.disable_blacklist,
-            !self.map_videos,
-            self.selected_extension,
-        )
-        .await?;
-
-        let mut fvec = limit.map_or_else(
-            || Vec::with_capacity(100),
-            |size| Vec::with_capacity(size as usize),
-        );
-
-        let mut page = 1;
-
-        loop {
-            let position = start_page.map_or(page, |n| page + n);
-
-            let posts = self.get_post_list(position, limit).await?;
-            let size = posts.len();
-
-            if size == 0 {
-                break;
-            }
-
-            let mut list = if !self.disable_blacklist || !self.download_ratings.is_empty() {
-                let (removed, posts) = blacklist.filter(posts);
-                self.total_removed += removed;
-                posts
-            } else {
-                posts
-            };
-
-            fvec.append(&mut list);
-
-            if let Some(num) = limit {
-                if fvec.len() >= num as usize {
-                    break;
-                }
-            }
-
-            if size < 100 || page == 100 {
-                break;
-            }
-
-            page += 1;
-        }
-
-        if fvec.is_empty() {
-            return Err(ExtractorError::ZeroPosts);
-        }
-
-        fvec.sort();
-        fvec.reverse();
-
-        let fin = PostQueue {
-            imageboard: ImageBoards::Moebooru,
-            client: self.client.clone(),
-            posts: fvec,
-            tags: self.tags.clone(),
-        };
-
-        Ok(fin)
-    }
-
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
-        self.excluded_tags = tags.to_vec();
-        self
-    }
-
-    fn force_extension(&mut self, extension: Extension) -> &mut Self {
-        self.selected_extension = Some(extension);
-        self
-    }
-
-    async fn get_post_list(
+    fn deserialize_single_post(
         &self,
-        page: u16,
-        limit: Option<u16>,
-    ) -> Result<Vec<Post>, ExtractorError> {
-        if self.server_cfg.post_list_url.is_none() {
-            return Err(ExtractorError::UnsupportedOperation);
-        }
-
-        let page_post_count = {
-            limit.map_or(self.server_cfg.max_post_limit, |count| {
-                if count < self.server_cfg.max_post_limit {
-                    count
-                } else {
-                    self.server_cfg.max_post_limit
-                }
-            })
-        };
-
-        let items = self
-            .client
-            .get(self.server_cfg.post_list_url.as_ref().unwrap())
-            .query(&[
-                ("page", &page.to_string()),
-                ("limit", &page_post_count.to_string()),
-                ("tags", &self.tag_string),
-            ])
-            .send()
-            .await?
-            .text()
-            .await?;
-
-        let start = Instant::now();
-
-        let post_list = self.map_posts(items)?;
-
-        let end = Instant::now();
-
-        debug!("List size: {}", post_list.len());
-        debug!("Post mapping took {:?}", end - start);
-
-        Ok(post_list)
+        _data: &str,
+    ) -> Result<Self::SinglePostResponse, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
     }
 
-    fn map_posts(&self, raw_json: String) -> Result<Vec<Post>, ExtractorError> {
-        let items = serde_json::from_str::<Vec<KonachanPost>>(raw_json.as_str()).unwrap();
+    fn map_post_list_response(
+        &self,
+        response: Self::PostListResponse,
+    ) -> Result<Vec<Post>, ExtractorError> {
+        let post_iter = response.into_iter().filter(|c| c.file_url.is_some());
 
-        let post_iter = items.iter().filter(|c| c.file_url.is_some());
-
-        let mut post_mtx: Vec<Post> = Vec::with_capacity(post_iter.size_hint().0);
-
-        post_iter.for_each(|c| {
-            let url = c.file_url.clone().unwrap();
+        let mapper_iter = post_iter.map(|c| {
+            let url = c.file_url.clone().unwrap(); // Filtered out None already
 
             let tag_iter = c.tags.split(' ');
 
@@ -281,39 +69,161 @@ impl Extractor for MoebooruExtractor {
                 tags.push(Tag::new(i, TagType::Any));
             });
 
-            let unit = Post {
-                id: c.id.unwrap(),
+            Post {
+                id: c.id.unwrap_or(0), // Default to 0 if ID is missing (shouldn't happen)
                 website: ImageBoards::Moebooru,
                 url,
-                md5: c.md5.clone().unwrap(),
+                md5: c.md5.unwrap_or_else(|| "unknown".to_string()), // Default if MD5 is missing
                 extension: Extension::guess_format(&ext),
                 tags,
                 rating: Rating::from_rating_str(&c.rating),
-            };
-
-            post_mtx.push(unit);
+            }
         });
 
-        Ok(post_mtx)
+        Ok(mapper_iter.collect::<Vec<Post>>())
     }
 
-    fn client(&self) -> Client {
-        self.client.clone()
+    fn map_single_post_response(
+        &self,
+        _response: Self::SinglePostResponse,
+    ) -> Result<Post, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
     }
 
-    fn total_removed(&self) -> u64 {
-        self.total_removed
+    fn single_post_url(&self, _base_url: &str, _post_id: u32) -> String {
+        // This should ideally not be called if features() is correct, but provide a placeholder
+        debug!("Attempted to call single_post_url on MoebooruApi, which does not support single post fetch.");
+        String::new() // Return empty string, the caller should handle the UnsupportedOperation error
     }
 
-    fn imageboard(&self) -> ImageBoards {
+    fn posts_url(
+        &self,
+        base_url: &str, // Expected to be like "https://konachan.com/post.json"
+        page: u16,
+        limit: u16,
+        tags_query_string: &str,
+    ) -> String {
+        // Moebooru uses 'page' and 'limit' query parameters.
+        // base_url is expected to be like "https://konachan.com/post.json"
+        // So, additional parameters are appended with '&' or '?' if it's the first.
+        // Assuming base_url might already have '?', we'll always use '&'.
+        let mut url = format!("{base_url}&page={page}&limit={limit}");
+
+        if !tags_query_string.is_empty() {
+            url.push_str("&tags=");
+            url.push_str(tags_query_string);
+        }
+        url
+    }
+
+    fn process_tags(&mut self, input_tags: &[String]) -> (String, Vec<String>) {
+        // Moebooru uses space to separate tags in the query string
+        let tag_string = join_tags!(input_tags);
+        (tag_string, input_tags.to_vec()) // Return both query string and vector
+    }
+
+    fn full_search_page_limit(&self) -> u16 {
+        // Based on the old implementation's loop condition
+        100
+    }
+
+    fn full_search_post_limit_break_condition(&self, posts_fetched_this_page: usize) -> bool {
+        // Break if no posts were found on the current page
+        posts_fetched_this_page == 0
+    }
+
+    fn full_search_api_call_delay(&self) -> Option<Duration> {
+        // Add a small delay to be polite to the server
+        Some(Duration::from_millis(500))
+    }
+
+    fn multi_get_post_api_call_delay(&self) -> Duration {
+        // This method is not used as single post fetch is unsupported, but provide a value
+        Duration::from_millis(500)
+    }
+
+    fn imageboard_type(&self) -> ImageBoards {
         ImageBoards::Moebooru
     }
 
     fn features() -> ExtractorFeatures {
-        ExtractorFeatures::from_bits_truncate(0b0000_0011) // AsyncFetch + TagSearch
+        // Moebooru supports TagSearch and AsyncFetch.
+        // It does NOT support PoolExtract, Auth, or SinglePostFetch.
+        ExtractorFeatures::from_bits_truncate(
+            ExtractorFeatures::AsyncFetch.bits() | ExtractorFeatures::TagSearch.bits(),
+        )
     }
 
-    fn config(&self) -> ServerConfig {
-        self.server_cfg.clone()
+    // Pool methods (unsupported for standard Moebooru API)
+    fn pool_details_url(&self, _base_url: &str, _pool_id: u32) -> String {
+        debug!("Attempted to call pool_details_url on MoebooruApi, which does not support pools.");
+        String::new() // Return empty string, the caller should handle the UnsupportedOperation error
+    }
+
+    fn deserialize_pool_details_response(
+        &self,
+        _data: &str,
+    ) -> Result<Self::PoolDetailsResponse, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
+
+    fn map_pool_details_to_post_ids_with_order(
+        &self,
+        _response: Self::PoolDetailsResponse,
+    ) -> Result<ahash::HashMap<u64, usize>, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
+
+    fn parse_post_ids_from_pool_json_str(
+        &self,
+        _raw_json: &str,
+    ) -> Result<Vec<u64>, ExtractorError> {
+        Err(ExtractorError::UnsupportedOperation)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use ibdl_common::{post::rating::Rating, ImageBoards};
+
+    use crate::{
+        extractor::PostExtractor, extractor_config::DEFAULT_SERVERS,
+        imageboards::prelude::MoebooruApi,
+    };
+
+    #[tokio::test]
+    async fn post_api() {
+        let server_config = DEFAULT_SERVERS.get("konachan").unwrap().clone();
+
+        let api = MoebooruApi::new();
+
+        let extractor = PostExtractor::new(
+            &["1girl", "long_hair"],
+            &[],
+            false,
+            false,
+            api, // Pass the MoebooruApi instance
+            server_config,
+        );
+
+        let post_list = extractor.get_post_list(1, Some(10)).await;
+        // Assertions to check the content of the parsed post list.
+        assert!(
+            post_list.is_ok(),
+            "Failed to fetch post list: {:?}",
+            post_list.err()
+        );
+
+        let posts = post_list.unwrap();
+        assert!(!posts.is_empty(), "Post list is empty");
+
+        // Check some properties of the first post.
+        let first_post = &posts[0];
+        assert_eq!(first_post.website, ImageBoards::Moebooru);
+        assert!(!first_post.md5.is_empty());
+        assert!(!first_post.url.is_empty());
+        assert_ne!(first_post.rating, Rating::Unknown);
+        assert!(first_post.tags.iter().any(|tag| tag.tag() == "1girl"));
+        assert!(first_post.tags.iter().any(|tag| tag.tag() == "long_hair"));
     }
 }
