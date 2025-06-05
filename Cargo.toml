@@ -4,7 +4,7 @@ members = [
     "ibdl-common",
     "ibdl-core",
     "ibdl-extractors",
-    "ibdl-wasm-gui",
+    #"ibdl-wasm-gui",
 ]
 
 [package]
@@ -39,19 +39,6 @@ cbz = [
     "ibdl-cli/cbz",
 ] # The binary's 'cbz' feature enables 'ibdl-cli's 'cbz' feature
 
-
-[dev-dependencies]
-criterion = { version = "0.6.0", features = ["html_reports"] }
-ahash = { version = "0.8.12", features = ["serde"] }
-rand = "0.9.1"
-
-[[bench]]
-name = "post_filter"
-harness = false
-
-[[bench]]
-name = "post_mapper"
-harness = false
 
 [profile.release]
 lto = "thin"

@@ -7,7 +7,7 @@ edition = "2024"
 clap = { version = "4.5.39", features = ["derive", "cargo"] }
 indicatif = "0.17.11"
 ibdl-common = { version = "1.8.1", path = "../ibdl-common" }
-ibdl-extractors = { version = "1.10.0", path = "../ibdl-extractors" }
+ibdl-extractors = { version = "1.10.0", path = "../ibdl-extractors", default-features = false }
 ibdl-core = { version = "1.7.1", path = "../ibdl-core" }
 dialoguer = "0.11.0"
 thiserror = "2.0.12"
@@ -15,4 +15,10 @@ owo-colors = "4.2.1"
 once_cell = "1.21.3"
 
 [features]
-cbz = ["ibdl-core/cbz"] # ibdl-cli cbz feature depends on ibdl-core cbz feature
+default = ["danbooru", "e621", "gelbooru", "moebooru"]
+
+cbz = ["ibdl-core/cbz"]                 # ibdl-cli cbz feature depends on ibdl-core cbz feature
+danbooru = ["ibdl-extractors/danbooru"]
+e621 = ["ibdl-extractors/e621"]
+gelbooru = ["ibdl-extractors/gelbooru"]
+moebooru = ["ibdl-extractors/moebooru"]

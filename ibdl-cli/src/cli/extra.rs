@@ -5,23 +5,24 @@ use std::{
 };
 
 use crate::error::CliError;
-use dialoguer::{theme::ColorfulTheme, Input, Password};
+use dialoguer::{Input, Password, theme::ColorfulTheme};
 use ibdl_common::{
+    ImageBoards,
     bincode::deserialize,
     directories::ProjectDirs, // Keep for get_servers
     log::{debug, info, warn}, // Added error and info
     tokio::fs::{create_dir_all, read, remove_file, write}, // Added create_dir_all, write
-    ImageBoards,
 };
-use ibdl_extractors::prelude::{Auth, Extractor};
 use ibdl_extractors::{
     auth::ImageboardConfig,
-    extractor_config::{serialize::read_server_cfg_file, ServerConfig, DEFAULT_SERVERS},
+    extractor::{PostExtractor, SiteApi},
+    extractor_config::{DEFAULT_SERVERS, ServerConfig, serialize::read_server_cfg_file},
 };
 use owo_colors::OwoColorize;
 use std::fs;
 
 use super::AVAILABLE_SERVERS;
+use ibdl_extractors::prelude::Auth; // Keep this for the Auth trait
 
 // The `auth_prompt` function is removed as its logic is now integrated into `auth_imgboard`.
 
@@ -40,10 +41,12 @@ use super::AVAILABLE_SERVERS;
 /// # Errors
 /// Returns a `CliError` if any step (cache reading, user input, authentication, cache writing,
 /// or applying auth to extractor) fails.
-pub async fn auth_imgboard<E>(prompt_for_auth: bool, extractor: &mut E) -> Result<(), CliError>
-where
-    E: Auth + Extractor + Send,
-{
+pub async fn auth_imgboard<S: SiteApi + 'static>(
+    prompt_for_auth: bool,
+    extractor: &mut PostExtractor<S>,
+) -> Result<(), CliError> {
+    // The old `E: Extractor` constraint is no longer needed as PostExtractor<S>
+    // provides `config()` and `client()` methods directly.
     let imageboard_server_config = extractor.config(); // This is &ServerConfig
     let client = extractor.client();
 

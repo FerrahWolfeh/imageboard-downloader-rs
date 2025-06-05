@@ -338,12 +338,12 @@ impl<S: SiteApi> PostExtractor<S> {
         })
     }
 
-    fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+    pub fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
         self.user_excluded_tags = tags.to_vec();
         self
     }
 
-    fn force_extension(&mut self, extension: Extension) -> &mut Self {
+    pub fn force_extension(&mut self, extension: Extension) -> &mut Self {
         self.selected_extension = Some(extension);
         self
     }

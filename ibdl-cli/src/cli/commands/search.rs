@@ -5,17 +5,26 @@ use ibdl_common::{
     reqwest::Client,
     tokio::sync::mpsc::{Sender, UnboundedSender},
 };
-use ibdl_extractors::imageboards::{
-    danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
-    moebooru::MoebooruExtractor,
-};
+use ibdl_extractors::extractor::PostExtractor;
 use ibdl_extractors::prelude::*;
 
-use crate::{
-    RatingArg,
-    cli::{Cli, extra::auth_imgboard},
-    error::CliError,
-};
+#[cfg(feature = "danbooru")]
+use ibdl_extractors::imageboards::prelude::DanbooruApi;
+
+#[cfg(feature = "e621")]
+use ibdl_extractors::imageboards::prelude::E621Api;
+
+#[cfg(feature = "gelbooru")]
+use ibdl_extractors::imageboards::prelude::GelbooruApi;
+
+#[cfg(feature = "moebooru")]
+use ibdl_extractors::imageboards::prelude::MoebooruApi;
+
+// Enable the auth import only when imageboards that support it are enabled, such as danbooru and e621
+#[cfg(any(feature = "danbooru", feature = "e621"))]
+use crate::cli::extra::auth_imgboard;
+
+use crate::{RatingArg, cli::Cli, error::CliError};
 
 #[derive(Debug, Args)]
 pub struct TagSearch {
@@ -127,12 +136,14 @@ impl TagSearch {
         let ratings = self.selected_ratings();
 
         match args.imageboard.server {
+            #[cfg(feature = "danbooru")]
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new_with_config(
+                let mut unit = PostExtractor::new(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    DanbooruApi::new(),
                     args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
@@ -155,12 +166,15 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "e621")]
+            // This arm is only compiled if the "e621" feature is enabled.
             ImageBoards::E621 => {
-                let mut unit = E621Extractor::new_with_config(
+                let mut unit = PostExtractor::new(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    E621Api::new(),
                     args.imageboard.clone(),
                 );
                 auth_imgboard(args.auth, &mut unit).await?;
@@ -183,12 +197,15 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "gelbooru")]
+            // This arm is only compiled if the "gelbooru" feature is enabled.
             ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
-                let mut unit = GelbooruExtractor::new_with_config(
+                let mut unit = PostExtractor::new(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    GelbooruApi::new(),
                     args.imageboard.clone(),
                 );
 
@@ -210,21 +227,25 @@ impl TagSearch {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "moebooru")]
+            // This arm is only compiled if the "moebooru" feature is enabled.
             ImageBoards::Moebooru => {
-                let mut unit = MoebooruExtractor::new_with_config(
+                let mut unit = PostExtractor::new(
                     &self.tags,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    MoebooruApi::new(),
                     args.imageboard.clone(),
                 );
-                let client = unit.client();
 
                 unit.exclude_tags(&self.exclude);
 
                 if let Some(ext) = args.get_extension() {
                     unit.force_extension(ext);
                 }
+
+                let client = unit.client();
 
                 let ext_thd = unit.setup_fetch_thread(
                     channel_tx,
@@ -234,6 +255,36 @@ impl TagSearch {
                 );
 
                 Ok((ext_thd, client))
+            }
+
+            // This arm is reached if the selected `args.imageboard.server` variant
+            // does not match any of the *compiled-in* arms above.
+            #[allow(unreachable_patterns)]
+            _ => {
+                // Now, check if *any* imageboard features are enabled at all.
+                #[cfg(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                ))]
+                {
+                    // If this block is compiled, it means *some* imageboards are enabled,
+                    // but the selected one isn't.
+                    Err(CliError::ImageboardNotEnabled {
+                        imageboard: args.imageboard.server.to_string(),
+                    })
+                }
+                #[cfg(not(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                )))]
+                {
+                    // If this block is compiled, it means *no* imageboard features are enabled.
+                    Err(CliError::NoImageboardsEnabled)
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::Args;
 use ibdl_common::{
+    ImageBoards,
     log::warn,
     post::Post as Pst,
     reqwest::Client,
@@ -9,16 +10,24 @@ use ibdl_common::{
         fs,
         sync::mpsc::{Sender, UnboundedSender},
     },
-    ImageBoards,
-};
-use ibdl_extractors::imageboards::{
-    danbooru::DanbooruExtractor, e621::E621Extractor, gelbooru::GelbooruExtractor,
 };
 use ibdl_extractors::prelude::*;
+
+use ibdl_extractors::extractor::PostExtractor;
+
+#[cfg(feature = "danbooru")]
+use ibdl_extractors::imageboards::prelude::DanbooruApi;
+#[cfg(feature = "e621")]
+use ibdl_extractors::imageboards::prelude::E621Api;
+#[cfg(feature = "gelbooru")]
+use ibdl_extractors::imageboards::prelude::GelbooruApi;
+
 use owo_colors::OwoColorize;
 
+// Enable the auth import only when imageboards that support it are enabled
+#[cfg(any(feature = "danbooru", feature = "e621"))]
 use crate::{
-    cli::{extra::auth_imgboard, Cli},
+    cli::{Cli, extra::auth_imgboard},
     error::CliError,
 };
 
@@ -52,13 +61,16 @@ impl Post {
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
         match args.imageboard.server {
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new_with_config(
+                let mut unit = PostExtractor::new(
                     &[""],
                     &[],
                     true,
                     true,
+                    DanbooruApi::new(),
                     args.imageboard.clone(),
                 );
+
+                // Authenticate if the feature is enabled and auth is requested
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 let client = unit.client();
@@ -101,9 +113,17 @@ impl Post {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "e621")]
             ImageBoards::E621 => {
-                let mut unit =
-                    E621Extractor::new_with_config(&[""], &[], true, true, args.imageboard.clone());
+                let mut unit = PostExtractor::new(
+                    &[""],
+                    &[],
+                    true,
+                    true,
+                    E621Api::new(),
+                    args.imageboard.clone(),
+                );
+
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 let client = unit.client();
@@ -145,12 +165,14 @@ impl Post {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "gelbooru")]
             ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
-                let unit = GelbooruExtractor::new_with_config(
+                let unit = PostExtractor::new(
                     &[""],
                     &[],
                     true,
                     true,
+                    GelbooruApi::new(),
                     args.imageboard.clone(),
                 );
 
@@ -192,57 +214,32 @@ impl Post {
                 };
 
                 Ok((ext_thd, client))
-
-                // let mut unit = GelbooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-
-                // unit.exclude_tags(&args.exclude)
-                //     .set_imageboard(*args.imageboard);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let client = unit.client();
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
             }
-            ImageBoards::Moebooru => {
-                Err(CliError::ExtractorUnsupportedMode)
+            #[cfg(feature = "moebooru")]
+            ImageBoards::Moebooru => Err(CliError::ExtractorUnsupportedMode),
 
-                // let mut unit = MoebooruExtractor::new(
-                //     &args.tags,
-                //     &ratings,
-                //     args.disable_blacklist,
-                //     !args.no_animated,
-                // );
-                // let client = unit.client();
-
-                // unit.exclude_tags(&args.exclude);
-
-                // if let Some(ext) = args.get_extension() {
-                //     unit.force_extension(ext);
-                // }
-
-                // let ext_thd = unit.setup_fetch_thread(
-                //     channel_tx,
-                //     args.start_page,
-                //     args.limit,
-                //     Some(length_tx),
-                // );
-
-                // Ok((ext_thd, client))
+            #[allow(unreachable_patterns)] // To suppress warnings if all features are enabled
+            _ => {
+                #[cfg(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                ))]
+                {
+                    Err(CliError::ImageboardNotEnabled {
+                        imageboard: args.imageboard.server.to_string(),
+                    })
+                }
+                #[cfg(not(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                )))]
+                {
+                    Err(CliError::NoImageboardsEnabled)
+                }
             }
         }
     }

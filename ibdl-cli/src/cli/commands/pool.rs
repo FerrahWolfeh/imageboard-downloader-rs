@@ -1,19 +1,26 @@
 use clap::Args;
 use ibdl_common::{
-    post::{rating::Rating, Post},
+    ImageBoards,
+    post::{Post, rating::Rating},
     reqwest::Client,
     tokio::sync::mpsc::{Sender, UnboundedSender},
-    ImageBoards,
 };
-use ibdl_extractors::{
-    imageboards::{danbooru::DanbooruExtractor, e621::E621Extractor},
-    prelude::*,
-};
+use ibdl_extractors::extractor::PostExtractor;
+use ibdl_extractors::prelude::*;
 
+#[cfg(feature = "danbooru")]
+use ibdl_extractors::imageboards::prelude::DanbooruApi;
+#[cfg(feature = "e621")]
+use ibdl_extractors::imageboards::prelude::E621Api;
+
+// Enable the auth import only when imageboards that support both pools and auth are enabled.
+// Currently, Danbooru and E621 fit this.
+#[cfg(any(feature = "danbooru", feature = "e621"))]
+// #[allow(unused_imports)] // May be unused if only one of danbooru/e621 is enabled
 use crate::{
-    cli::{extra::auth_imgboard, Cli},
-    error::CliError,
     RatingArg,
+    cli::{Cli, extra::auth_imgboard},
+    error::CliError,
 };
 
 #[derive(Debug, Args)]
@@ -139,14 +146,17 @@ impl Pool {
         let ratings = self.selected_ratings();
 
         match args.imageboard.server {
+            #[cfg(feature = "danbooru")]
             ImageBoards::Danbooru => {
-                let mut unit = DanbooruExtractor::new_with_config(
-                    &[""],
+                let mut unit = PostExtractor::new(
+                    &[""], // Tags are ignored for pool downloads
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    DanbooruApi::new(),
                     args.imageboard.clone(),
                 );
+
                 auth_imgboard(args.auth, &mut unit).await?;
 
                 unit.exclude_tags(&self.exclude);
@@ -168,12 +178,14 @@ impl Pool {
 
                 Ok((ext_thd, client))
             }
+            #[cfg(feature = "e621")]
             ImageBoards::E621 => {
-                let mut unit = E621Extractor::new_with_config(
-                    &[""],
+                let mut unit = PostExtractor::new(
+                    &[""], // Tags are ignored for pool downloads
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
+                    E621Api::new(),
                     args.imageboard.clone(),
                 );
 
@@ -198,8 +210,38 @@ impl Pool {
 
                 Ok((ext_thd, client))
             }
-            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru | ImageBoards::Moebooru => {
+            #[cfg(feature = "gelbooru")]
+            ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
+                // GelbooruApi::features() does not include PoolExtract
                 Err(CliError::ExtractorUnsupportedMode)
+            }
+            #[cfg(feature = "moebooru")]
+            ImageBoards::Moebooru => {
+                // MoebooruApi::features() does not include PoolExtract
+                Err(CliError::ExtractorUnsupportedMode)
+            }
+            #[allow(unreachable_patterns)] // To suppress warnings if all features are enabled
+            _ => {
+                #[cfg(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                ))]
+                {
+                    Err(CliError::ImageboardNotEnabled {
+                        imageboard: args.imageboard.server.to_string(),
+                    })
+                }
+                #[cfg(not(any(
+                    feature = "danbooru",
+                    feature = "e621",
+                    feature = "gelbooru",
+                    feature = "moebooru"
+                )))]
+                {
+                    Err(CliError::NoImageboardsEnabled)
+                }
             }
         }
     }

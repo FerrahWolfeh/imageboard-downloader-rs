@@ -44,4 +44,12 @@ pub enum CliError {
 
     #[error("No posts given")]
     NoPostsInInput,
+
+    #[error("This program has been compiled without {imageboard} support.")]
+    ImageboardNotEnabled { imageboard: String },
+
+    #[error(
+        "No imageboards are enabled. Recompile the program with at least one imageboard feature enabled."
+    )]
+    NoImageboardsEnabled,
 }
