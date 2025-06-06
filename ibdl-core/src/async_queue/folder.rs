@@ -1,3 +1,7 @@
+//! Handles the logic for downloading posts into a regular directory structure.
+//!
+//! This module is responsible for processing a stream of `Post` objects,
+//! checking for existing files, fetching new files, and saving them to the designated output folder.
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 
@@ -21,11 +25,41 @@ use super::Queue;
 /// Represents the outcome of a download attempt for a single post to a folder.
 #[derive(Debug)]
 enum FolderDownloadTaskStatus {
-    Downloaded(Post), // Post was successfully downloaded
-    Skipped(Post),    // Post was skipped (e.g., already exists or renamed)
+    // Not public, so detailed docs might be overkill unless for internal understanding
+    /// Indicates that the post was successfully downloaded.
+    Downloaded(Post),
+    /// Indicates that the post was skipped, for example, because it already exists
+    /// and matches the MD5 hash, or it was successfully renamed from an alternative naming scheme.
+    Skipped(Post),
 }
 
 impl Queue {
+    /// Consumes a stream of `Post` objects from a channel and downloads them into the specified output directory.
+    ///
+    /// This function orchestrates the download process for folder-based output. It spawns tasks
+    /// for each post, checks for existing files, fetches new ones, and handles progress reporting.
+    ///
+    /// # Arguments
+    ///
+    /// * `channel`: An `UnboundedReceiverStream` that yields `Post` objects to be downloaded.
+    /// * `output_dir`: The `PathBuf` representing the directory where files will be saved.
+    /// * `is_pool`: A boolean indicating if the download is for a pool. This affects file naming
+    ///   (sequential for pools, `name_type` based otherwise).
+    /// * `progress_listener`: A `SharedProgressListener` for reporting overall progress (main bar ticks)
+    ///   and individual file download progress/events.
+    /// * `downloaded_post_count`: An `Arc<AtomicU64>` to count successfully downloaded posts.
+    ///
+    /// # Behavior
+    /// - For each post received, it spawns an asynchronous task.
+    /// - Inside each task, `check_file_exists` is called. If the file exists and is valid (or renamed), it's skipped.
+    /// - If the file needs to be downloaded, `fetch` is called.
+    /// - If `annotate` is enabled in the `Queue`'s options, `write_caption` is called after a successful download.
+    /// - The number of simultaneous downloads is limited by `self.sim_downloads`.
+    /// - Progress:
+    ///     - `progress_listener.main_tick()` is called for each post received from the `channel`.
+    ///     - `check_file_exists` and `fetch` use `progress_listener` for logging events (skip, rename, remove, warnings, errors).
+    ///     - `fetch` uses `progress_listener.add_download_task` for per-file download bars.
+    ///     - `downloaded_post_count` is incremented for each successfully downloaded and saved post.
     pub(crate) async fn download_channel(
         &self,
         channel: UnboundedReceiverStream<Post>,
@@ -172,18 +206,19 @@ impl Queue {
     /// If a similar file exists (same MD5, different name scheme), it's renamed.
     /// If an identical file exists (same MD5, same name scheme), it's skipped.
     /// If a file with the same name exists but different MD5, it's removed.
-    /// Logs actions using the progress_listener.
+    /// Logs actions (skip, rename, remove) using the `progress_listener`.
     ///
     /// # Arguments
-    /// * `post`: The post object.
-    /// * `target_path_full`: The full path where the file *should* be saved with the *target* naming convention.
-    /// * `name_type`: The target naming convention (ID or MD5).
-    /// * `progress_listener`: For logging skip/rename messages.
+    ///
+    /// * `post`: A reference to the `Post` being processed.
+    /// * `target_path_full`: The `Path` where the file is intended to be saved, using the `name_type` convention.
+    /// * `name_type`: The `NameType` (ID or MD5) that dictates the `target_path_full`'s filename.
+    /// * `progress_listener`: A `SharedProgressListener` for logging events.
     ///
     /// # Returns
-    /// * `Ok(true)`: File exists and is identical (or was renamed). Download should be **skipped**.
-    /// * `Ok(false)`: File does not exist or was removed (MD5 mismatch). Download should **proceed**.
-    /// * `Err(PostError)`: For file I/O errors during the check.
+    /// * `Ok(true)` if the file exists and is valid (either matching MD5 or renamed from an alternative name with matching MD5). The download should be skipped.
+    /// * `Ok(false)` if the file does not exist, or if an existing file with the same name (target or alternative) had an MD5 mismatch and was removed. The download should proceed.
+    /// * `Err(DownloaderError)` if any file I/O operation (reading, removing, renaming) fails.
     async fn check_file_exists(
         post: &Post,
         target_path_full: &Path, // e.g., /output/dir/md5_name.ext or /output/dir/id_name.ext
@@ -261,6 +296,27 @@ impl Queue {
         Ok(false) // Proceed with download
     }
 
+    /// Fetches the content of a `Post` from its URL and saves it to a file.
+    ///
+    /// This function handles the actual HTTP GET request, streams the response body,
+    /// writes it to a file, and updates a download progress bar.
+    ///
+    /// # Arguments
+    ///
+    /// * `client`: The `reqwest::Client` to use for the download.
+    /// * `post`: A reference to the `Post` to download.
+    /// * `output_dir`: The `Path` to the directory where the file will be saved. The filename
+    ///   is determined by `is_pool` or `name_type`.
+    /// * `name_type`: The `NameType` to use for the filename if `is_pool` is `false`.
+    /// * `is_pool`: If `true`, a sequential filename (e.g., "000001.ext") is used. Otherwise,
+    ///   `name_type` determines the filename.
+    /// * `progress_listener`: A `SharedProgressListener` to report download progress and log events.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the download and saving are successful.
+    /// * `Err(DownloaderError)` if the remote server returns an error (e.g., 404),
+    ///   if there's an error during chunk download, or if there's a file I/O error.
     async fn fetch(
         client: Client,
         post: &Post,

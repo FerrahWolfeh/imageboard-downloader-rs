@@ -1,3 +1,9 @@
+//! Defines traits and utilities for reporting download progress.
+//!
+//! This module provides the [`ProgressListener`](crate::progress::ProgressListener) and [`DownloadProgressUpdater`](crate::progress::DownloadProgressUpdater) traits,
+//! which act as an interface for [`async_queue`](crate::async_queue) to communicate progress updates
+//! to the consuming application (e.g., a CLI or GUI). This allows for flexible
+//! integration with various UI libraries or custom progress tracking mechanisms.
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -27,10 +33,11 @@ pub trait ProgressListener: Send + Sync + Debug {
     fn set_main_total(&self, total: u64);
     /// Increments the total number of items for the main progress.
     /// Called when more items are discovered (e.g., during pagination).
+    /// This should reflect the new total number of items expected to be processed.
     fn inc_main_total(&self, delta: u64);
-    /// Signals that one main item has been processed successfully.
+    /// Signals that one main item has been taken from the queue for processing.
     fn main_tick(&self);
-    /// Signals that `delta` main items have been processed successfully.
+    /// Signals that `delta` main items have been taken from the queue for processing.
     fn main_inc_by(&self, delta: u64);
     /// Signals that all main item processing is complete.
     fn main_done(&self);

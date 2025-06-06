@@ -1,17 +1,21 @@
+//! Handles the logic for downloading posts and packaging them into CBZ archives.
+//!
+//! This module is responsible for fetching posts, adding them to a `ZipWriter` instance,
+//! managing concurrent downloads, and structuring the CBZ file.
 use std::{
     fs::File,
     io::Write,
     path::PathBuf,
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
 use futures::StreamExt;
 use ibdl_common::{
     log::debug,
-    post::{error::PostError, rating::Rating, NameType, Post},
+    post::{NameType, Post, error::PostError, rating::Rating},
     reqwest::Client,
     tokio::{
         io::AsyncWriteExt,
@@ -19,13 +23,36 @@ use ibdl_common::{
     },
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
+use zip::{CompressionMethod, ZipWriter, write::SimpleFileOptions};
 
 use crate::{error::QueueError, progress::SharedProgressListener};
 
 use super::Queue;
 
 impl Queue {
+    /// Fetches a single post for a pool download and adds it to the CBZ archive.
+    ///
+    /// Files in a pool CBZ are typically named sequentially (e.g., "000001.jpg").
+    /// This function handles the download, progress reporting for the individual file,
+    /// and writing the file data to the provided `ZipWriter`.
+    ///
+    /// # Arguments
+    ///
+    /// * `client`: The `reqwest::Client` to use for the download.
+    /// * `post`: The `Post` object to download.
+    /// * `zip`: An `Arc<Mutex<ZipWriter<File>>>` representing the CBZ archive being written to.
+    ///            The actual writing is done within a `spawn_blocking` task.
+    /// * `num_digits`: The number of digits to use for the sequential filename (e.g., 6 for "000001").
+    /// * `progress_listener`: A `SharedProgressListener` for reporting download progress and logging events.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the post is successfully downloaded and added to the CBZ.
+    /// * `Err(PostError)` if there's an issue with downloading, writing to the zip,
+    ///   or if the remote server returns an error.
+    ///
+    /// # Panics
+    /// This function can panic if `zip.lock()` fails, which indicates a poisoned mutex.
     pub(crate) async fn fetch_cbz_pool(
         client: Client,
         post: Post,
@@ -106,6 +133,29 @@ impl Queue {
         Ok(())
     }
 
+    /// Fetches a single post for a non-pool (tag-based) download and adds it to the CBZ archive.
+    ///
+    /// Files are typically placed into subdirectories within the CBZ based on their `Rating`
+    /// (e.g., "Safe/image.jpg"). If `annotate` is true, a corresponding ".txt" caption file
+    /// is also created and added to the CBZ.
+    ///
+    /// # Arguments
+    ///
+    /// * `client`: The `reqwest::Client` to use for the download.
+    /// * `name_type`: The `NameType` (ID or MD5) to use for the image filename and caption filename.
+    /// * `post`: The `Post` object to download.
+    /// * `annotate`: A boolean indicating whether to create and add a caption file for the post.
+    /// * `zip`: An `Arc<Mutex<ZipWriter<File>>>` representing the CBZ archive.
+    ///            Writing is done within a `spawn_blocking` task.
+    /// * `progress_listener`: A `SharedProgressListener` for reporting progress and logging.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the post (and caption, if applicable) is successfully downloaded and added.
+    /// * `Err(PostError)` for download, zip writing, or remote server errors.
+    ///
+    /// # Panics
+    /// This function can panic if `zip.lock()` fails (poisoned mutex).
     pub(crate) async fn fetch_cbz(
         client: Client,
         name_type: NameType,
@@ -218,6 +268,19 @@ impl Queue {
         Ok(())
     }
 
+    /// Writes the initial directory structure to the CBZ file for non-pool downloads.
+    ///
+    /// This creates directories named after each `Rating` variant (Safe, Questionable, Explicit, Unknown)
+    /// at the root of the CBZ archive. This is typically called once before any posts are added.
+    ///
+    /// # Arguments
+    ///
+    /// * `zip`: An `Arc<Mutex<ZipWriter<File>>>` representing the CBZ archive.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the directories are successfully created.
+    /// * `Err(QueueError)` if there's an error writing to the zip file (converted from `zip::result::ZipError`).
     pub(crate) fn write_zip_structure(
         &self,
         zip: Arc<Mutex<ZipWriter<File>>>,
@@ -235,6 +298,30 @@ impl Queue {
         Ok(())
     }
 
+    /// Orchestrates the download of posts from a channel and packages them into a CBZ archive.
+    ///
+    /// This function initializes a `ZipWriter`, sets up the directory structure if it's not a pool download,
+    /// and then processes a stream of `Post` objects. For each post, it spawns a task
+    /// (either `fetch_cbz_pool` or `fetch_cbz`) to download and add the post to the archive.
+    /// The number of concurrent download tasks is limited by `self.sim_downloads`.
+    ///
+    /// # Arguments
+    ///
+    /// * `path`: The `PathBuf` where the final CBZ file will be saved.
+    /// * `channel`: An `UnboundedReceiverStream` that yields `Post` objects to be downloaded.
+    /// * `is_pool`: A boolean indicating if the download is for a pool. This affects how posts are fetched
+    ///              and whether the initial directory structure is created.
+    /// * `progress_listener`: A `SharedProgressListener` for reporting overall progress (main bar ticks)
+    ///                        and individual file download progress/events.
+    /// * `downloaded_post_count`: An `Arc<AtomicU64>` to count successfully downloaded and archived posts.
+    ///
+    /// # Behavior
+    /// - Creates the CBZ file at the specified `path`.
+    /// - If `!is_pool`, calls `write_zip_structure`.
+    /// - For each post from the `channel`, `progress_listener.main_tick()` is called, and a download task is spawned.
+    /// - After all posts are processed, the `ZipWriter` is finalized.
+    /// - `downloaded_post_count` is incremented for each post successfully added to the CBZ.
+    /// - Errors during individual post fetching are logged but do not stop the processing of other posts.
     pub(crate) async fn cbz_path(
         &self,
         path: PathBuf,
