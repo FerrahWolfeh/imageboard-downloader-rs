@@ -1,183 +1,161 @@
-use std::sync::Arc;
-
-use ibdl_common::tokio::task::{JoinHandle, spawn_local};
-use ibdl_common::{all_ratings, post::rating::Rating};
-use ibdl_extractors::error::ExtractorError;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-
-// Assuming your Post struct is in ibdl_common::post::Post
-// and it can be made Serialize + Deserialize. Need to ensure Post is indeed serializable.
-// The WebPost struct suggests it might not be directly serializable, hence the conversion.
-
-// Need tokio imports for channels and tasks, adapted for WASM.
-// Use the re-exported ones from ibdl_common
 use ibdl_common::post::Post;
-use ibdl_common::tokio::sync::{
-    Mutex,
-    mpsc::{UnboundedReceiver, UnboundedSender},
-}; // Assuming you have an enum like this
+use ibdl_extractors::error::ExtractorError;
+use ibdl_extractors::extractor::PostExtractor; // Added ExtractorError
+use ibdl_extractors::extractor_config::DEFAULT_SERVERS; // Added ServerConfig for clarity, though PostExtractor::new uses it directly
+use ibdl_extractors::imageboards::prelude::*;
+use ibdl_extractors::prelude::AsyncFetch;
+use serde::Serialize;
+use tokio::sync::mpsc;
+use wasm_bindgen::prelude::*; // Use tokio's MPSC channel
 
-use ibdl_extractors::prelude::*;
-
-// Your extractors - you'll need to figure out how to instantiate and use them.
-// This is a simplified example. The actual extractor API from your project will be used.
-use ibdl_extractors::imageboards::{
-    // ... other extractors
-    danbooru::DanbooruExtractor,
-    e621::E621Extractor,
-};
-
-// Helper for logging to the browser console
+// Helper to log to the browser console
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
-
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-// A simplified struct to pass to JavaScript.
-// Your `Post` struct might be too complex or contain non-serializable types.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+// The WebPost DTO and its From<Post> implementation remain the same,
+// as they are still a great way to prepare data for JS.
+#[derive(Serialize, Debug, Clone)]
 pub struct WebPost {
     pub id: u64,
-    pub direct_url: String, // URL to the image/file itself
-    pub post_url: String,   // URL to the imageboard post page
+    pub direct_url: String,
+    pub post_url: String,
     pub tags: Vec<String>,
     pub site: String,
-    // Add other fields you want to display like thumbnail_url, rating, etc.
+    pub rating: String,
 }
 
-// Conversion from your main `Post` struct to `WebPost`
-// This is an example, you'll need to adapt it based on your `Post` struct fields
-impl WebPost {
-    fn from_common_post(common_post: &Post, imageboard_name: &str) -> Self {
-        let domain = common_post.website.domain();
-        WebPost {
-            id: common_post.id,
-            direct_url: common_post.url.clone(),
-            post_url: format!("https://{}/posts/{}", domain, common_post.id),
-            tags: common_post
-                .tags
-                .iter()
-                .map(|tag| tag.tag().to_string())
-                .collect(),
-            site: imageboard_name.to_string(),
+impl From<&Post> for WebPost {
+    fn from(post: &Post) -> Self {
+        let domain = post.website.domain();
+        Self {
+            id: post.id,
+            direct_url: post.url.clone(),
+            post_url: format!("https://{}/posts/{}", domain, post.id),
+            tags: post.tags.iter().map(|t| t.tag().to_string()).collect(),
+            site: format!("{:?}", post.website),
+            rating: format!("{:?}", post.rating),
         }
     }
 }
 
-#[wasm_bindgen(start)]
-pub fn main_js() -> Result<(), JsValue> {
-    // Optional: set up a panic hook for better debugging in the browser console
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-    console_log!("WASM module initialized.");
-    Ok(())
+// Enum to handle different concrete PostExtractor types
+enum AnyPostExtractor {
+    Danbooru(PostExtractor<DanbooruApi>),
+    E621(PostExtractor<E621Api>),
+    // If you support more sites, add their variants here
+}
+
+impl AnyPostExtractor {
+    // This method's signature is simplified to the parameters actually used in this context.
+    // It will call the underlying PostExtractor's async_fetch method with the
+    // appropriate arguments (including `None` for blacklisted_tags and cbz_mode).
+    async fn async_fetch(
+        &mut self,
+        sender: mpsc::UnboundedSender<Post>,
+        limit: Option<u16>,
+    ) -> Result<u64, ExtractorError> {
+        match self {
+            AnyPostExtractor::Danbooru(extractor) => {
+                // Call the original async_fetch, passing None for unused args
+                extractor.async_fetch(sender, None, limit, None).await
+            }
+            AnyPostExtractor::E621(extractor) => {
+                // Call the original async_fetch, passing None for unused args
+                extractor.async_fetch(sender, None, limit, None).await
+            } // Add cases for other sites if AnyPostExtractor is expanded
+        }
+    }
 }
 
 #[wasm_bindgen]
 pub async fn fetch_links(
     site_name: String,
     tags_str: String,
-    limit: Option<u16>,
+    limit: u16,
 ) -> Result<JsValue, JsValue> {
     console_log!(
-        "Rust (WASM): fetch_links called with site '{}', tags '{}', limit {:?}",
+        "[WASM] Fetching from '{}' with tags '{}'",
         site_name,
-        tags_str,
-        limit
+        tags_str
     );
 
     let tags: Vec<String> = tags_str.split_whitespace().map(String::from).collect();
     if tags.is_empty() {
-        return Err(JsValue::from_str("No tags provided."));
+        return Err("No tags provided.".into());
     }
+    let tags_slice: Vec<&str> = tags.iter().map(AsRef::as_ref).collect();
 
-    // Use the channel-based async fetch methods from unsync.rs
+    // This part is a bit tricky, the API structs need the server config
+    let server_cfg = DEFAULT_SERVERS
+        .get(&site_name)
+        .ok_or_else(|| JsValue::from_str(&format!("Invalid site name: {}", site_name)))?
+        .clone();
 
-    // Create an unbounded channel to receive posts
-    let (sender, mut receiver): (UnboundedSender<Post>, UnboundedReceiver<Post>) =
-        ibdl_common::tokio::sync::mpsc::unbounded_channel();
+    // Create the extractor instance using the enum. It must be mutable.
+    let mut extractor: AnyPostExtractor = match site_name.to_lowercase().as_str() {
+        "danbooru" => AnyPostExtractor::Danbooru(PostExtractor::new(
+            &tags_slice,
+            &[],
+            true,
+            false,
+            DanbooruApi::new(),
+            server_cfg,
+        )),
+        "e621" => AnyPostExtractor::E621(PostExtractor::new(
+            &tags_slice,
+            &[],
+            true,
+            false,
+            E621Api::new(),
+            server_cfg,
+        )),
+        _ => {
+            return Err(JsValue::from_str(&format!(
+                "Unsupported site: {}",
+                site_name
+            )));
+        }
+    };
+    // 1. Create the channel
+    let (sender, mut receiver) = mpsc::unbounded_channel::<Post>();
 
-    // Use Arc<Mutex> to share the collected posts vector between tasks
-    let shared_posts = Arc::new(Mutex::new(Vec::new()));
-    let receiver_posts = shared_posts.clone();
-
-    // Spawn a task to receive posts from the channel and collect them
-    let receiver_handle = spawn_local(async move {
-        console_log!("Rust (WASM): Receiver task started.");
-        let mut posts = receiver_posts.lock().await;
+    // 2. Define the collector future
+    let collector_future = async {
+        let mut collected_posts = Vec::new();
         while let Some(post) = receiver.recv().await {
-            posts.push(post);
+            collected_posts.push(post);
         }
-        console_log!("Rust (WASM): Receiver task finished.");
-    });
+        console_log!(
+            "[WASM] Collector finished, got {} posts.",
+            collected_posts.len()
+        );
+        collected_posts
+    };
 
-    // Spawn the extractor task using setup_fetch_thread
-    let extractor_handle: JoinHandle<Result<u64, ExtractorError>> =
-        match site_name.to_lowercase().as_str() {
-            "danbooru" => {
-                // Example: Instantiate and use DanbooruExtractor
-                // The exact method signature and parameters will depend on your actual extractor implementation.
-                // The extractor's search/fetch method MUST be async and use a WASM-compatible reqwest client.
-                let extractor = DanbooruExtractor::new(&tags, all_ratings!(), true, false); // Adapt constructor
-                console_log!("Rust (WASM): Using DanbooruExtractor");
-                // Use setup_fetch_thread to spawn the async_fetch logic
-                extractor.setup_fetch_thread(sender, Some(1), limit, None) // Start page 1, pass limit, no post_counter
-            }
-            "e621" => {
-                let extractor = E621Extractor::new(&tags, all_ratings!(), true, false); // Adapt constructor
-                console_log!("Rust (WASM): Using E621Extractor");
-                // Use setup_fetch_thread to spawn the async_fetch logic
-                extractor.setup_fetch_thread(sender, Some(1), limit, None) // Start page 1, pass limit, no post_counter
-            }
-            // Add other sites your `ibdl-extractors` support
-            _ => {
-                // If site is unsupported, drop the sender immediately to close the channel
-                drop(sender);
-                // Return an error immediately
-                return Err(JsValue::from_str(&format!(
-                    "Unsupported site: {}",
-                    site_name
-                )));
-            }
-        };
+    // 3. Define the fetcher future
+    // Call the async_fetch method defined on our AnyPostExtractor enum.
+    let fetcher_future = extractor.async_fetch(sender, Some(limit));
 
-    // Wait for the extractor task to finish. This will also cause the sender to be dropped.
-    let extractor_result = extractor_handle.await;
+    // 4. Run both futures concurrently
+    console_log!("[WASM] Starting fetcher and collector...");
+    let (fetch_result, collected_posts) = tokio::join!(fetcher_future, collector_future);
 
-    // Wait for the receiver task to finish processing all messages
-    let _ = receiver_handle.await;
-
-    // Process the result from the extractor task
-    match extractor_result {
-        Ok(total_removed) => {
-            console_log!(
-                "Rust (WASM): Extractor finished. {:?} posts removed by blacklist.",
-                total_removed
-            );
-            // Access the collected posts from the shared vector
-            let final_posts = shared_posts.lock().await;
-            console_log!("Rust (WASM): Collected {} posts.", final_posts.len());
-
-            if final_posts.is_empty() {
-                return Err(JsValue::from_str("No posts found for the given tags."));
-            }
-
-            let web_posts: Vec<WebPost> = final_posts
-                .iter()
-                .map(|p| WebPost::from_common_post(p, &site_name))
-                .collect();
-
-            Ok(serde_wasm_bindgen::to_value(&web_posts)?) // Serialize to JsValue
-        }
-        Err(e) => {
-            console_log!("Rust (WASM): Extractor error: {}", e);
-            Err(JsValue::from_str(&format!("Extractor error: {}", e)))
-        }
+    // 5. Handle the results
+    if let Err(e) = fetch_result {
+        let error_message = format!("Error during fetch: {:?}", e);
+        console_log!("[WASM] {}", error_message);
+        return Err(error_message.into());
     }
+
+    console_log!("[WASM] Fetch successful. Converting posts to WebPosts.");
+    let web_posts: Vec<WebPost> = collected_posts.iter().map(WebPost::from).collect();
+
+    // Serialize to JsValue and return
+    serde_wasm_bindgen::to_value(&web_posts).map_err(|e| e.into())
 }

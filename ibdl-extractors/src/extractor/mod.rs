@@ -249,6 +249,10 @@ pub struct PostExtractor<S: SiteApi> {
     pool_config: Option<PoolDownloadConfig>,
     /// The site-specific API handler.
     site_api: S,
+    /// The active blacklist filter instance, configured based on current settings.
+    active_blacklist_filter: BlacklistFilter,
+    /// Stored global blacklist configuration data, used to rebuild the `active_blacklist_filter`.
+    global_blacklist_config: crate::blacklist::GlobalBlacklist,
 }
 
 /// Represents a collection of posts fetched from an imageboard.
@@ -302,22 +306,24 @@ impl<S: SiteApi> PostExtractor<S> {
     /// * `map_videos`: If `true`, video posts (and posts tagged 'animated') will be included. If `false`, they will be filtered out
     ///   by the `BlacklistFilter` (as `ignore_animated` will be true).
     /// * `site_api`: An instance of a type implementing `SiteApi`, providing site-specific logic. This instance is consumed.
+    /// * `global_blacklist_config`: The parsed global blacklist configuration.
     /// * `server_cfg`: The `ServerConfig` for the imageboard being accessed.
     ///
     /// # Type Parameters
     /// * `T`: A type that can be converted to a `String` and implements `Display`, used for `tags_raw`.
     pub fn new<T>(
         tags_raw: &[T],
-        download_ratings: &[Rating],
-        disable_blacklist: bool,
-        map_videos: bool,
+        global_blacklist_config_param: &crate::blacklist::GlobalBlacklist,
+        download_ratings_param: &[Rating],
+        disable_blacklist_param: bool,
+        map_videos_param: bool,
         mut site_api: S, // Consumes the site_api instance
-        server_cfg: ServerConfig,
+        server_cfg_param: ServerConfig,
     ) -> Self
     where
         T: ToString + Display,
     {
-        let client_cfg = server_cfg.clone();
+        let client_cfg = server_cfg_param.clone();
         let client = Client::builder()
             .user_agent(&client_cfg.client_user_agent)
             .build()
@@ -332,22 +338,55 @@ impl<S: SiteApi> PostExtractor<S> {
         debug!("Processed Tags for API Query: {tags_for_query}");
         debug!("Tags for PostQueue: {tags_for_post_queue:?}");
 
+        let initial_active_filter = BlacklistFilter::new(
+            global_blacklist_config_param,
+            server_cfg_param.server,
+            &[], // No user/auth tags initially
+            download_ratings_param,
+            disable_blacklist_param,
+            !map_videos_param,
+            None, // No extension initially
+        );
+
         Self {
             client,
             tags_for_query,
             tags_for_post_queue,
             auth_state: AuthState::NotAuthenticated,
             auth_config: ImageboardConfig::default(),
-            download_ratings: download_ratings.to_vec(),
-            disable_blacklist,
+            download_ratings: download_ratings_param.to_vec(),
+            disable_blacklist: disable_blacklist_param,
             total_removed: 0,
-            map_videos,
+            map_videos: map_videos_param,
             user_excluded_tags: vec![],
             selected_extension: None,
-            server_cfg,
+            server_cfg: server_cfg_param,
             pool_config: None,
+            active_blacklist_filter: initial_active_filter,
+            global_blacklist_config: global_blacklist_config_param.clone(),
             site_api,
         }
+    }
+
+    /// Rebuilds the `active_blacklist_filter` based on the current state of `PostExtractor`
+    /// (user excluded tags, auth tags, selected extension, etc.).
+    fn rebuild_blacklist_filter(&mut self) {
+        let mut current_additional_tags = self.user_excluded_tags.clone();
+        if self.auth_state.is_auth() && !self.auth_config.user_data.blacklisted_tags.is_empty() {
+            current_additional_tags
+                .extend(self.auth_config.user_data.blacklisted_tags.iter().cloned());
+        }
+
+        self.active_blacklist_filter = BlacklistFilter::new(
+            &self.global_blacklist_config,
+            self.server_cfg.server,
+            &current_additional_tags,
+            &self.download_ratings,
+            self.disable_blacklist,
+            !self.map_videos,
+            self.selected_extension,
+        );
+        debug!("Active blacklist filter rebuilt.");
     }
 
     /// Fetches a single page of posts based on the configured tags and page number.
@@ -407,18 +446,8 @@ impl<S: SiteApi> PostExtractor<S> {
             effective_blacklist_tags.sort_unstable();
             effective_blacklist_tags.dedup();
         }
-        debug!("Effective blacklist tags: {effective_blacklist_tags:?}");
-
-        let blacklist = BlacklistFilter::new(
-            self.server_cfg.clone(),
-            &effective_blacklist_tags,
-            &self.download_ratings,
-            self.disable_blacklist,
-            !self.map_videos,
-            self.selected_extension,
-        )
-        .await?;
-
+        // The active_blacklist_filter is rebuilt by exclude_tags and auth,
+        // so it should be up-to-date with effective_blacklist_tags logic.
         let mut fvec = limit.map_or_else(
             || Vec::with_capacity(self.server_cfg.max_post_limit as usize),
             |size| Vec::with_capacity(size as usize),
@@ -463,7 +492,8 @@ impl<S: SiteApi> PostExtractor<S> {
                 || !self.download_ratings.is_empty()
                 || !effective_blacklist_tags.is_empty()
             {
-                let (removed, posts_after_filter) = blacklist.filter(posts_this_page);
+                let (removed, posts_after_filter) =
+                    self.active_blacklist_filter.filter(posts_this_page);
                 self.total_removed += removed;
                 posts_after_filter
             } else {
@@ -515,6 +545,7 @@ impl<S: SiteApi> PostExtractor<S> {
     /// # Returns
     /// A mutable reference to `self` for chaining.
     pub fn exclude_tags(&mut self, tags: &[String]) -> &mut Self {
+        self.rebuild_blacklist_filter();
         self.user_excluded_tags = tags.to_vec();
         self
     }
@@ -527,6 +558,7 @@ impl<S: SiteApi> PostExtractor<S> {
     /// # Returns
     /// A mutable reference to `self` for chaining.
     pub fn force_extension(&mut self, extension: Extension) -> &mut Self {
+        self.rebuild_blacklist_filter();
         self.selected_extension = Some(extension);
         self
     }
@@ -633,6 +665,7 @@ impl<S: SiteApi> Auth for PostExtractor<S> {
         );
         self.auth_config = config;
         self.auth_state = AuthState::Authenticated;
+        self.rebuild_blacklist_filter();
         Ok(())
     }
 }
@@ -779,23 +812,13 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
             limited_pool_items.len(),
             pool_cfg.pool_id
         );
-
-        let blacklist = BlacklistFilter::new(
-            self.server_cfg.clone(),
-            &self.user_excluded_tags,
-            &self.download_ratings,
-            self.disable_blacklist,
-            !self.map_videos,
-            self.selected_extension,
-        )
-        .await?;
-
+        // active_blacklist_filter is assumed to be up-to-date.
         let mut posts_sent_this_run = 0u64;
         for (post_id_u64, _) in limited_pool_items {
             match self.get_post(u32::try_from(post_id_u64)?).await {
                 Ok(post_to_filter) => {
                     let (removed_count, mut filtered_posts_vec) =
-                        blacklist.filter(vec![post_to_filter]);
+                        self.active_blacklist_filter.filter(vec![post_to_filter]);
                     self.total_removed += removed_count;
 
                     if let Some(final_post) = filtered_posts_vec.pop() {
@@ -847,16 +870,7 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
             "Starting TAG-BASED download. Tags: '{}'. Limit: {:?}. Start Page: {:?}.",
             self.tags_for_query, limit, start_page
         );
-        let blacklist = BlacklistFilter::new(
-            self.server_cfg.clone(),
-            &self.user_excluded_tags, // Using PostExtractor's own excluded tags
-            &self.download_ratings,
-            self.disable_blacklist,
-            !self.map_videos,
-            self.selected_extension,
-        )
-        .await?;
-
+        // active_blacklist_filter is assumed to be up-to-date.
         let mut has_posts: bool = false;
         let mut total_posts_sent: u16 = 0; // This is u16, consistent with limit
         let mut page = 1;
@@ -899,7 +913,7 @@ impl<S: SiteApi + 'static> PostExtractor<S> {
                 // Simplified condition
                 posts
             } else {
-                let (removed, posts_after_filter) = blacklist.filter(posts);
+                let (removed, posts_after_filter) = self.active_blacklist_filter.filter(posts);
                 self.total_removed += removed;
                 posts_after_filter
             };

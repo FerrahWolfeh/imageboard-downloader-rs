@@ -237,6 +237,7 @@ mod test {
     use tokio::{join, sync::mpsc::unbounded_channel};
 
     use crate::{
+        blacklist::{GlobalBlacklist, DEFAULT_BLACKLIST_TOML},
         extractor::PostExtractor,
         extractor_config::DEFAULT_SERVERS,
         imageboards::danbooru::DanbooruApi,
@@ -249,15 +250,17 @@ mod test {
 
         let danbooru_api = DanbooruApi::new();
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             &["1girl", "cyrene_(honkai:_star_rail)"],
-            &[],
+            &global_blacklist,
+            &[], // ratings_to_download
             false,
             false,
             danbooru_api, // Pass the DanbooruApi instance
             server_config,
         );
-
         let post_list = extractor.get_post_list(1, None).await;
         // Assertions to check the content of the parsed post list.
         assert!(
@@ -290,13 +293,16 @@ mod test {
         let disable_blacklist = true; // Disable blacklist for simplicity in this test
         let map_videos = false;
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             tags_to_search,
+            &global_blacklist,
             ratings_to_download,
             disable_blacklist,
             map_videos,
             danbooru_api,
-            server_config,
+            server_config.clone(), // Clone if server_config is used later, or pass directly
         );
 
         let (post_sender, mut post_receiver) = unbounded_channel();
@@ -373,9 +379,10 @@ mod test {
         // but PostExtractor requires them for initialization.
         let mut extractor = PostExtractor::new(
             &Vec::<String>::new(), // No tags needed for this specific pool fetch
-            &[],                   // No ratings needed
-            true,                  // disable_blacklist
-            false,                 // map_videos
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No ratings needed
+            true,  // disable_blacklist
+            false, // map_videos
             danbooru_api,
             server_config,
         );
@@ -443,6 +450,7 @@ mod test {
         );
     }
 
+    #[allow(clippy::too_many_lines)]
     #[tokio::test]
     async fn pool_async_fetch() {
         let server_config = DEFAULT_SERVERS
@@ -464,9 +472,10 @@ mod test {
         // Test Case 1: Limit 3, last_first = false
         let mut extractor1 = PostExtractor::new(
             &Vec::<String>::new(), // No tags for pool download
-            &[],                   // No specific ratings
-            true,                  // disable_blacklist
-            false,                 // map_videos
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No specific ratings
+            true,  // disable_blacklist
+            false, // map_videos
             DanbooruApi::new(),
             server_config.clone(),
         );
@@ -499,6 +508,7 @@ mod test {
         // Test Case 2: Limit 2, last_first = true
         let mut extractor2 = PostExtractor::new(
             &Vec::<String>::new(),
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
             &[],
             true,
             false,
@@ -534,11 +544,12 @@ mod test {
         // Test Case 3: No limit, last_first = false (fetch all)
         let mut extractor3 = PostExtractor::new(
             &Vec::<String>::new(),
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
             &[],
             true,
             false,
             DanbooruApi::new(),
-            server_config,
+            server_config.clone(),
         );
         extractor3.setup_pool_download(Some(pool_id_to_test), false);
 

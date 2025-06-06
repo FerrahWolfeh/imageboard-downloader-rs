@@ -189,7 +189,9 @@ mod test {
     use ibdl_common::{post::rating::Rating, ImageBoards};
 
     use crate::{
-        extractor::PostExtractor, extractor_config::DEFAULT_SERVERS,
+        blacklist::{GlobalBlacklist, DEFAULT_BLACKLIST_TOML},
+        extractor::PostExtractor,
+        extractor_config::DEFAULT_SERVERS,
         imageboards::prelude::MoebooruApi,
     };
 
@@ -199,8 +201,11 @@ mod test {
 
         let api = MoebooruApi::new();
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             &["1girl", "long_hair"],
+            &global_blacklist,
             &[],
             false,
             false,

@@ -32,25 +32,21 @@
 //! This configuration allows users to specify tags they wish to avoid. If a post contains
 //! any tag listed in the applicable blacklist (global or site-specific), it will be excluded.
 use ahash::AHashSet;
-use ibdl_common::directories::ProjectDirs;
 use ibdl_common::post::extension::Extension;
 use ibdl_common::post::rating::Rating;
 use ibdl_common::post::tags::{Tag, TagType};
 use ibdl_common::post::Post;
+use ibdl_common::ImageBoards;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
-use tokio::fs::{create_dir_all, read_to_string, File};
-use tokio::io::AsyncWriteExt;
 use tokio::time::Instant;
-use toml::from_str;
-
-use crate::extractor_config::ServerConfig;
-
-use super::error::ExtractorError;
 
 const BF_INIT_TEXT: &str = include_str!("blacklist.toml");
+
+/// Public constant for the default blacklist.toml content.
+/// The main application can use this to create a default config file.
+pub const DEFAULT_BLACKLIST_TOML: &str = BF_INIT_TEXT;
 
 /// Represents a list of blacklisted tags for a specific imageboard or for global application.
 /// Used internally for deserializing the `blacklist.toml` file.
@@ -71,46 +67,25 @@ pub struct GlobalBlacklist {
 }
 
 impl GlobalBlacklist {
-    /// Parses the blacklist config file and fills the struct. If the file does not exist (deleted
-    /// or first run), it will be created.
+    /// Parses the blacklist configuration from a string.
+    ///
+    /// # Arguments
+    /// * `config_content`: A string slice containing the TOML blacklist configuration.
     ///
     /// # Returns
-    /// A `Result` containing the `GlobalBlacklist` instance on success, or an `ExtractorError`
-    /// if there's an issue with file operations (creation, reading) or TOML deserialization.
+    /// A `Result` containing the `GlobalBlacklist` instance on success, or a `toml::de::Error`
+    /// if deserialization fails.
     ///
     /// # Errors
     /// This function can return an error if:
-    /// - The configuration directory cannot be accessed or created.
-    /// - The `blacklist.toml` file cannot be created or written to.
-    /// - The `blacklist.toml` file cannot be read.
     /// - The content of `blacklist.toml` is not valid TOML or does not match the expected structure.
-    pub async fn get() -> Result<Self, ExtractorError> {
-        let cache_dir = ProjectDirs::from("com", "ferrahwolfeh", "imageboard-downloader").unwrap();
-
-        let cfold = cache_dir.config_dir();
-
-        if !cfold.exists() {
-            create_dir_all(cfold).await?;
-        }
-
-        let dir = cfold.join(Path::new("blacklist.toml"));
-
-        if !dir.exists() {
-            debug!("Creating blacklist file");
-            File::create(&dir)
-                .await?
-                .write_all(BF_INIT_TEXT.as_bytes())
-                .await?;
-        }
-
-        let gbl_string = read_to_string(&dir).await?;
-
-        let deserialized = from_str::<Self>(&gbl_string)?;
+    pub fn from_config(config_content: &str) -> Result<Self, toml::de::Error> {
+        let deserialized = toml::from_str::<Self>(config_content)?;
 
         debug!("Global blacklist config decoded");
         debug!(
             "Global blacklist setup with {} servers",
-            deserialized.blacklist.keys().len().saturating_sub(1)
+            deserialized.blacklist.keys().len().saturating_sub(1) // Subtract 1 for the "global" key
         );
         Ok(deserialized)
     }
@@ -118,15 +93,16 @@ impl GlobalBlacklist {
 
 /// A filter for `Post` items, capable of removing posts based on blacklisted tags,
 /// selected ratings, desired file extension, and animation status.
+#[derive(Debug, Clone)]
 pub struct BlacklistFilter {
     /// A set of all tags that should be blacklisted for the current operation.
     /// This includes global tags, site-specific tags, and any tags provided through authentication.
     gbl_tags: AHashSet<String>,
     /// A sorted vector of `Rating`s that are allowed. Posts with ratings not in this list will be filtered out.
-    /// If empty, no rating filtering is applied.
     selected_ratings: Vec<Rating>,
-    /// A flag indicating whether all blacklist filtering (tags) is disabled.
-    disabled: bool,
+    /// A flag indicating whether tag-based blacklisting (global, site-specific, user-added) is disabled.
+    /// Other filters (ratings, extension, animated) still apply.
+    tag_blacklisting_disabled: bool,
     /// A flag indicating whether animated posts (GIFs, WEBMs, MP4s, or posts tagged 'animated') should be ignored.
     ignore_animated: bool,
     /// An optional `Extension` to filter by. If `Some`, only posts with this extension will be kept.
@@ -136,49 +112,62 @@ pub struct BlacklistFilter {
 impl BlacklistFilter {
     /// Creates a new `BlacklistFilter` instance.
     ///
-    /// This constructor initializes the filter by loading global and site-specific blacklists,
-    /// incorporating authentication-related tags, and setting up filters for ratings,
+    /// This constructor initializes the filter by using a pre-loaded `GlobalBlacklist` configuration,
+    /// incorporating additional tags (e.g., from user input or authentication), and setting up filters for ratings,
     /// animated content, and specific file extensions.
     ///
     /// # Arguments
-    /// * `imageboard`: The `ServerConfig` for the imageboard being accessed, used to fetch site-specific blacklists.
-    /// * `auth_tags`: A slice of tags that should always be blacklisted, typically derived from user authentication or specific session settings.
+    /// * `global_blacklist_config`: A reference to the parsed `GlobalBlacklist` data.
+    /// * `imageboard_name`: The name of the imageboard (e.g., "danbooru") to look up site-specific blacklisted tags.
+    /// * `imageboard_pretty_name`: The user-friendly name of the imageboard, for logging purposes.
+    /// * `additional_tags_to_blacklist`: A slice of tags (e.g., from user input, command-line arguments, or auth data) to be blacklisted.
     /// * `selected_ratings`: A slice of `Rating`s that the user wants to download. Posts with other ratings will be filtered out.
-    /// * `disabled`: If `true`, tag-based blacklisting (both global and site-specific) is disabled. Other filters (ratings, extension, animated) still apply.
+    /// * `disable_tag_blacklisting`: If `true`, all tag-based blacklisting (from `global_blacklist_config` and `additional_tags_to_blacklist`) is disabled.
     /// * `ignore_animated`: If `true`, posts identified as animated (either by tag 'animated' or by video extension) will be filtered out.
     /// * `extension`: If `Some(Extension)`, only posts with the specified file extension will be kept. If `None`, no extension filtering is applied.
-    ///
-    /// # Returns
-    /// A `Result` containing the `BlacklistFilter` on success, or an `ExtractorError` if
-    /// the `GlobalBlacklist` cannot be loaded.
-    pub async fn new(
-        imageboard: ServerConfig,
-        auth_tags: &[String],
+    #[must_use]
+    pub fn new(
+        global_blacklist_config: &GlobalBlacklist,
+        imageboard: ImageBoards,
+        additional_tags_to_blacklist: &[String],
         selected_ratings: &[Rating],
-        disabled: bool,
+        disable_tag_blacklisting: bool,
         ignore_animated: bool,
         extension: Option<Extension>,
-    ) -> Result<Self, ExtractorError> {
+    ) -> Self {
         let mut gbl_tags: AHashSet<String> = AHashSet::new();
-        if !disabled {
-            gbl_tags.extend(auth_tags.iter().cloned());
 
-            let gbl = GlobalBlacklist::get().await?;
+        // Add tags passed directly to this function (e.g., user-excluded tags, auth tags)
+        // These are added regardless of the `disable_tag_blacklisting` flag for global/site lists,
+        // as they represent explicit immediate exclusions.
+        // However, the overall filtering logic later checks `self.tag_blacklisting_disabled`.
+        // To be consistent, if `disable_tag_blacklisting` is true, no tags should be added to `gbl_tags`.
+        if !disable_tag_blacklisting {
+            gbl_tags.extend(additional_tags_to_blacklist.iter().cloned());
 
-            gbl.blacklist.get("global").map_or_else(
+            // Add tags from the global blacklist configuration
+            global_blacklist_config.blacklist.get("global").map_or_else(
                 || warn!("Global blacklist config has no [blacklist.global] section!"),
                 |global| {
                     if global.tags.is_empty() {
-                        debug!("Global blacklist is empty");
+                        debug!("Global blacklist (from config) is empty");
                     } else {
                         gbl_tags.extend(global.tags.iter().cloned());
                     }
                 },
             );
 
-            if let Some(special) = gbl.blacklist.get(&imageboard.name) {
+            let imageboard_name = imageboard.to_string();
+
+            if let Some(special) = global_blacklist_config
+                .blacklist
+                .get(&imageboard_name.to_lowercase())
+            {
                 if !special.tags.is_empty() {
-                    debug!("{} blacklist: {:?}", imageboard.pretty_name, &special.tags);
+                    debug!(
+                        "{} site-specific blacklist: {:?}",
+                        imageboard_name, &special.tags
+                    );
                     gbl_tags.extend(special.tags.iter().cloned());
                 }
             }
@@ -187,13 +176,13 @@ impl BlacklistFilter {
         let mut sorted_list = selected_ratings.to_vec();
         sorted_list.sort();
 
-        Ok(Self {
+        Self {
             gbl_tags,
             selected_ratings: sorted_list,
-            disabled,
+            tag_blacklisting_disabled: disable_tag_blacklisting,
             ignore_animated,
             extension,
-        })
+        }
     }
 
     /// Filters a list of `Post`s based on the configured criteria.
@@ -202,7 +191,7 @@ impl BlacklistFilter {
     /// 1. If an `extension` is specified, posts not matching it are removed.
     /// 2. If `selected_ratings` is not empty, posts with ratings not in the list are removed.
     /// 3. If blacklisting is not `disabled`:
-    ///    a. Posts containing any tag from `gbl_tags` are removed.
+    ///    a. If `tag_blacklisting_disabled` is false, posts containing any tag from `gbl_tags` are removed.
     ///    b. If `ignore_animated` is true, posts tagged 'animated' or with video extensions are removed.
     ///
     /// # Arguments
@@ -236,7 +225,7 @@ impl BlacklistFilter {
             removed += safe_counter as u64;
         }
 
-        if !self.disabled {
+        if !self.tag_blacklisting_disabled {
             let fsize = original_list.len();
 
             let bp = if self.gbl_tags.is_empty() {
@@ -247,15 +236,18 @@ impl BlacklistFilter {
                 fsize - original_list.len()
             };
 
-            if self.ignore_animated {
-                original_list.retain(|post| {
-                    !(post.tags.contains(&Tag::new("animated", TagType::Meta))
-                        || post.extension.is_video())
-                });
-            }
-
             debug!("Blacklist removed {bp} posts");
             removed += bp as u64;
+        }
+        // Animation filter should apply regardless of tag_blacklisting_disabled,
+        // as it's a separate filter criteria.
+        if self.ignore_animated {
+            let count_before_anim_filter = original_list.len();
+            original_list.retain(|post| {
+                !(post.tags.contains(&Tag::new("animated", TagType::Meta))
+                    || post.extension.is_video())
+            });
+            removed += (count_before_anim_filter - original_list.len()) as u64;
         }
 
         debug!("Filtering took {:?}", start.elapsed());

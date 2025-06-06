@@ -212,6 +212,7 @@ mod test {
     use tokio::{join, sync::mpsc::unbounded_channel};
 
     use crate::{
+        blacklist::{GlobalBlacklist, DEFAULT_BLACKLIST_TOML},
         extractor::PostExtractor,
         extractor_config::DEFAULT_SERVERS,
         imageboards::{danbooru::DanbooruApi, prelude::GelbooruApi},
@@ -224,9 +225,12 @@ mod test {
 
         let api = GelbooruApi::new();
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             &["1girl", "cyrene_(honkai:_star_rail)"],
-            &[],
+            &global_blacklist,
+            &[], // ratings_to_download
             false,
             false,
             api, // Pass the DanbooruApi instance
@@ -265,8 +269,11 @@ mod test {
         let disable_blacklist = true; // Disable blacklist for simplicity in this test
         let map_videos = false;
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             tags_to_search,
+            &global_blacklist,
             ratings_to_download,
             disable_blacklist,
             map_videos,

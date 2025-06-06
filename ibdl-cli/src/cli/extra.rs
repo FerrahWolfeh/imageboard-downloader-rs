@@ -13,13 +13,17 @@ use ibdl_common::{
 };
 use ibdl_extractors::{
     auth::ImageboardConfig,
+    blacklist::{DEFAULT_BLACKLIST_TOML, GlobalBlacklist},
     extractor::{PostExtractor, SiteApi},
     extractor_config::{DEFAULT_SERVERS, ServerConfig, serialize::read_server_cfg_file},
 };
 use log::{debug, info, warn};
 use owo_colors::OwoColorize;
 use std::fs;
-use tokio::fs::{create_dir_all, read, remove_file, write};
+use tokio::{
+    fs::{File, create_dir_all, read, read_to_string, remove_file, write},
+    io::AsyncWriteExt,
+};
 
 use super::AVAILABLE_SERVERS;
 use ibdl_extractors::prelude::Auth; // Keep this for the Auth trait
@@ -204,4 +208,29 @@ pub fn validate_imageboard(input: &str) -> Result<ServerConfig, String> {
         },
         |server| Ok(server.clone()),
     )
+}
+
+pub async fn init_blacklist() -> Result<GlobalBlacklist, CliError> {
+    // Load global blacklist configuration
+    let proj_dirs = ProjectDirs::from("com", "ferrahwolfeh", "imageboard-downloader").unwrap();
+
+    let config_dir = proj_dirs.config_dir();
+    if !config_dir.exists() {
+        create_dir_all(config_dir).await?;
+    }
+
+    let blacklist_path = config_dir.join("blacklist.toml");
+
+    let blacklist_content = if blacklist_path.exists() {
+        read_to_string(&blacklist_path).await?
+    } else {
+        let default_content = DEFAULT_BLACKLIST_TOML.to_string();
+        let mut file = File::create(&blacklist_path).await?;
+        file.write_all(default_content.as_bytes()).await?;
+        default_content
+    };
+
+    let global_blacklist = GlobalBlacklist::from_config(&blacklist_content)?;
+
+    Ok(global_blacklist)
 }

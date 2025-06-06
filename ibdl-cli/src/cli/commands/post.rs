@@ -24,7 +24,10 @@ use tokio::{
 // Enable the auth import only when imageboards that support it are enabled
 #[cfg(any(feature = "danbooru", feature = "e621"))]
 use crate::{
-    cli::{Cli, extra::auth_imgboard},
+    cli::{
+        Cli,
+        extra::{auth_imgboard, init_blacklist},
+    },
     error::CliError,
 };
 
@@ -56,14 +59,18 @@ impl Post {
         channel_tx: UnboundedSender<Pst>,
         length_tx: Sender<u64>,
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
+        let global_blacklist = init_blacklist().await?;
+
         match args.imageboard.server {
+            #[cfg(feature = "danbooru")]
             ImageBoards::Danbooru => {
                 let mut unit = PostExtractor::new(
-                    &[""],
-                    &[],
-                    true,
-                    true,
-                    DanbooruApi::new(),
+                    &Vec::<String>::new(), // No tags for direct post download
+                    &global_blacklist,
+                    &[],                // No specific ratings for direct post download
+                    true,               // disable_blacklist (don't filter explicit IDs)
+                    true, // map_videos (fetch regardless of animation for explicit IDs)
+                    DanbooruApi::new(), // site_api
                     args.imageboard.clone(),
                 );
 
@@ -113,7 +120,8 @@ impl Post {
             #[cfg(feature = "e621")]
             ImageBoards::E621 => {
                 let mut unit = PostExtractor::new(
-                    &[""],
+                    &Vec::<String>::new(),
+                    &global_blacklist,
                     &[],
                     true,
                     true,
@@ -165,7 +173,9 @@ impl Post {
             #[cfg(feature = "gelbooru")]
             ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
                 let unit = PostExtractor::new(
-                    &[""],
+                    // Gelbooru doesn't have auth, so `unit` can be non-mut if no other mut methods are called
+                    &Vec::<String>::new(),
+                    &global_blacklist,
                     &[],
                     true,
                     true,

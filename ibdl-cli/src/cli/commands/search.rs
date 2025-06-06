@@ -24,7 +24,11 @@ use tokio::sync::mpsc::{Sender, UnboundedSender};
 #[cfg(any(feature = "danbooru", feature = "e621"))]
 use crate::cli::extra::auth_imgboard;
 
-use crate::{RatingArg, cli::Cli, error::CliError};
+use crate::{
+    RatingArg,
+    cli::{Cli, extra::init_blacklist},
+    error::CliError,
+};
 
 #[derive(Debug, Args)]
 pub struct TagSearch {
@@ -133,6 +137,8 @@ impl TagSearch {
         channel_tx: UnboundedSender<Post>,
         length_tx: Sender<u64>,
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
+        let global_blacklist = init_blacklist().await?;
+
         let ratings = self.selected_ratings();
 
         match args.imageboard.server {
@@ -140,6 +146,7 @@ impl TagSearch {
             ImageBoards::Danbooru => {
                 let mut unit = PostExtractor::new(
                     &self.tags,
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
@@ -171,6 +178,7 @@ impl TagSearch {
             ImageBoards::E621 => {
                 let mut unit = PostExtractor::new(
                     &self.tags,
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
@@ -202,6 +210,7 @@ impl TagSearch {
             ImageBoards::GelbooruV0_2 | ImageBoards::Gelbooru => {
                 let mut unit = PostExtractor::new(
                     &self.tags,
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
@@ -232,6 +241,7 @@ impl TagSearch {
             ImageBoards::Moebooru => {
                 let mut unit = PostExtractor::new(
                     &self.tags,
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,

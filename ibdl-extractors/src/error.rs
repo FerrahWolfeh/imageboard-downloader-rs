@@ -55,26 +55,10 @@ pub enum ExtractorError {
     #[error("Error while deserializing JSON")]
     JsonSerializeFail(#[from] serde_json::Error),
 
-    /// An I/O error occurred while trying to read the global blacklist configuration file.
-    /// Wraps an underlying `tokio::io::Error`.
-    #[error("Error while reading Global blacklist file. error: {source}")]
-    BlacklistIOError {
-        #[from]
-        source: tokio::io::Error,
-    },
-
     /// An error occurred during the process of mapping raw API data to `Post` structs.
     /// This might indicate unexpected data structures or missing essential fields.
     #[error("Failed to map posts")]
     PostMapFailure,
-
-    /// Failed to deserialize the TOML content of the blacklist configuration file.
-    /// Wraps an underlying `toml::de::Error`.
-    #[error("Failed to decode blacklis: {source}")]
-    BlacklistDecodeError {
-        #[from]
-        source: toml::de::Error,
-    },
 
     /// An attempt was made to use an extractor with an imageboard type it does not support.
     /// `imgboard` contains the name or identifier of the incompatible imageboard.

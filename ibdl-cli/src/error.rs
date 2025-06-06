@@ -52,4 +52,12 @@ pub enum CliError {
         "No imageboards are enabled. Recompile the program with at least one imageboard feature enabled."
     )]
     NoImageboardsEnabled,
+
+    /// Failed to deserialize the TOML content of the blacklist configuration file.
+    /// Wraps an underlying `toml::de::Error`.
+    #[error("Failed to decode blacklis: {source}")]
+    BlacklistDecodeError {
+        #[from]
+        source: toml::de::Error,
+    },
 }

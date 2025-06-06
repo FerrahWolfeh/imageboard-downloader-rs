@@ -198,6 +198,7 @@ mod test {
     use tokio::{join, sync::mpsc::unbounded_channel};
 
     use crate::{
+        blacklist::{GlobalBlacklist, DEFAULT_BLACKLIST_TOML},
         extractor::PostExtractor,
         extractor_config::DEFAULT_SERVERS,
         imageboards::e621::E621Api,
@@ -210,9 +211,12 @@ mod test {
 
         let e621_api = E621Api::new();
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             &["feral", "canine"], // Use e621-relevant tags
-            &[],
+            &global_blacklist,
+            &[], // ratings_to_download
             false,
             false,
             e621_api, // Pass the E621Api instance
@@ -255,8 +259,11 @@ mod test {
         let disable_blacklist = true; // Disable blacklist for simplicity in this test
         let map_videos = false;
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         let extractor = PostExtractor::new(
             tags_to_search,
+            &global_blacklist,
             ratings_to_download,
             disable_blacklist,
             map_videos,
@@ -336,9 +343,10 @@ mod test {
         // but PostExtractor requires them for initialization.
         let mut extractor = PostExtractor::new(
             &Vec::<String>::new(), // No tags needed for this specific pool fetch
-            &[],                   // No ratings needed
-            true,                  // disable_blacklist
-            false,                 // map_videos
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No ratings needed
+            true,  // disable_blacklist
+            false, // map_videos
             e621_api,
             server_config,
         );
@@ -419,12 +427,15 @@ mod test {
         let pool_id_to_test = 18135; // Updated pool ID
         let all_expected_post_ids_in_order: Vec<u64> = vec![1_972_824, 1_972_825]; // Updated post IDs
 
+        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
+
         // Test Case 1: Limit 2, last_first = false
         let mut extractor1 = PostExtractor::new(
             &Vec::<String>::new(), // No tags for pool download
-            &[],                   // No specific ratings
-            true,                  // disable_blacklist
-            false,                 // map_videos
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No ratings needed
+            true,  // disable_blacklist
+            false, // map_videos
             E621Api::new(),
             server_config.clone(),
         );
@@ -457,9 +468,10 @@ mod test {
         // Test Case 2: Limit 1, last_first = true
         let mut extractor2 = PostExtractor::new(
             &Vec::<String>::new(),
-            &[],
-            true,
-            false,
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No ratings needed
+            true,  // disable_blacklist
+            false, // map_videos
             E621Api::new(),
             server_config.clone(),
         );
@@ -492,9 +504,10 @@ mod test {
         // Test Case 3: No limit, last_first = false (fetch all)
         let mut extractor3 = PostExtractor::new(
             &Vec::<String>::new(),
-            &[],
-            true,
-            false,
+            &GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap(),
+            &[],   // No ratings needed
+            true,  // disable_blacklist
+            false, // map_videos
             E621Api::new(),
             server_config,
         );

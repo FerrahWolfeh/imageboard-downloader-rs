@@ -13,6 +13,7 @@ use ibdl_extractors::imageboards::prelude::E621Api;
 use reqwest::Client;
 use tokio::sync::mpsc::{Sender, UnboundedSender};
 
+use crate::cli::extra::init_blacklist;
 // Enable the auth import only when imageboards that support both pools and auth are enabled.
 // Currently, Danbooru and E621 fit this.
 #[cfg(any(feature = "danbooru", feature = "e621"))]
@@ -143,18 +144,21 @@ impl Pool {
         channel_tx: UnboundedSender<Post>,
         length_tx: Sender<u64>,
     ) -> Result<(ExtractorThreadHandle, Client), CliError> {
+        let global_blacklist = init_blacklist().await?;
+
         let ratings = self.selected_ratings();
 
         match args.imageboard.server {
             #[cfg(feature = "danbooru")]
             ImageBoards::Danbooru => {
                 let mut unit = PostExtractor::new(
-                    &[""], // Tags are ignored for pool downloads
+                    &Vec::<String>::new(), // Tags are not used for pool downloads directly by PostExtractor::new
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
-                    DanbooruApi::new(),
-                    args.imageboard.clone(),
+                    DanbooruApi::new(),      // site_api
+                    args.imageboard.clone(), // server_cfg_param
                 );
 
                 auth_imgboard(args.auth, &mut unit).await?;
@@ -181,12 +185,13 @@ impl Pool {
             #[cfg(feature = "e621")]
             ImageBoards::E621 => {
                 let mut unit = PostExtractor::new(
-                    &[""], // Tags are ignored for pool downloads
+                    &Vec::<String>::new(),
+                    &global_blacklist,
                     &ratings,
                     self.disable_blacklist,
                     !self.no_animated,
                     E621Api::new(),
-                    args.imageboard.clone(),
+                    args.imageboard.clone(), // server_cfg_param
                 );
 
                 auth_imgboard(args.auth, &mut unit).await?;

@@ -1,5 +1,5 @@
 [package]
-name = "ibdl-wasm-gui"
+name = "ibdl-wasm"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,13 +7,10 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"] # cdylib for WASM, rlib for potential Rust testing
 
 [dependencies]
-wasm-bindgen = "0.2.92"
-serde = { version = "1.0", features = ["derive"] }
+wasm-bindgen = "0.2.100"
+serde = { version = "1.0.219", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5" # For easy conversion between Rust structs and JsValue
-js-sys = "0.3.69" # For JavaScript types like Promise
-
-# For making HTTP requests from WASM
-reqwest-wasm = { version = "0.11.16", features = ["json"] } # Ensure wasm-bindgen feature is enabled
+js-sys = "0.3.77" # For JavaScript types like Promise
 
 # Your project's crates (adjust paths as necessary)
 # Ensure these crates themselves are WASM-compatible or their features used are.
@@ -21,11 +18,11 @@ ibdl-common = { path = "../ibdl-common" } # Assuming ibdl-wasm-ui is a sibling t
 ibdl-extractors = { path = "../ibdl-extractors" }
 
 # For better panic messages in the browser console (optional, but good for dev)
-console_error_panic_hook = { version = "0.1.7", optional = true }
 
 # For async tasks in WASM
-wasm-bindgen-futures = "0.4.42"
+wasm-bindgen-futures = "0.4.50"
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
+tokio = "1.45.1"
 
 [features]
-default = ["console_error_panic_hook"]
+default = []
