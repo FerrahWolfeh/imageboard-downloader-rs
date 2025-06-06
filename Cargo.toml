@@ -4,7 +4,7 @@ members = [
     "ibdl-common",
     "ibdl-core",
     "ibdl-extractors",
-    #"ibdl-wasm",
+    "ibdl-wasm",
 ]
 
 [package]

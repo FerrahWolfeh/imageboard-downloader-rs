@@ -8,12 +8,15 @@ use bitflags::bitflags;
 use ibdl_common::post::Post;
 use std::future::Future;
 use tokio::sync::mpsc::{Sender, UnboundedSender};
+
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::task::JoinHandle;
 
 /// A type alias for a `JoinHandle` returned by asynchronous extractor operations.
 ///
 /// The `JoinHandle` resolves to a `Result` containing a `u64` (often representing a count,
 /// like posts processed or removed) or an `ExtractorError`.
+#[cfg(not(target_arch = "wasm32"))]
 pub type ExtractorThreadHandle = JoinHandle<Result<u64, ExtractorError>>;
 
 bitflags! {
@@ -49,10 +52,17 @@ pub trait Auth {
     /// # Returns
     /// A `Future` that resolves to `Result<(), ExtractorError>`. `Ok(())` indicates successful
     /// authentication, while an `Err` indicates an authentication failure.
+    #[cfg(not(target_arch = "wasm32"))]
     fn auth(
         &mut self,
         config: ImageboardConfig,
     ) -> impl Future<Output = Result<(), ExtractorError>> + Send;
+
+    #[cfg(target_arch = "wasm32")]
+    fn auth(
+        &mut self,
+        config: ImageboardConfig,
+    ) -> impl Future<Output = Result<(), ExtractorError>>;
 }
 
 /// Defines the capability for an extractor to fetch posts asynchronously and send them
@@ -75,6 +85,7 @@ pub trait AsyncFetch {
     /// # Returns
     /// A `Future` that resolves to `Result<u64, ExtractorError>`. The `u64` on success typically
     /// represents the total number of posts removed by blacklisting during the fetch operation.
+    #[cfg(not(target_arch = "wasm32"))]
     fn async_fetch(
         &mut self,
         sender_channel: UnboundedSender<Post>,
@@ -82,6 +93,15 @@ pub trait AsyncFetch {
         limit: Option<u16>,
         post_counter: Option<Sender<u64>>,
     ) -> impl Future<Output = Result<u64, ExtractorError>> + Send;
+
+    #[cfg(target_arch = "wasm32")]
+    fn async_fetch(
+        &mut self,
+        sender_channel: UnboundedSender<Post>,
+        start_page: Option<u16>,
+        limit: Option<u16>,
+        post_counter: Option<Sender<u64>>,
+    ) -> impl Future<Output = Result<u64, ExtractorError>>;
 
     /// A high-level convenience method to spawn the `async_fetch` operation in a new Tokio task.
     ///
@@ -96,6 +116,7 @@ pub trait AsyncFetch {
     ///
     /// # Returns
     /// An [`ExtractorThreadHandle`], which is a `JoinHandle` for the asynchronous fetch task.
+    #[cfg(not(target_arch = "wasm32"))]
     fn setup_fetch_thread(
         self,
         sender_channel: UnboundedSender<Post>,
@@ -136,10 +157,14 @@ pub trait SinglePostFetch {
     /// # Returns
     /// A `Future` that resolves to `Result<Post, ExtractorError>`, containing the fetched `Post`
     /// on success or an error if the post cannot be found or an API error occurs.
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_post(
         &mut self,
         post_id: u32,
     ) -> impl Future<Output = Result<Post, ExtractorError>> + Send;
+
+    #[cfg(target_arch = "wasm32")]
+    fn get_post(&mut self, post_id: u32) -> impl Future<Output = Result<Post, ExtractorError>>;
 
     /// Fetches multiple posts from the imageboard by their unique IDs.
     ///
@@ -150,10 +175,17 @@ pub trait SinglePostFetch {
     /// A `Future` that resolves to `Result<Vec<Post>, ExtractorError>`, containing a vector
     /// of the fetched `Post` objects on success or an error if any post cannot be fetched
     /// or an API error occurs.
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_posts(
         &mut self,
         posts: &[u32],
     ) -> impl Future<Output = Result<Vec<Post>, ExtractorError>> + Send;
+
+    #[cfg(target_arch = "wasm32")]
+    fn get_posts(
+        &mut self,
+        posts: &[u32],
+    ) -> impl Future<Output = Result<Vec<Post>, ExtractorError>>;
 }
 
 /// Defines the capability for an extractor to set up an asynchronous task
@@ -176,6 +208,7 @@ pub trait PostFetchAsync {
     /// An [`ExtractorThreadHandle`]. The `u64` in the `Result` typically signifies a status or count;
     /// for instance, `Ok(0)` might indicate successful completion of sending all requested posts,
     /// as `total_removed` (from blacklist filtering) isn't the primary concern here.
+    #[cfg(not(target_arch = "wasm32"))]
     fn setup_async_post_fetch(
         self,
         post_channel: UnboundedSender<Post>,
@@ -196,11 +229,19 @@ pub trait PoolExtract {
     /// # Returns
     /// A `Future` that resolves to `Result<HashMap<u64, usize>, ExtractorError>`.
     /// The `HashMap` maps post IDs (`u64`) to their 0-indexed order (`usize`) within the pool.
+    #[cfg(not(target_arch = "wasm32"))]
     fn fetch_pool_idxs(
         &mut self,
         pool_id: u32,
         limit: Option<u16>,
     ) -> impl Future<Output = Result<HashMap<u64, usize>, ExtractorError>> + Send;
+
+    #[cfg(target_arch = "wasm32")]
+    fn fetch_pool_idxs(
+        &mut self,
+        pool_id: u32,
+        limit: Option<u16>,
+    ) -> impl Future<Output = Result<HashMap<u64, usize>, ExtractorError>>;
 
     /// Parses a raw JSON string, presumably from a pool API endpoint, into a `Vec<u64>` of post IDs.
     /// The order of IDs in the returned vector should reflect their order in the pool if specified by the API.

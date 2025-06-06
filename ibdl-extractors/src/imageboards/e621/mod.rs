@@ -427,8 +427,6 @@ mod test {
         let pool_id_to_test = 18135; // Updated pool ID
         let all_expected_post_ids_in_order: Vec<u64> = vec![1_972_824, 1_972_825]; // Updated post IDs
 
-        let global_blacklist = GlobalBlacklist::from_config(DEFAULT_BLACKLIST_TOML).unwrap();
-
         // Test Case 1: Limit 2, last_first = false
         let mut extractor1 = PostExtractor::new(
             &Vec::<String>::new(), // No tags for pool download

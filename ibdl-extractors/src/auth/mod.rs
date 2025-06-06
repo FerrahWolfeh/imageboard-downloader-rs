@@ -10,7 +10,6 @@
 use bincode::serialize;
 use log::debug;
 use reqwest::Client;
-use std::io::{self};
 use thiserror::Error;
 
 use ibdl_common::ImageBoards;
@@ -52,13 +51,6 @@ pub enum Error {
     /// Indicates errors while connecting or parsing the response from the imageboard.
     #[error("Connection to auth url failed")]
     ConnectionError(#[from] reqwest::Error),
-
-    /// Indicates any unrecoverable IO error when trying to read the auth config file.
-    #[error("Failed to read config file. error: {source}")]
-    ConfigIOError {
-        #[from]
-        source: io::Error,
-    },
 
     /// Indicates a failed attempt to serialize the config file to `bincode`.
     #[error("Failed to encode config file")]

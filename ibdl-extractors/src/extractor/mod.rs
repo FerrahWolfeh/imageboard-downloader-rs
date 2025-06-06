@@ -10,8 +10,12 @@ use crate::{
     auth::{AuthState, ImageboardConfig},
     blacklist::BlacklistFilter,
     extractor_config::ServerConfig,
-    prelude::{AsyncFetch, Auth, PoolExtract, PostFetchAsync, PostFetchMethod, SinglePostFetch},
+    prelude::{AsyncFetch, Auth, PoolExtract, PostFetchAsync, SinglePostFetch},
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::prelude::PostFetchMethod;
+
 use ahash::HashMap;
 use ibdl_common::{
     post::{extension::Extension, rating::Rating, Post},
@@ -25,11 +29,15 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::{
-    spawn,
     sync::mpsc::{Sender, UnboundedSender},
-    task::JoinHandle,
     time::sleep,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::task::JoinHandle;
+
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::spawn;
 
 use crate::error::ExtractorError;
 
@@ -1008,6 +1016,7 @@ impl<S: SiteApi + 'static> AsyncFetch for PostExtractor<S> {
     /// # Returns
     /// A `JoinHandle` for the spawned task, which will resolve to the result of `async_fetch`.
     #[inline]
+    #[cfg(not(target_arch = "wasm32"))]
     fn setup_fetch_thread(
         mut self, // PostExtractor needs to be mutable for async_fetch
         sender_channel: UnboundedSender<Post>,
@@ -1035,6 +1044,7 @@ impl<S: SiteApi + 'static> PostFetchAsync for PostExtractor<S> {
     /// A `JoinHandle` for the spawned task. The task result is `Ok(0)` on successful completion of sending posts,
     /// or an `ExtractorError` if any operation fails. The `0` indicates that `total_removed` is not
     /// directly applicable in this context as it is for broader searches.
+    #[cfg(not(target_arch = "wasm32"))]
     fn setup_async_post_fetch(
         mut self, // PostExtractor needs to be mutable for get_post
         post_channel: UnboundedSender<Post>,
